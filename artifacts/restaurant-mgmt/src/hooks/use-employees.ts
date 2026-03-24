@@ -4,7 +4,8 @@ import {
   useUpdateEmployee, 
   useDeleteEmployee,
   getListEmployeesQueryKey,
-  getGetDashboardSummaryQueryKey
+  getGetDashboardSummaryQueryKey,
+  getGetPLReportQueryKey,
 } from "@workspace/api-client-react";
 
 export function useEmployeeMutations() {
@@ -13,6 +14,7 @@ export function useEmployeeMutations() {
   const invalidateQueries = () => {
     queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() });
     queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetPLReportQueryKey() });
   };
 
   const create = useCreateEmployee({ mutation: { onSuccess: invalidateQueries } });

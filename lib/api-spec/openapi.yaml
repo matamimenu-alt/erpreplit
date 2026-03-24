@@ -918,41 +918,77 @@ components:
           type: integer
         name:
           type: string
-        jobTitle:
+        designation:
           type: string
+        fullTime:
+          type: boolean
+        nationality:
+          type: string
+        joiningDate:
+          type: string
+          nullable: true
+        numberOfMonths:
+          type: number
         salary:
           type: number
-        iqamaExpiryDate:
-          type: string
-        iqamaRenewalDate:
-          type: string
-        lastTravelDate:
-          type: string
-        vacationBalance:
+        socialSecurity:
           type: number
-        accommodationCost:
+        laborFees:
+          type: number
+        iqamaRenewalYearly:
           type: number
         medicalInsurance:
           type: number
-        gosiInsurance:
-          type: number
         airTicketCost:
+          type: number
+        foodMeal:
+          type: number
+        monthlyIqamaRenewal:
+          type: number
+        monthlyMedical:
+          type: number
+        monthlyAirTicket:
+          type: number
+        monthlyIndemnity:
+          type: number
+        monthlyVacation:
+          type: number
+        totalPayrollTaxes:
+          type: number
+        totalEmployeesBenefits:
           type: number
         totalMonthlyCost:
           type: number
+        iqamaExpiryDate:
+          type: string
+          nullable: true
+        iqamaRenewalDate:
+          type: string
+          nullable: true
         createdAt:
           type: string
       required:
         - id
         - name
-        - jobTitle
+        - designation
+        - fullTime
+        - nationality
         - salary
-        - vacationBalance
-        - accommodationCost
+        - socialSecurity
+        - laborFees
+        - iqamaRenewalYearly
         - medicalInsurance
-        - gosiInsurance
         - airTicketCost
+        - foodMeal
+        - monthlyIqamaRenewal
+        - monthlyMedical
+        - monthlyAirTicket
+        - monthlyIndemnity
+        - monthlyVacation
+        - totalPayrollTaxes
+        - totalEmployeesBenefits
         - totalMonthlyCost
+        - numberOfMonths
         - createdAt
 
     CreateEmployee:
@@ -960,35 +996,39 @@ components:
       properties:
         name:
           type: string
-        jobTitle:
+        designation:
           type: string
+        fullTime:
+          type: boolean
+        nationality:
+          type: string
+        joiningDate:
+          type: string
+          nullable: true
         salary:
           type: number
-        iqamaExpiryDate:
-          type: string
-        iqamaRenewalDate:
-          type: string
-        lastTravelDate:
-          type: string
-        vacationBalance:
+        socialSecurity:
           type: number
-        accommodationCost:
+        laborFees:
+          type: number
+        iqamaRenewalYearly:
           type: number
         medicalInsurance:
           type: number
-        gosiInsurance:
-          type: number
         airTicketCost:
           type: number
+        foodMeal:
+          type: number
+        iqamaExpiryDate:
+          type: string
+          nullable: true
+        iqamaRenewalDate:
+          type: string
+          nullable: true
       required:
         - name
-        - jobTitle
+        - designation
         - salary
-        - vacationBalance
-        - accommodationCost
-        - medicalInsurance
-        - gosiInsurance
-        - airTicketCost
 
     Expense:
       type: object

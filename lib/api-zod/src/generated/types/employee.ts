@@ -9,16 +9,27 @@
 export interface Employee {
   id: number;
   name: string;
-  jobTitle: string;
+  designation: string;
+  fullTime: boolean;
+  nationality: string;
+  joiningDate?: string | null;
+  numberOfMonths: number;
   salary: number;
-  iqamaExpiryDate?: string;
-  iqamaRenewalDate?: string;
-  lastTravelDate?: string;
-  vacationBalance: number;
-  accommodationCost: number;
+  socialSecurity: number;
+  laborFees: number;
+  iqamaRenewalYearly: number;
   medicalInsurance: number;
-  gosiInsurance: number;
   airTicketCost: number;
+  foodMeal: number;
+  monthlyIqamaRenewal: number;
+  monthlyMedical: number;
+  monthlyAirTicket: number;
+  monthlyIndemnity: number;
+  monthlyVacation: number;
+  totalPayrollTaxes: number;
+  totalEmployeesBenefits: number;
   totalMonthlyCost: number;
+  iqamaExpiryDate?: string | null;
+  iqamaRenewalDate?: string | null;
   createdAt: string;
 }
