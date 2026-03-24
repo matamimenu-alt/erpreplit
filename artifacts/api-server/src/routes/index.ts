@@ -8,10 +8,14 @@ import expensesRouter from "./expenses";
 import vatRouter from "./vat";
 import dashboardRouter from "./dashboard";
 import reportsRouter from "./reports";
+import { restaurantsRouter, seedRestaurants } from "./restaurants";
 
 const router: IRouter = Router();
 
+seedRestaurants().catch(console.error);
+
 router.use(healthRouter);
+router.use("/restaurants", restaurantsRouter);
 router.use("/sales", salesRouter);
 router.use("/purchases", purchasesRouter);
 router.use("/suppliers", suppliersRouter);

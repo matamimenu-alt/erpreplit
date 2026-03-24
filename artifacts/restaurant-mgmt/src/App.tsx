@@ -14,6 +14,7 @@ import Employees from "@/pages/Employees";
 import Expenses from "@/pages/Expenses";
 import VatReport from "@/pages/VatReport";
 import Reports from "@/pages/Reports";
+import { RestaurantProvider } from "@/contexts/RestaurantContext";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -48,7 +49,9 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
+          <RestaurantProvider>
+            <Router />
+          </RestaurantProvider>
         </WouterRouter>
         <Toaster />
       </TooltipProvider>

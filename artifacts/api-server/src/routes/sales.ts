@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { salesTable } from "@workspace/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
+import { getRestaurantId } from "../lib/restaurant";
 
 const router: IRouter = Router();
 
@@ -20,8 +21,11 @@ function toNum(v: unknown) {
 // GET /api/sales
 router.get("/", async (req, res) => {
   try {
+    const restaurantId = getRestaurantId(req);
     const month = req.query.month as string | undefined;
-    let records = await db.select().from(salesTable).orderBy(salesTable.date);
+    let records = await db.select().from(salesTable)
+      .where(eq(salesTable.restaurantId, restaurantId))
+      .orderBy(salesTable.date);
     if (month) {
       records = records.filter((r) => r.date.startsWith(month));
     }
@@ -44,11 +48,13 @@ router.get("/", async (req, res) => {
 // POST /api/sales
 router.post("/", async (req, res) => {
   try {
+    const restaurantId = getRestaurantId(req);
     const { date, foodSales, beverageSales } = req.body;
     const { totalSales, outputVat } = calcSales(Number(foodSales), Number(beverageSales));
     const [record] = await db
       .insert(salesTable)
       .values({
+        restaurantId,
         date,
         foodSales: String(Number(foodSales).toFixed(2)),
         beverageSales: String(Number(beverageSales).toFixed(2)),
@@ -74,6 +80,7 @@ router.post("/", async (req, res) => {
 // PUT /api/sales/:id
 router.put("/:id", async (req, res) => {
   try {
+    const restaurantId = getRestaurantId(req);
     const id = parseInt(req.params.id);
     const { date, foodSales, beverageSales } = req.body;
     const { totalSales, outputVat } = calcSales(Number(foodSales), Number(beverageSales));
@@ -86,7 +93,7 @@ router.put("/:id", async (req, res) => {
         totalSales: String(totalSales),
         outputVat: String(outputVat),
       })
-      .where(eq(salesTable.id, id))
+      .where(and(eq(salesTable.id, id), eq(salesTable.restaurantId, restaurantId)))
       .returning();
     if (!record) return res.status(404).json({ error: "Not found" });
     res.json({
@@ -107,8 +114,9 @@ router.put("/:id", async (req, res) => {
 // DELETE /api/sales/:id
 router.delete("/:id", async (req, res) => {
   try {
+    const restaurantId = getRestaurantId(req);
     const id = parseInt(req.params.id);
-    await db.delete(salesTable).where(eq(salesTable.id, id));
+    await db.delete(salesTable).where(and(eq(salesTable.id, id), eq(salesTable.restaurantId, restaurantId)));
     res.status(204).send();
   } catch (err) {
     req.log.error({ err }, "Error deleting sale");
@@ -119,7 +127,10 @@ router.delete("/:id", async (req, res) => {
 // GET /api/sales/monthly-summary
 router.get("/monthly-summary", async (req, res) => {
   try {
-    const records = await db.select().from(salesTable).orderBy(salesTable.date);
+    const restaurantId = getRestaurantId(req);
+    const records = await db.select().from(salesTable)
+      .where(eq(salesTable.restaurantId, restaurantId))
+      .orderBy(salesTable.date);
     const monthMap: Record<string, { food: number; beverage: number; total: number; vat: number }> = {};
     for (const r of records) {
       const month = r.date.substring(0, 7);

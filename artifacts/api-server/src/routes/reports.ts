@@ -1,6 +1,8 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { salesTable, purchasesTable, employeesTable, expensesTable } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
+import { getRestaurantId } from "../lib/restaurant";
 
 const router: IRouter = Router();
 
@@ -16,25 +18,26 @@ function pct(part: number, total: number): number {
 // GET /api/reports/pl
 router.get("/pl", async (req, res) => {
   try {
+    const restaurantId = getRestaurantId(req);
     const month = req.query.month as string | undefined;
 
-    let salesRecords = await db.select().from(salesTable).orderBy(salesTable.date);
-    let purchaseRecords = await db.select().from(purchasesTable).orderBy(purchasesTable.date);
+    let salesRecords = await db.select().from(salesTable)
+      .where(eq(salesTable.restaurantId, restaurantId))
+      .orderBy(salesTable.date);
+    let purchaseRecords = await db.select().from(purchasesTable)
+      .where(eq(purchasesTable.restaurantId, restaurantId))
+      .orderBy(purchasesTable.date);
 
     if (month) {
       salesRecords = salesRecords.filter((r) => r.date.startsWith(month));
       purchaseRecords = purchaseRecords.filter((r) => r.date.startsWith(month));
     }
 
-    // Revenue
     const foodSales = salesRecords.reduce((s, r) => s + toNum(r.foodSales), 0);
     const beverageSales = salesRecords.reduce((s, r) => s + toNum(r.beverageSales), 0);
     const totalRevenue = foodSales + beverageSales;
-
-    // VAT
     const outputVat = salesRecords.reduce((s, r) => s + toNum(r.outputVat), 0);
 
-    // COGS by category
     const foodCost = purchaseRecords
       .filter((r) => r.category === "food")
       .reduce((s, r) => s + toNum(r.amountBeforeVat), 0);
@@ -47,27 +50,19 @@ router.get("/pl", async (req, res) => {
     const totalCOGS = foodCost + beverageCost + otherCost;
     const inputVat = purchaseRecords.reduce((s, r) => s + toNum(r.vatAmount), 0);
 
-    // Gross Profit
     const grossProfit = totalRevenue - totalCOGS;
 
-    // Labor Cost (TLC) - sum of all employee total monthly costs
-    const employees = await db.select().from(employeesTable);
+    const employees = await db.select().from(employeesTable)
+      .where(eq(employeesTable.restaurantId, restaurantId));
     const totalLaborCost = employees.reduce((s, e) => s + toNum(e.totalMonthlyCost), 0);
 
-    // Fixed Expenses
-    const expenses = await db.select().from(expensesTable);
+    const expenses = await db.select().from(expensesTable)
+      .where(eq(expensesTable.restaurantId, restaurantId));
     const totalFixedExpenses = expenses.reduce((s, e) => s + toNum(e.monthlyCost), 0);
 
-    // Operating Expenses = Labor + Fixed
     const totalOperatingExpenses = totalLaborCost + totalFixedExpenses;
-
-    // Operating Profit (EBITDA)
     const operatingProfit = grossProfit - totalOperatingExpenses;
-
-    // VAT Payable
     const vatPayable = outputVat - inputVat;
-
-    // Net Profit = Operating Profit - VAT Payable
     const netProfit = operatingProfit - vatPayable;
 
     res.json({

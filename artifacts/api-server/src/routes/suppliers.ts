@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { suppliersTable, supplierProductsTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
+import { getRestaurantId } from "../lib/restaurant";
 
 const router: IRouter = Router();
 
@@ -42,7 +43,10 @@ function toProduct(r: typeof supplierProductsTable.$inferSelect, supplierName: s
 // GET /api/suppliers
 router.get("/", async (req, res) => {
   try {
-    const records = await db.select().from(suppliersTable).orderBy(suppliersTable.name);
+    const restaurantId = getRestaurantId(req);
+    const records = await db.select().from(suppliersTable)
+      .where(eq(suppliersTable.restaurantId, restaurantId))
+      .orderBy(suppliersTable.name);
     res.json(records.map(toSupplier));
   } catch (err) {
     req.log.error({ err }, "Error listing suppliers");
@@ -53,10 +57,11 @@ router.get("/", async (req, res) => {
 // POST /api/suppliers
 router.post("/", async (req, res) => {
   try {
+    const restaurantId = getRestaurantId(req);
     const { name, contactPerson, phone, email } = req.body;
     const [record] = await db
       .insert(suppliersTable)
-      .values({ name, contactPerson, phone, email })
+      .values({ restaurantId, name, contactPerson, phone, email })
       .returning();
     res.status(201).json(toSupplier(record));
   } catch (err) {
@@ -68,12 +73,13 @@ router.post("/", async (req, res) => {
 // PUT /api/suppliers/:id
 router.put("/:id", async (req, res) => {
   try {
+    const restaurantId = getRestaurantId(req);
     const id = parseInt(req.params.id);
     const { name, contactPerson, phone, email } = req.body;
     const [record] = await db
       .update(suppliersTable)
       .set({ name, contactPerson, phone, email })
-      .where(eq(suppliersTable.id, id))
+      .where(and(eq(suppliersTable.id, id), eq(suppliersTable.restaurantId, restaurantId)))
       .returning();
     if (!record) return res.status(404).json({ error: "Not found" });
     res.json(toSupplier(record));
@@ -86,9 +92,10 @@ router.put("/:id", async (req, res) => {
 // DELETE /api/suppliers/:id
 router.delete("/:id", async (req, res) => {
   try {
+    const restaurantId = getRestaurantId(req);
     const id = parseInt(req.params.id);
     await db.delete(supplierProductsTable).where(eq(supplierProductsTable.supplierId, id));
-    await db.delete(suppliersTable).where(eq(suppliersTable.id, id));
+    await db.delete(suppliersTable).where(and(eq(suppliersTable.id, id), eq(suppliersTable.restaurantId, restaurantId)));
     res.status(204).send();
   } catch (err) {
     req.log.error({ err }, "Error deleting supplier");
@@ -99,17 +106,21 @@ router.delete("/:id", async (req, res) => {
 // GET /api/suppliers/price-comparison
 router.get("/price-comparison", async (req, res) => {
   try {
-    const suppliers = await db.select().from(suppliersTable);
+    const restaurantId = getRestaurantId(req);
+    const suppliers = await db.select().from(suppliersTable)
+      .where(eq(suppliersTable.restaurantId, restaurantId));
     const supplierMap = new Map(suppliers.map((s) => [s.id, s.name]));
+    const supplierIds = suppliers.map((s) => s.id);
     const products = await db.select().from(supplierProductsTable).orderBy(supplierProductsTable.productName);
-    const result = products.map((p) => {
+    const filtered = products.filter((p) => p.supplierId != null && supplierIds.includes(p.supplierId));
+    const result = filtered.map((p) => {
       const prev = toNum(p.previousPrice);
       const curr = toNum(p.currentPrice)!;
       const diff = prev != null ? +(curr - prev).toFixed(2) : 0;
       const pct = prev != null && prev !== 0 ? +((diff / prev) * 100).toFixed(2) : 0;
       return {
         supplierId: p.supplierId,
-        supplierName: supplierMap.get(p.supplierId) ?? "Unknown",
+        supplierName: supplierMap.get(p.supplierId!) ?? "Unknown",
         productName: p.productName,
         previousPrice: prev ?? undefined,
         currentPrice: curr,
@@ -128,10 +139,14 @@ router.get("/price-comparison", async (req, res) => {
 // GET /api/supplier-products
 router.get("/products", async (req, res) => {
   try {
-    const suppliers = await db.select().from(suppliersTable);
+    const restaurantId = getRestaurantId(req);
+    const suppliers = await db.select().from(suppliersTable)
+      .where(eq(suppliersTable.restaurantId, restaurantId));
     const supplierMap = new Map(suppliers.map((s) => [s.id, s.name]));
+    const supplierIds = suppliers.map((s) => s.id);
     const products = await db.select().from(supplierProductsTable).orderBy(supplierProductsTable.productName);
-    res.json(products.map((p) => toProduct(p, supplierMap.get(p.supplierId) ?? "Unknown")));
+    const filtered = products.filter((p) => p.supplierId != null && supplierIds.includes(p.supplierId));
+    res.json(filtered.map((p) => toProduct(p, supplierMap.get(p.supplierId!) ?? "Unknown")));
   } catch (err) {
     req.log.error({ err }, "Error listing supplier products");
     res.status(500).json({ error: "Internal server error" });

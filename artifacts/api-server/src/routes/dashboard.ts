@@ -1,6 +1,8 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { salesTable, purchasesTable, employeesTable, expensesTable } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
+import { getRestaurantId } from "../lib/restaurant";
 
 const router: IRouter = Router();
 
@@ -11,10 +13,15 @@ function toNum(v: unknown) {
 // GET /api/dashboard/summary
 router.get("/summary", async (req, res) => {
   try {
+    const restaurantId = getRestaurantId(req);
     const month = req.query.month as string | undefined;
 
-    let salesRecords = await db.select().from(salesTable).orderBy(salesTable.date);
-    let purchaseRecords = await db.select().from(purchasesTable).orderBy(purchasesTable.date);
+    let salesRecords = await db.select().from(salesTable)
+      .where(eq(salesTable.restaurantId, restaurantId))
+      .orderBy(salesTable.date);
+    let purchaseRecords = await db.select().from(purchasesTable)
+      .where(eq(purchasesTable.restaurantId, restaurantId))
+      .orderBy(purchasesTable.date);
 
     if (month) {
       salesRecords = salesRecords.filter((r) => r.date.startsWith(month));
@@ -30,14 +37,14 @@ router.get("/summary", async (req, res) => {
     const inputVat = purchaseRecords.reduce((s, r) => s + toNum(r.vatAmount), 0);
     const vatPayable = outputVat - inputVat;
 
-    // Employees and expenses are always totals (monthly recurring)
-    const employees = await db.select().from(employeesTable);
-    const expenses = await db.select().from(expensesTable);
+    const employees = await db.select().from(employeesTable)
+      .where(eq(employeesTable.restaurantId, restaurantId));
+    const expenses = await db.select().from(expensesTable)
+      .where(eq(expensesTable.restaurantId, restaurantId));
 
     const totalSalaries = employees.reduce((s, e) => s + toNum(e.totalMonthlyCost), 0);
     const totalFixedExpenses = expenses.reduce((s, e) => s + toNum(e.monthlyCost), 0);
 
-    // Net Profit = Sales - Purchases - Salaries - Expenses - VAT Payable
     const netProfit = totalSales - totalPurchases - totalSalaries - totalFixedExpenses - vatPayable;
 
     res.json({

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Restaurant Management & Accounting System for Saudi Arabia. Full-stack pnpm monorepo using TypeScript, React, and Express.
+Multi-restaurant Management & Accounting System for Saudi Arabia. Manages 3 restaurants: **Asad Al-Hamra**, **Sabah Al-El**, **Chicken Bar**. Full-stack pnpm monorepo using TypeScript, React, and Express.
 
 ## Stack
 

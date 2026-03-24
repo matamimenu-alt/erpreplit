@@ -36,6 +36,7 @@ import type {
   PLReport,
   PriceComparison,
   Purchase,
+  Restaurant,
   Sale,
   Supplier,
   SupplierProduct,
@@ -118,6 +119,81 @@ export function useHealthCheck<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getHealthCheckQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List all restaurants
+ */
+export const getListRestaurantsUrl = () => {
+  return `/api/restaurants`;
+};
+
+export const listRestaurants = async (
+  options?: RequestInit,
+): Promise<Restaurant[]> => {
+  return customFetch<Restaurant[]>(getListRestaurantsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListRestaurantsQueryKey = () => {
+  return [`/api/restaurants`] as const;
+};
+
+export const getListRestaurantsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listRestaurants>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listRestaurants>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListRestaurantsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listRestaurants>>> = ({
+    signal,
+  }) => listRestaurants({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listRestaurants>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListRestaurantsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listRestaurants>>
+>;
+export type ListRestaurantsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all restaurants
+ */
+
+export function useListRestaurants<
+  TData = Awaited<ReturnType<typeof listRestaurants>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listRestaurants>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListRestaurantsQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

@@ -17,6 +17,7 @@ const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
 let _baseUrl: string | null = null;
 let _authTokenGetter: AuthTokenGetter | null = null;
+let _restaurantId: number | null = null;
 
 /**
  * Set a base URL that is prepended to every relative request URL
@@ -39,6 +40,14 @@ export function setBaseUrl(url: string | null): void {
  */
 export function setAuthTokenGetter(getter: AuthTokenGetter | null): void {
   _authTokenGetter = getter;
+}
+
+/**
+ * Set the active restaurant ID. When set, every request will include an
+ * `X-Restaurant-ID` header so the API server can scope data correctly.
+ */
+export function setRestaurantId(id: number | null): void {
+  _restaurantId = id;
 }
 
 function isRequest(input: RequestInfo | URL): input is Request {
@@ -353,6 +362,11 @@ export async function customFetch<T = unknown>(
     if (token) {
       headers.set("authorization", `Bearer ${token}`);
     }
+  }
+
+  // Attach restaurant ID header when set.
+  if (_restaurantId != null && !headers.has("x-restaurant-id")) {
+    headers.set("x-restaurant-id", String(_restaurantId));
   }
 
   const requestInfo = { method, url: resolveUrl(input) };

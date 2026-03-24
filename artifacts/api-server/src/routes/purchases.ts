@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { purchasesTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
+import { getRestaurantId } from "../lib/restaurant";
 
 const router: IRouter = Router();
 
@@ -51,8 +52,11 @@ function toRecord(r: typeof purchasesTable.$inferSelect) {
 // GET /api/purchases
 router.get("/", async (req, res) => {
   try {
+    const restaurantId = getRestaurantId(req);
     const month = req.query.month as string | undefined;
-    let records = await db.select().from(purchasesTable).orderBy(purchasesTable.date);
+    let records = await db.select().from(purchasesTable)
+      .where(eq(purchasesTable.restaurantId, restaurantId))
+      .orderBy(purchasesTable.date);
     if (month) {
       records = records.filter((r) => r.date.startsWith(month));
     }
@@ -66,6 +70,7 @@ router.get("/", async (req, res) => {
 // POST /api/purchases
 router.post("/", async (req, res) => {
   try {
+    const restaurantId = getRestaurantId(req);
     const { date, supplierName, productName, category, quantity, price, priceIncludesVat } = req.body;
     const { amountBeforeVat, vatAmount, totalAmount } = calcPurchase(
       Number(quantity),
@@ -75,6 +80,7 @@ router.post("/", async (req, res) => {
     const [record] = await db
       .insert(purchasesTable)
       .values({
+        restaurantId,
         date,
         supplierName,
         productName,
@@ -97,6 +103,7 @@ router.post("/", async (req, res) => {
 // PUT /api/purchases/:id
 router.put("/:id", async (req, res) => {
   try {
+    const restaurantId = getRestaurantId(req);
     const id = parseInt(req.params.id);
     const { date, supplierName, productName, category, quantity, price, priceIncludesVat } = req.body;
     const { amountBeforeVat, vatAmount, totalAmount } = calcPurchase(
@@ -118,7 +125,7 @@ router.put("/:id", async (req, res) => {
         vatAmount: String(vatAmount),
         totalAmount: String(totalAmount),
       })
-      .where(eq(purchasesTable.id, id))
+      .where(and(eq(purchasesTable.id, id), eq(purchasesTable.restaurantId, restaurantId)))
       .returning();
     if (!record) return res.status(404).json({ error: "Not found" });
     res.json(toRecord(record));
@@ -131,8 +138,9 @@ router.put("/:id", async (req, res) => {
 // DELETE /api/purchases/:id
 router.delete("/:id", async (req, res) => {
   try {
+    const restaurantId = getRestaurantId(req);
     const id = parseInt(req.params.id);
-    await db.delete(purchasesTable).where(eq(purchasesTable.id, id));
+    await db.delete(purchasesTable).where(and(eq(purchasesTable.id, id), eq(purchasesTable.restaurantId, restaurantId)));
     res.status(204).send();
   } catch (err) {
     req.log.error({ err }, "Error deleting purchase");

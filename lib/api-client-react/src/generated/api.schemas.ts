@@ -9,6 +9,13 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface Restaurant {
+  id: number;
+  name: string;
+  nameAr?: string | null;
+  createdAt: string;
+}
+
 export interface Sale {
   id: number;
   date: string;

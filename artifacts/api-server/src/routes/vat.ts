@@ -1,6 +1,8 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { salesTable, purchasesTable } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
+import { getRestaurantId } from "../lib/restaurant";
 
 const router: IRouter = Router();
 
@@ -11,10 +13,15 @@ function toNum(v: unknown) {
 // GET /api/vat/report
 router.get("/report", async (req, res) => {
   try {
+    const restaurantId = getRestaurantId(req);
     const month = req.query.month as string | undefined;
 
-    let salesRecords = await db.select().from(salesTable).orderBy(salesTable.date);
-    let purchaseRecords = await db.select().from(purchasesTable).orderBy(purchasesTable.date);
+    let salesRecords = await db.select().from(salesTable)
+      .where(eq(salesTable.restaurantId, restaurantId))
+      .orderBy(salesTable.date);
+    let purchaseRecords = await db.select().from(purchasesTable)
+      .where(eq(purchasesTable.restaurantId, restaurantId))
+      .orderBy(purchasesTable.date);
 
     if (month) {
       salesRecords = salesRecords.filter((r) => r.date.startsWith(month));

@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { employeesTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
+import { getRestaurantId } from "../lib/restaurant";
 
 const router: IRouter = Router();
 
@@ -41,7 +42,10 @@ function toRecord(r: typeof employeesTable.$inferSelect) {
 // GET /api/employees
 router.get("/", async (req, res) => {
   try {
-    const records = await db.select().from(employeesTable).orderBy(employeesTable.name);
+    const restaurantId = getRestaurantId(req);
+    const records = await db.select().from(employeesTable)
+      .where(eq(employeesTable.restaurantId, restaurantId))
+      .orderBy(employeesTable.name);
     res.json(records.map(toRecord));
   } catch (err) {
     req.log.error({ err }, "Error listing employees");
@@ -52,6 +56,7 @@ router.get("/", async (req, res) => {
 // POST /api/employees
 router.post("/", async (req, res) => {
   try {
+    const restaurantId = getRestaurantId(req);
     const {
       name, jobTitle, salary, iqamaExpiryDate, iqamaRenewalDate,
       lastTravelDate, vacationBalance, accommodationCost, medicalInsurance,
@@ -64,6 +69,7 @@ router.post("/", async (req, res) => {
     const [record] = await db
       .insert(employeesTable)
       .values({
+        restaurantId,
         name, jobTitle,
         salary: String(Number(salary).toFixed(2)),
         iqamaExpiryDate: iqamaExpiryDate || null,
@@ -87,6 +93,7 @@ router.post("/", async (req, res) => {
 // PUT /api/employees/:id
 router.put("/:id", async (req, res) => {
   try {
+    const restaurantId = getRestaurantId(req);
     const id = parseInt(req.params.id);
     const {
       name, jobTitle, salary, iqamaExpiryDate, iqamaRenewalDate,
@@ -112,7 +119,7 @@ router.put("/:id", async (req, res) => {
         airTicketCost: String(Number(airTicketCost || 0).toFixed(2)),
         totalMonthlyCost: String(totalMonthlyCost),
       })
-      .where(eq(employeesTable.id, id))
+      .where(and(eq(employeesTable.id, id), eq(employeesTable.restaurantId, restaurantId)))
       .returning();
     if (!record) return res.status(404).json({ error: "Not found" });
     res.json(toRecord(record));
@@ -125,8 +132,9 @@ router.put("/:id", async (req, res) => {
 // DELETE /api/employees/:id
 router.delete("/:id", async (req, res) => {
   try {
+    const restaurantId = getRestaurantId(req);
     const id = parseInt(req.params.id);
-    await db.delete(employeesTable).where(eq(employeesTable.id, id));
+    await db.delete(employeesTable).where(and(eq(employeesTable.id, id), eq(employeesTable.restaurantId, restaurantId)));
     res.status(204).send();
   } catch (err) {
     req.log.error({ err }, "Error deleting employee");

@@ -1,3 +1,4 @@
+export * from "./restaurants";
 export * from "./sales";
 export * from "./purchases";
 export * from "./suppliers";

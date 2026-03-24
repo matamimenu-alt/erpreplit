@@ -28,6 +28,7 @@ export * from "./priceComparison";
 export * from "./priceComparisonTrend";
 export * from "./purchase";
 export * from "./purchaseCategory";
+export * from "./restaurant";
 export * from "./sale";
 export * from "./supplier";
 export * from "./supplierProduct";

@@ -15,6 +15,17 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
+ * @summary List all restaurants
+ */
+export const ListRestaurantsResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  nameAr: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+export const ListRestaurantsResponse = zod.array(ListRestaurantsResponseItem);
+
+/**
  * @summary List all sales records
  */
 export const ListSalesQueryParams = zod.object({

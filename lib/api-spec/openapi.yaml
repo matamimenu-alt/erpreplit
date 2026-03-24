@@ -40,6 +40,22 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 
+  # Restaurants
+  /restaurants:
+    get:
+      operationId: listRestaurants
+      tags: [health]
+      summary: List all restaurants
+      responses:
+        "200":
+          description: List of restaurants
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Restaurant"
+
   # Sales
   /sales:
     get:
@@ -577,6 +593,23 @@ components:
           type: string
       required:
         - status
+
+    Restaurant:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        nameAr:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - createdAt
 
     Sale:
       type: object
