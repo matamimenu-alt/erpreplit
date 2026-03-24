@@ -32,9 +32,9 @@ function calcPayroll(data: {
   const { salary, socialSecurity, laborFees, iqamaRenewalYearly, medicalInsurance, airTicketCost, foodMeal } = data;
 
   // Monthly equivalents
-  const monthlyIqamaRenewal = +(iqamaRenewalYearly / 12).toFixed(2);
+  const monthlyIqamaRenewal = +(iqamaRenewalYearly / 3).toFixed(2);   // renewed every 3 months
   const monthlyMedical = +(medicalInsurance / 12).toFixed(2);
-  const monthlyAirTicket = +(airTicketCost / 12).toFixed(2);
+  const monthlyAirTicket = +(airTicketCost / 24).toFixed(2);           // every 24 months
   const monthlyIndemnity = +(salary / 12).toFixed(2);               // End-of-service provision
   const monthlyVacation = +((salary / 30 * 21) / 12).toFixed(2);   // Annual leave provision
 

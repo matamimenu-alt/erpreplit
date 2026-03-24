@@ -55,9 +55,9 @@ function usePayrollPreview(form: ReturnType<typeof useForm<EmpForm>>) {
   const ticket = Number(useWatch({ control: form.control, name: "airTicketCost" })) || 0;
   const food = Number(useWatch({ control: form.control, name: "foodMeal" })) || 0;
 
-  const monthlyIqama = +(iqama / 12).toFixed(2);
+  const monthlyIqama = +(iqama / 3).toFixed(2);      // every 3 months
   const monthlyMedical = +(medical / 12).toFixed(2);
-  const monthlyTicket = +(ticket / 12).toFixed(2);
+  const monthlyTicket = +(ticket / 24).toFixed(2);   // every 24 months
   const monthlyIndemnity = +(salary / 12).toFixed(2);
   const monthlyVacation = +((salary / 30 * 21) / 12).toFixed(2);
   const totalTaxes = +(ss + lf + monthlyIqama).toFixed(2);
@@ -149,15 +149,15 @@ function EmpModal({
               <SH t="Monthly Payroll Taxes" />
               <F label="Social Security / GOSI (SAR/month)" name="socialSecurity" hint="Monthly GOSI contribution amount" />
               <F label="Labor Fees (SAR/month)" name="laborFees" hint="Monthly government labor fees" />
-              <F label="Iqama Renewal (SAR/year)" name="iqamaRenewalYearly" hint={`Monthly = SAR ${(Number(form.watch("iqamaRenewalYearly")) / 12).toFixed(2)}`} />
+              <F label="Iqama Renewal Cost (SAR per 3 months)" name="iqamaRenewalYearly" hint={`Monthly provision = SAR ${(Number(form.watch("iqamaRenewalYearly")) / 3).toFixed(2)}`} />
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm col-span-full">
                 <div className="flex justify-between"><span className="text-slate-600">Total Payroll Taxes / month</span><span className="font-bold">{formatSAR(p.totalTaxes)}</span></div>
               </div>
 
               {/* Benefits */}
               <SH t="Employee Benefits" />
-              <F label="Medical Insurance (SAR/year)" name="medicalInsurance" hint={`Monthly = SAR ${(Number(form.watch("medicalInsurance")) / 12).toFixed(2)}`} />
-              <F label="Air Ticket (SAR/year)" name="airTicketCost" hint={`Monthly provision = SAR ${(Number(form.watch("airTicketCost")) / 12).toFixed(2)}`} />
+              <F label="Medical Insurance (SAR/year)" name="medicalInsurance" hint={`Monthly provision = SAR ${(Number(form.watch("medicalInsurance")) / 12).toFixed(2)}`} />
+              <F label="Air Ticket Cost (SAR per ticket / every 24 months)" name="airTicketCost" hint={`Monthly provision = SAR ${(Number(form.watch("airTicketCost")) / 24).toFixed(2)}`} />
               <F label="Food / Meal Allowance (SAR/month)" name="foodMeal" />
               <div className="bg-slate-50 rounded-xl p-3 text-xs text-slate-500 space-y-1 col-span-full">
                 <p><span className="font-semibold">Indemnity:</span> SAR {formatSAR(p.monthlyIndemnity)}/mo (= Salary ÷ 12)</p>
@@ -433,8 +433,8 @@ export default function Employees() {
         {emps.length > 0 && (
           <div className="px-4 py-3 bg-slate-50 border-t text-[11px] text-slate-400 flex flex-wrap gap-x-6 gap-y-1">
             <span>Total Labor Cost = Basic Salary + Payroll Taxes + Benefits</span>
-            <span>Payroll Taxes = Social Security + Labor Fees + Iqama ÷ 12</span>
-            <span>Benefits = Medical÷12 + Indemnity (Salary÷12) + Ticket÷12 + Vacation (Salary÷30×21÷12) + Food</span>
+            <span>Payroll Taxes = Social Security + Labor Fees + Iqama ÷ 3 (every 3mo)</span>
+            <span>Benefits = Medical÷12 + Indemnity (Salary÷12) + Air Ticket÷24 (every 24mo) + Vacation (Salary÷30×21÷12) + Food</span>
           </div>
         )}
       </div>
