@@ -17,6 +17,7 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  CategoryExpenseReport,
   CreateEmployee,
   CreateExpense,
   CreatePurchase,
@@ -26,12 +27,14 @@ import type {
   DashboardSummary,
   Employee,
   Expense,
+  GetCategoryExpenseReportParams,
   GetDashboardSummaryParams,
   GetPLReportParams,
   GetVatReportParams,
   HealthStatus,
   ListPurchasesParams,
   ListSalesParams,
+  MonthlyPurchaseReport,
   MonthlySalesSummary,
   PLReport,
   PriceComparison,
@@ -2564,6 +2567,191 @@ export function useGetPLReport<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetPLReportQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get monthly purchase totals
+ */
+export const getGetMonthlyPurchaseReportUrl = () => {
+  return `/api/reports/purchases/monthly`;
+};
+
+export const getMonthlyPurchaseReport = async (
+  options?: RequestInit,
+): Promise<MonthlyPurchaseReport[]> => {
+  return customFetch<MonthlyPurchaseReport[]>(
+    getGetMonthlyPurchaseReportUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetMonthlyPurchaseReportQueryKey = () => {
+  return [`/api/reports/purchases/monthly`] as const;
+};
+
+export const getGetMonthlyPurchaseReportQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMonthlyPurchaseReport>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getMonthlyPurchaseReport>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetMonthlyPurchaseReportQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getMonthlyPurchaseReport>>
+  > = ({ signal }) => getMonthlyPurchaseReport({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMonthlyPurchaseReport>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetMonthlyPurchaseReportQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMonthlyPurchaseReport>>
+>;
+export type GetMonthlyPurchaseReportQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get monthly purchase totals
+ */
+
+export function useGetMonthlyPurchaseReport<
+  TData = Awaited<ReturnType<typeof getMonthlyPurchaseReport>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getMonthlyPurchaseReport>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetMonthlyPurchaseReportQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get purchases grouped by category
+ */
+export const getGetCategoryExpenseReportUrl = (
+  params?: GetCategoryExpenseReportParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/reports/purchases/by-category?${stringifiedParams}`
+    : `/api/reports/purchases/by-category`;
+};
+
+export const getCategoryExpenseReport = async (
+  params?: GetCategoryExpenseReportParams,
+  options?: RequestInit,
+): Promise<CategoryExpenseReport[]> => {
+  return customFetch<CategoryExpenseReport[]>(
+    getGetCategoryExpenseReportUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetCategoryExpenseReportQueryKey = (
+  params?: GetCategoryExpenseReportParams,
+) => {
+  return [
+    `/api/reports/purchases/by-category`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetCategoryExpenseReportQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCategoryExpenseReport>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetCategoryExpenseReportParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCategoryExpenseReport>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCategoryExpenseReportQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCategoryExpenseReport>>
+  > = ({ signal }) =>
+    getCategoryExpenseReport(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCategoryExpenseReport>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCategoryExpenseReportQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCategoryExpenseReport>>
+>;
+export type GetCategoryExpenseReportQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get purchases grouped by category
+ */
+
+export function useGetCategoryExpenseReport<
+  TData = Awaited<ReturnType<typeof getCategoryExpenseReport>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetCategoryExpenseReportParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCategoryExpenseReport>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCategoryExpenseReportQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

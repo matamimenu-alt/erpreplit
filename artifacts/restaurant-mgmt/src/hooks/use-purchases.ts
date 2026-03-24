@@ -5,7 +5,10 @@ import {
   useDeletePurchase,
   getListPurchasesQueryKey,
   getGetDashboardSummaryQueryKey,
-  getGetVatReportQueryKey
+  getGetVatReportQueryKey,
+  getGetPLReportQueryKey,
+  getGetMonthlyPurchaseReportQueryKey,
+  getGetCategoryExpenseReportQueryKey,
 } from "@workspace/api-client-react";
 
 export function usePurchasesMutations() {
@@ -15,6 +18,9 @@ export function usePurchasesMutations() {
     queryClient.invalidateQueries({ queryKey: getListPurchasesQueryKey() });
     queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
     queryClient.invalidateQueries({ queryKey: getGetVatReportQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetPLReportQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetMonthlyPurchaseReportQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetCategoryExpenseReportQueryKey() });
   };
 
   const create = useCreatePurchase({ mutation: { onSuccess: invalidateQueries } });

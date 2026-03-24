@@ -101,6 +101,8 @@ export const GetMonthlySalesSummaryResponse = zod.array(
  */
 export const ListPurchasesQueryParams = zod.object({
   month: zod.coerce.string().optional().describe("Filter by month (YYYY-MM)"),
+  category: zod.coerce.string().optional().describe("Filter by category"),
+  search: zod.coerce.string().optional().describe("Search by product name"),
 });
 
 export const ListPurchasesResponseItem = zod.object({
@@ -108,13 +110,23 @@ export const ListPurchasesResponseItem = zod.object({
   date: zod.string(),
   supplierName: zod.string(),
   productName: zod.string(),
-  category: zod.enum(["food", "beverage", "other"]),
+  category: zod.enum([
+    "cost-food",
+    "cost-beverage",
+    "cost-general",
+    "fuel-energy",
+    "maintenance",
+    "it-communication",
+    "marketing",
+    "others",
+  ]),
   quantity: zod.number(),
   price: zod.number(),
   priceIncludesVat: zod.boolean(),
   amountBeforeVat: zod.number(),
   vatAmount: zod.number(),
   totalAmount: zod.number(),
+  notes: zod.string().nullish(),
   createdAt: zod.string(),
 });
 export const ListPurchasesResponse = zod.array(ListPurchasesResponseItem);
@@ -124,12 +136,22 @@ export const ListPurchasesResponse = zod.array(ListPurchasesResponseItem);
  */
 export const CreatePurchaseBody = zod.object({
   date: zod.string(),
-  supplierName: zod.string(),
+  supplierName: zod.string().optional(),
   productName: zod.string(),
-  category: zod.enum(["food", "beverage", "other"]),
+  category: zod.enum([
+    "cost-food",
+    "cost-beverage",
+    "cost-general",
+    "fuel-energy",
+    "maintenance",
+    "it-communication",
+    "marketing",
+    "others",
+  ]),
   quantity: zod.number(),
   price: zod.number(),
   priceIncludesVat: zod.boolean(),
+  notes: zod.string().nullish(),
 });
 
 /**
@@ -141,12 +163,22 @@ export const UpdatePurchaseParams = zod.object({
 
 export const UpdatePurchaseBody = zod.object({
   date: zod.string(),
-  supplierName: zod.string(),
+  supplierName: zod.string().optional(),
   productName: zod.string(),
-  category: zod.enum(["food", "beverage", "other"]),
+  category: zod.enum([
+    "cost-food",
+    "cost-beverage",
+    "cost-general",
+    "fuel-energy",
+    "maintenance",
+    "it-communication",
+    "marketing",
+    "others",
+  ]),
   quantity: zod.number(),
   price: zod.number(),
   priceIncludesVat: zod.boolean(),
+  notes: zod.string().nullish(),
 });
 
 export const UpdatePurchaseResponse = zod.object({
@@ -154,13 +186,23 @@ export const UpdatePurchaseResponse = zod.object({
   date: zod.string(),
   supplierName: zod.string(),
   productName: zod.string(),
-  category: zod.enum(["food", "beverage", "other"]),
+  category: zod.enum([
+    "cost-food",
+    "cost-beverage",
+    "cost-general",
+    "fuel-energy",
+    "maintenance",
+    "it-communication",
+    "marketing",
+    "others",
+  ]),
   quantity: zod.number(),
   price: zod.number(),
   priceIncludesVat: zod.boolean(),
   amountBeforeVat: zod.number(),
   vatAmount: zod.number(),
   totalAmount: zod.number(),
+  notes: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -474,6 +516,12 @@ export const GetPLReportResponse = zod.object({
   grossMarginPercent: zod.number(),
   foodCostPercent: zod.number(),
   beverageCostPercent: zod.number(),
+  fuelEnergyCost: zod.number(),
+  maintenanceCost: zod.number(),
+  itCommunicationCost: zod.number(),
+  marketingCost: zod.number(),
+  othersPurchaseCost: zod.number(),
+  totalPurchaseOpex: zod.number(),
   totalLaborCost: zod.number(),
   totalFixedExpenses: zod.number(),
   totalOperatingExpenses: zod.number(),
@@ -484,6 +532,39 @@ export const GetPLReportResponse = zod.object({
   netProfit: zod.number(),
   netMarginPercent: zod.number(),
 });
+
+/**
+ * @summary Get monthly purchase totals
+ */
+export const GetMonthlyPurchaseReportResponseItem = zod.object({
+  month: zod.string(),
+  totalAmount: zod.number(),
+  totalVat: zod.number(),
+  netAmount: zod.number(),
+  count: zod.number(),
+});
+export const GetMonthlyPurchaseReportResponse = zod.array(
+  GetMonthlyPurchaseReportResponseItem,
+);
+
+/**
+ * @summary Get purchases grouped by category
+ */
+export const GetCategoryExpenseReportQueryParams = zod.object({
+  month: zod.coerce.string().optional().describe("Filter by month (YYYY-MM)"),
+});
+
+export const GetCategoryExpenseReportResponseItem = zod.object({
+  category: zod.string(),
+  label: zod.string(),
+  totalAmount: zod.number(),
+  totalVat: zod.number(),
+  netAmount: zod.number(),
+  count: zod.number(),
+});
+export const GetCategoryExpenseReportResponse = zod.array(
+  GetCategoryExpenseReportResponseItem,
+);
 
 /**
  * @summary Get financial dashboard summary

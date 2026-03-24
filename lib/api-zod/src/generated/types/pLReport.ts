@@ -19,6 +19,12 @@ export interface PLReport {
   grossMarginPercent: number;
   foodCostPercent: number;
   beverageCostPercent: number;
+  fuelEnergyCost: number;
+  maintenanceCost: number;
+  itCommunicationCost: number;
+  marketingCost: number;
+  othersPurchaseCost: number;
+  totalPurchaseOpex: number;
   totalLaborCost: number;
   totalFixedExpenses: number;
   totalOperatingExpenses: number;

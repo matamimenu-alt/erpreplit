@@ -160,6 +160,16 @@ paths:
           schema:
             type: string
           description: Filter by month (YYYY-MM)
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: Filter by category
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by product name
       responses:
         "200":
           description: List of purchases
@@ -564,6 +574,42 @@ paths:
               schema:
                 $ref: "#/components/schemas/PLReport"
 
+  /reports/purchases/monthly:
+    get:
+      operationId: getMonthlyPurchaseReport
+      tags: [reports]
+      summary: Get monthly purchase totals
+      responses:
+        "200":
+          description: Monthly purchase report
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MonthlyPurchaseReport"
+
+  /reports/purchases/by-category:
+    get:
+      operationId: getCategoryExpenseReport
+      tags: [reports]
+      summary: Get purchases grouped by category
+      parameters:
+        - name: month
+          in: query
+          schema:
+            type: string
+          description: Filter by month (YYYY-MM)
+      responses:
+        "200":
+          description: Category expense report
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CategoryExpenseReport"
+
   # Dashboard
   /dashboard/summary:
     get:
@@ -671,6 +717,18 @@ components:
         - totalSales
         - totalOutputVat
 
+    PurchaseCategory:
+      type: string
+      enum:
+        - cost-food
+        - cost-beverage
+        - cost-general
+        - fuel-energy
+        - maintenance
+        - it-communication
+        - marketing
+        - others
+
     Purchase:
       type: object
       properties:
@@ -683,8 +741,7 @@ components:
         productName:
           type: string
         category:
-          type: string
-          enum: [food, beverage, other]
+          $ref: "#/components/schemas/PurchaseCategory"
         quantity:
           type: number
         price:
@@ -697,6 +754,9 @@ components:
           type: number
         totalAmount:
           type: number
+        notes:
+          type: string
+          nullable: true
         createdAt:
           type: string
       required:
@@ -723,17 +783,18 @@ components:
         productName:
           type: string
         category:
-          type: string
-          enum: [food, beverage, other]
+          $ref: "#/components/schemas/PurchaseCategory"
         quantity:
           type: number
         price:
           type: number
         priceIncludesVat:
           type: boolean
+        notes:
+          type: string
+          nullable: true
       required:
         - date
-        - supplierName
         - productName
         - category
         - quantity
@@ -992,6 +1053,18 @@ components:
           type: number
         beverageCostPercent:
           type: number
+        fuelEnergyCost:
+          type: number
+        maintenanceCost:
+          type: number
+        itCommunicationCost:
+          type: number
+        marketingCost:
+          type: number
+        othersPurchaseCost:
+          type: number
+        totalPurchaseOpex:
+          type: number
         totalLaborCost:
           type: number
         totalFixedExpenses:
@@ -1022,6 +1095,12 @@ components:
         - grossMarginPercent
         - foodCostPercent
         - beverageCostPercent
+        - fuelEnergyCost
+        - maintenanceCost
+        - itCommunicationCost
+        - marketingCost
+        - othersPurchaseCost
+        - totalPurchaseOpex
         - totalLaborCost
         - totalFixedExpenses
         - totalOperatingExpenses
@@ -1031,6 +1110,49 @@ components:
         - vatPayable
         - netProfit
         - netMarginPercent
+
+    MonthlyPurchaseReport:
+      type: object
+      properties:
+        month:
+          type: string
+        totalAmount:
+          type: number
+        totalVat:
+          type: number
+        netAmount:
+          type: number
+        count:
+          type: integer
+      required:
+        - month
+        - totalAmount
+        - totalVat
+        - netAmount
+        - count
+
+    CategoryExpenseReport:
+      type: object
+      properties:
+        category:
+          type: string
+        label:
+          type: string
+        totalAmount:
+          type: number
+        totalVat:
+          type: number
+        netAmount:
+          type: number
+        count:
+          type: integer
+      required:
+        - category
+        - label
+        - totalAmount
+        - totalVat
+        - netAmount
+        - count
 
     VatReport:
       type: object

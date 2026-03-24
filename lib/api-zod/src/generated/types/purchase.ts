@@ -19,5 +19,6 @@ export interface Purchase {
   amountBeforeVat: number;
   vatAmount: number;
   totalAmount: number;
+  notes?: string | null;
   createdAt: string;
 }

@@ -36,15 +36,16 @@ function toRecord(r: typeof purchasesTable.$inferSelect) {
   return {
     id: r.id,
     date: r.date,
-    supplierName: r.supplierName,
+    supplierName: r.supplierName ?? "",
     productName: r.productName,
-    category: (r.category || "other") as "food" | "beverage" | "other",
+    category: r.category || "others",
     quantity: toNum(r.quantity),
     price: toNum(r.price),
     priceIncludesVat: r.priceIncludesVat,
     amountBeforeVat: toNum(r.amountBeforeVat),
     vatAmount: toNum(r.vatAmount),
     totalAmount: toNum(r.totalAmount),
+    notes: r.notes ?? undefined,
     createdAt: r.createdAt.toISOString(),
   };
 }
@@ -54,12 +55,24 @@ router.get("/", async (req, res) => {
   try {
     const restaurantId = getRestaurantId(req);
     const month = req.query.month as string | undefined;
+    const category = req.query.category as string | undefined;
+    const search = req.query.search as string | undefined;
+
     let records = await db.select().from(purchasesTable)
       .where(eq(purchasesTable.restaurantId, restaurantId))
       .orderBy(purchasesTable.date);
+
     if (month) {
       records = records.filter((r) => r.date.startsWith(month));
     }
+    if (category) {
+      records = records.filter((r) => r.category === category);
+    }
+    if (search) {
+      const q = search.toLowerCase();
+      records = records.filter((r) => r.productName.toLowerCase().includes(q));
+    }
+
     res.json(records.map(toRecord));
   } catch (err) {
     req.log.error({ err }, "Error listing purchases");
@@ -71,7 +84,7 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const restaurantId = getRestaurantId(req);
-    const { date, supplierName, productName, category, quantity, price, priceIncludesVat } = req.body;
+    const { date, supplierName, productName, category, quantity, price, priceIncludesVat, notes } = req.body;
     const { amountBeforeVat, vatAmount, totalAmount } = calcPurchase(
       Number(quantity),
       Number(price),
@@ -82,15 +95,16 @@ router.post("/", async (req, res) => {
       .values({
         restaurantId,
         date,
-        supplierName,
+        supplierName: supplierName || "",
         productName,
-        category: category || "other",
+        category: category || "others",
         quantity: String(Number(quantity).toFixed(3)),
         price: String(Number(price).toFixed(2)),
         priceIncludesVat: Boolean(priceIncludesVat),
         amountBeforeVat: String(amountBeforeVat),
         vatAmount: String(vatAmount),
         totalAmount: String(totalAmount),
+        notes: notes || null,
       })
       .returning();
     res.status(201).json(toRecord(record));
@@ -105,7 +119,7 @@ router.put("/:id", async (req, res) => {
   try {
     const restaurantId = getRestaurantId(req);
     const id = parseInt(req.params.id);
-    const { date, supplierName, productName, category, quantity, price, priceIncludesVat } = req.body;
+    const { date, supplierName, productName, category, quantity, price, priceIncludesVat, notes } = req.body;
     const { amountBeforeVat, vatAmount, totalAmount } = calcPurchase(
       Number(quantity),
       Number(price),
@@ -115,15 +129,16 @@ router.put("/:id", async (req, res) => {
       .update(purchasesTable)
       .set({
         date,
-        supplierName,
+        supplierName: supplierName || "",
         productName,
-        category: category || "other",
+        category: category || "others",
         quantity: String(Number(quantity).toFixed(3)),
         price: String(Number(price).toFixed(2)),
         priceIncludesVat: Boolean(priceIncludesVat),
         amountBeforeVat: String(amountBeforeVat),
         vatAmount: String(vatAmount),
         totalAmount: String(totalAmount),
+        notes: notes || null,
       })
       .where(and(eq(purchasesTable.id, id), eq(purchasesTable.restaurantId, restaurantId)))
       .returning();

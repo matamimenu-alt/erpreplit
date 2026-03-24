@@ -7,15 +7,16 @@ export const purchasesTable = pgTable("purchases", {
   id: serial("id").primaryKey(),
   restaurantId: integer("restaurant_id").notNull().references(() => restaurantsTable.id).default(1),
   date: text("date").notNull(),
-  supplierName: text("supplier_name").notNull(),
+  supplierName: text("supplier_name").notNull().default(""),
   productName: text("product_name").notNull(),
-  category: text("category").notNull().default("other"),
+  category: text("category").notNull().default("others"),
   quantity: numeric("quantity", { precision: 12, scale: 3 }).notNull(),
   price: numeric("price", { precision: 12, scale: 2 }).notNull(),
   priceIncludesVat: boolean("price_includes_vat").notNull().default(false),
   amountBeforeVat: numeric("amount_before_vat", { precision: 12, scale: 2 }).notNull(),
   vatAmount: numeric("vat_amount", { precision: 12, scale: 2 }).notNull(),
   totalAmount: numeric("total_amount", { precision: 12, scale: 2 }).notNull(),
+  notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

@@ -6,17 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ListPurchasesParams = {
+export type GetCategoryExpenseReportParams = {
   /**
    * Filter by month (YYYY-MM)
    */
   month?: string;
-  /**
-   * Filter by category
-   */
-  category?: string;
-  /**
-   * Search by product name
-   */
-  search?: string;
 };

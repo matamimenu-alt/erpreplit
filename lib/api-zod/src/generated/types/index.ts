@@ -6,22 +6,24 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./categoryExpenseReport";
 export * from "./createEmployee";
 export * from "./createExpense";
 export * from "./createPurchase";
-export * from "./createPurchaseCategory";
 export * from "./createSale";
 export * from "./createSupplier";
 export * from "./createSupplierProduct";
 export * from "./dashboardSummary";
 export * from "./employee";
 export * from "./expense";
+export * from "./getCategoryExpenseReportParams";
 export * from "./getDashboardSummaryParams";
 export * from "./getPLReportParams";
 export * from "./getVatReportParams";
 export * from "./healthStatus";
 export * from "./listPurchasesParams";
 export * from "./listSalesParams";
+export * from "./monthlyPurchaseReport";
 export * from "./monthlySalesSummary";
 export * from "./pLReport";
 export * from "./priceComparison";

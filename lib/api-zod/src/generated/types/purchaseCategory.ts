@@ -10,7 +10,12 @@ export type PurchaseCategory =
   (typeof PurchaseCategory)[keyof typeof PurchaseCategory];
 
 export const PurchaseCategory = {
-  food: "food",
-  beverage: "beverage",
-  other: "other",
+  "cost-food": "cost-food",
+  "cost-beverage": "cost-beverage",
+  "cost-general": "cost-general",
+  "fuel-energy": "fuel-energy",
+  maintenance: "maintenance",
+  "it-communication": "it-communication",
+  marketing: "marketing",
+  others: "others",
 } as const;
