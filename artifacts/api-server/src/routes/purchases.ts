@@ -37,6 +37,7 @@ function toRecord(r: typeof purchasesTable.$inferSelect) {
     date: r.date,
     supplierName: r.supplierName,
     productName: r.productName,
+    category: (r.category || "other") as "food" | "beverage" | "other",
     quantity: toNum(r.quantity),
     price: toNum(r.price),
     priceIncludesVat: r.priceIncludesVat,
@@ -65,7 +66,7 @@ router.get("/", async (req, res) => {
 // POST /api/purchases
 router.post("/", async (req, res) => {
   try {
-    const { date, supplierName, productName, quantity, price, priceIncludesVat } = req.body;
+    const { date, supplierName, productName, category, quantity, price, priceIncludesVat } = req.body;
     const { amountBeforeVat, vatAmount, totalAmount } = calcPurchase(
       Number(quantity),
       Number(price),
@@ -77,6 +78,7 @@ router.post("/", async (req, res) => {
         date,
         supplierName,
         productName,
+        category: category || "other",
         quantity: String(Number(quantity).toFixed(3)),
         price: String(Number(price).toFixed(2)),
         priceIncludesVat: Boolean(priceIncludesVat),
@@ -96,7 +98,7 @@ router.post("/", async (req, res) => {
 router.put("/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { date, supplierName, productName, quantity, price, priceIncludesVat } = req.body;
+    const { date, supplierName, productName, category, quantity, price, priceIncludesVat } = req.body;
     const { amountBeforeVat, vatAmount, totalAmount } = calcPurchase(
       Number(quantity),
       Number(price),
@@ -108,6 +110,7 @@ router.put("/:id", async (req, res) => {
         date,
         supplierName,
         productName,
+        category: category || "other",
         quantity: String(Number(quantity).toFixed(3)),
         price: String(Number(price).toFixed(2)),
         priceIncludesVat: Boolean(priceIncludesVat),

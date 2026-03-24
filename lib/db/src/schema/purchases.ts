@@ -7,6 +7,7 @@ export const purchasesTable = pgTable("purchases", {
   date: text("date").notNull(),
   supplierName: text("supplier_name").notNull(),
   productName: text("product_name").notNull(),
+  category: text("category").notNull().default("other"),
   quantity: numeric("quantity", { precision: 12, scale: 3 }).notNull(),
   price: numeric("price", { precision: 12, scale: 2 }).notNull(),
   priceIncludesVat: boolean("price_includes_vat").notNull().default(false),

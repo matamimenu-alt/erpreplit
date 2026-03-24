@@ -33,11 +33,21 @@ export interface MonthlySalesSummary {
   totalOutputVat: number;
 }
 
+export type PurchaseCategory =
+  (typeof PurchaseCategory)[keyof typeof PurchaseCategory];
+
+export const PurchaseCategory = {
+  food: "food",
+  beverage: "beverage",
+  other: "other",
+} as const;
+
 export interface Purchase {
   id: number;
   date: string;
   supplierName: string;
   productName: string;
+  category: PurchaseCategory;
   quantity: number;
   price: number;
   priceIncludesVat: boolean;
@@ -47,10 +57,20 @@ export interface Purchase {
   createdAt: string;
 }
 
+export type CreatePurchaseCategory =
+  (typeof CreatePurchaseCategory)[keyof typeof CreatePurchaseCategory];
+
+export const CreatePurchaseCategory = {
+  food: "food",
+  beverage: "beverage",
+  other: "other",
+} as const;
+
 export interface CreatePurchase {
   date: string;
   supplierName: string;
   productName: string;
+  category: CreatePurchaseCategory;
   quantity: number;
   price: number;
   priceIncludesVat: boolean;
@@ -158,6 +178,30 @@ export interface CreateExpense {
   contractEndDate?: string;
 }
 
+export interface PLReport {
+  month?: string;
+  foodSales: number;
+  beverageSales: number;
+  totalRevenue: number;
+  foodCost: number;
+  beverageCost: number;
+  otherCost: number;
+  totalCOGS: number;
+  grossProfit: number;
+  grossMarginPercent: number;
+  foodCostPercent: number;
+  beverageCostPercent: number;
+  totalLaborCost: number;
+  totalFixedExpenses: number;
+  totalOperatingExpenses: number;
+  operatingProfit: number;
+  outputVat: number;
+  inputVat: number;
+  vatPayable: number;
+  netProfit: number;
+  netMarginPercent: number;
+}
+
 export interface VatReport {
   month?: string;
   totalSales: number;
@@ -196,6 +240,13 @@ export type ListPurchasesParams = {
 };
 
 export type GetVatReportParams = {
+  /**
+   * Filter by month (YYYY-MM)
+   */
+  month?: string;
+};
+
+export type GetPLReportParams = {
   /**
    * Filter by month (YYYY-MM)
    */

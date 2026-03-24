@@ -27,11 +27,13 @@ import type {
   Employee,
   Expense,
   GetDashboardSummaryParams,
+  GetPLReportParams,
   GetVatReportParams,
   HealthStatus,
   ListPurchasesParams,
   ListSalesParams,
   MonthlySalesSummary,
+  PLReport,
   PriceComparison,
   Purchase,
   Sale,
@@ -2392,6 +2394,100 @@ export function useGetVatReport<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetVatReportQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get full Profit & Loss report
+ */
+export const getGetPLReportUrl = (params?: GetPLReportParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/reports/pl?${stringifiedParams}`
+    : `/api/reports/pl`;
+};
+
+export const getPLReport = async (
+  params?: GetPLReportParams,
+  options?: RequestInit,
+): Promise<PLReport> => {
+  return customFetch<PLReport>(getGetPLReportUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPLReportQueryKey = (params?: GetPLReportParams) => {
+  return [`/api/reports/pl`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetPLReportQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPLReport>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetPLReportParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPLReport>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetPLReportQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPLReport>>> = ({
+    signal,
+  }) => getPLReport(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPLReport>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetPLReportQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPLReport>>
+>;
+export type GetPLReportQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get full Profit & Loss report
+ */
+
+export function useGetPLReport<
+  TData = Awaited<ReturnType<typeof getPLReport>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetPLReportParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPLReport>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPLReportQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

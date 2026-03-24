@@ -528,6 +528,26 @@ paths:
               schema:
                 $ref: "#/components/schemas/VatReport"
 
+  # P&L Report
+  /reports/pl:
+    get:
+      operationId: getPLReport
+      tags: [reports]
+      summary: Get full Profit & Loss report
+      parameters:
+        - name: month
+          in: query
+          schema:
+            type: string
+          description: Filter by month (YYYY-MM)
+      responses:
+        "200":
+          description: P&L report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PLReport"
+
   # Dashboard
   /dashboard/summary:
     get:
@@ -629,6 +649,9 @@ components:
           type: string
         productName:
           type: string
+        category:
+          type: string
+          enum: [food, beverage, other]
         quantity:
           type: number
         price:
@@ -648,6 +671,7 @@ components:
         - date
         - supplierName
         - productName
+        - category
         - quantity
         - price
         - priceIncludesVat
@@ -665,6 +689,9 @@ components:
           type: string
         productName:
           type: string
+        category:
+          type: string
+          enum: [food, beverage, other]
         quantity:
           type: number
         price:
@@ -675,6 +702,7 @@ components:
         - date
         - supplierName
         - productName
+        - category
         - quantity
         - price
         - priceIncludesVat
@@ -903,6 +931,73 @@ components:
       required:
         - name
         - monthlyCost
+
+    PLReport:
+      type: object
+      properties:
+        month:
+          type: string
+        foodSales:
+          type: number
+        beverageSales:
+          type: number
+        totalRevenue:
+          type: number
+        foodCost:
+          type: number
+        beverageCost:
+          type: number
+        otherCost:
+          type: number
+        totalCOGS:
+          type: number
+        grossProfit:
+          type: number
+        grossMarginPercent:
+          type: number
+        foodCostPercent:
+          type: number
+        beverageCostPercent:
+          type: number
+        totalLaborCost:
+          type: number
+        totalFixedExpenses:
+          type: number
+        totalOperatingExpenses:
+          type: number
+        operatingProfit:
+          type: number
+        outputVat:
+          type: number
+        inputVat:
+          type: number
+        vatPayable:
+          type: number
+        netProfit:
+          type: number
+        netMarginPercent:
+          type: number
+      required:
+        - foodSales
+        - beverageSales
+        - totalRevenue
+        - foodCost
+        - beverageCost
+        - otherCost
+        - totalCOGS
+        - grossProfit
+        - grossMarginPercent
+        - foodCostPercent
+        - beverageCostPercent
+        - totalLaborCost
+        - totalFixedExpenses
+        - totalOperatingExpenses
+        - operatingProfit
+        - outputVat
+        - inputVat
+        - vatPayable
+        - netProfit
+        - netMarginPercent
 
     VatReport:
       type: object

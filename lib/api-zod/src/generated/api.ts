@@ -97,6 +97,7 @@ export const ListPurchasesResponseItem = zod.object({
   date: zod.string(),
   supplierName: zod.string(),
   productName: zod.string(),
+  category: zod.enum(["food", "beverage", "other"]),
   quantity: zod.number(),
   price: zod.number(),
   priceIncludesVat: zod.boolean(),
@@ -114,6 +115,7 @@ export const CreatePurchaseBody = zod.object({
   date: zod.string(),
   supplierName: zod.string(),
   productName: zod.string(),
+  category: zod.enum(["food", "beverage", "other"]),
   quantity: zod.number(),
   price: zod.number(),
   priceIncludesVat: zod.boolean(),
@@ -130,6 +132,7 @@ export const UpdatePurchaseBody = zod.object({
   date: zod.string(),
   supplierName: zod.string(),
   productName: zod.string(),
+  category: zod.enum(["food", "beverage", "other"]),
   quantity: zod.number(),
   price: zod.number(),
   priceIncludesVat: zod.boolean(),
@@ -140,6 +143,7 @@ export const UpdatePurchaseResponse = zod.object({
   date: zod.string(),
   supplierName: zod.string(),
   productName: zod.string(),
+  category: zod.enum(["food", "beverage", "other"]),
   quantity: zod.number(),
   price: zod.number(),
   priceIncludesVat: zod.boolean(),
@@ -437,6 +441,37 @@ export const GetVatReportResponse = zod.object({
   totalPurchases: zod.number(),
   inputVat: zod.number(),
   vatPayable: zod.number(),
+});
+
+/**
+ * @summary Get full Profit & Loss report
+ */
+export const GetPLReportQueryParams = zod.object({
+  month: zod.coerce.string().optional().describe("Filter by month (YYYY-MM)"),
+});
+
+export const GetPLReportResponse = zod.object({
+  month: zod.string().optional(),
+  foodSales: zod.number(),
+  beverageSales: zod.number(),
+  totalRevenue: zod.number(),
+  foodCost: zod.number(),
+  beverageCost: zod.number(),
+  otherCost: zod.number(),
+  totalCOGS: zod.number(),
+  grossProfit: zod.number(),
+  grossMarginPercent: zod.number(),
+  foodCostPercent: zod.number(),
+  beverageCostPercent: zod.number(),
+  totalLaborCost: zod.number(),
+  totalFixedExpenses: zod.number(),
+  totalOperatingExpenses: zod.number(),
+  operatingProfit: zod.number(),
+  outputVat: zod.number(),
+  inputVat: zod.number(),
+  vatPayable: zod.number(),
+  netProfit: zod.number(),
+  netMarginPercent: zod.number(),
 });
 
 /**

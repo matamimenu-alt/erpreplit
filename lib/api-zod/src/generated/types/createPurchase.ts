@@ -5,11 +5,13 @@
  * Restaurant Management & Accounting System API
  * OpenAPI spec version: 0.1.0
  */
+import type { CreatePurchaseCategory } from "./createPurchaseCategory";
 
 export interface CreatePurchase {
   date: string;
   supplierName: string;
   productName: string;
+  category: CreatePurchaseCategory;
   quantity: number;
   price: number;
   priceIncludesVat: boolean;

@@ -8,15 +8,28 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Trash2 } from "lucide-react";
 
+const CATEGORIES = [
+  { value: "food", label: "Food Cost" },
+  { value: "beverage", label: "Beverage Cost" },
+  { value: "other", label: "Other" },
+];
+
 const purchaseSchema = z.object({
   date: z.string().min(1, "Required"),
   supplierName: z.string().min(1, "Required"),
   productName: z.string().min(1, "Required"),
+  category: z.enum(["food", "beverage", "other"]),
   quantity: z.coerce.number().min(0.01),
   price: z.coerce.number().min(0),
   priceIncludesVat: z.boolean()
 });
 type PurchaseForm = z.infer<typeof purchaseSchema>;
+
+const categoryBadge: Record<string, string> = {
+  food: "bg-orange-100 text-orange-700",
+  beverage: "bg-blue-100 text-blue-700",
+  other: "bg-slate-100 text-slate-600",
+};
 
 export default function Purchases() {
   const [month, setMonth] = useState("");
@@ -27,8 +40,16 @@ export default function Purchases() {
 
   const form = useForm<PurchaseForm>({
     resolver: zodResolver(purchaseSchema),
-    defaultValues: { date: new Date().toISOString().split('T')[0], quantity: 1, price: 0, priceIncludesVat: false, supplierName: "", productName: "" }
+    defaultValues: {
+      date: new Date().toISOString().split('T')[0],
+      quantity: 1, price: 0, priceIncludesVat: false,
+      supplierName: "", productName: "", category: "food"
+    }
   });
+
+  const totalPreVat = purchases?.reduce((s, p) => s + p.amountBeforeVat, 0) ?? 0;
+  const totalVat = purchases?.reduce((s, p) => s + p.vatAmount, 0) ?? 0;
+  const totalAmount = purchases?.reduce((s, p) => s + p.totalAmount, 0) ?? 0;
 
   return (
     <div>
@@ -61,6 +82,7 @@ export default function Purchases() {
                 <th className="px-6 py-4">Date</th>
                 <th className="px-6 py-4">Supplier</th>
                 <th className="px-6 py-4">Product</th>
+                <th className="px-6 py-4">Category</th>
                 <th className="px-6 py-4 text-right">Qty</th>
                 <th className="px-6 py-4 text-right">Unit Price</th>
                 <th className="px-6 py-4 text-right">Pre-VAT</th>
@@ -71,15 +93,20 @@ export default function Purchases() {
             </thead>
             <tbody className="divide-y text-slate-700">
               {isLoading ? (
-                <tr><td colSpan={9} className="text-center py-8">Loading...</td></tr>
+                <tr><td colSpan={10} className="text-center py-8">Loading...</td></tr>
               ) : purchases?.length === 0 ? (
-                <tr><td colSpan={9} className="text-center py-8">No records</td></tr>
+                <tr><td colSpan={10} className="text-center py-8 text-slate-400">No records found for {formatMonth(month)}</td></tr>
               ) : (
                 purchases?.map((p) => (
                   <tr key={p.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4">{formatDate(p.date)}</td>
                     <td className="px-6 py-4 font-medium">{p.supplierName}</td>
                     <td className="px-6 py-4 text-slate-500">{p.productName}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${categoryBadge[p.category] ?? categoryBadge.other}`}>
+                        {CATEGORIES.find(c => c.value === p.category)?.label ?? p.category}
+                      </span>
+                    </td>
                     <td className="px-6 py-4 text-right">{p.quantity}</td>
                     <td className="px-6 py-4 text-right">{formatSAR(p.price)} {p.priceIncludesVat && <span className="text-[10px] text-slate-400 block">inc. VAT</span>}</td>
                     <td className="px-6 py-4 text-right">{formatSAR(p.amountBeforeVat)}</td>
@@ -94,6 +121,17 @@ export default function Purchases() {
                 ))
               )}
             </tbody>
+            {(purchases?.length ?? 0) > 0 && (
+              <tfoot className="bg-slate-50 border-t font-semibold text-slate-800">
+                <tr>
+                  <td colSpan={6} className="px-6 py-4 text-right">Totals:</td>
+                  <td className="px-6 py-4 text-right">{formatSAR(totalPreVat)}</td>
+                  <td className="px-6 py-4 text-right text-emerald-600">{formatSAR(totalVat)}</td>
+                  <td className="px-6 py-4 text-right">{formatSAR(totalAmount)}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       </div>
@@ -102,7 +140,7 @@ export default function Purchases() {
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-card w-full max-w-lg rounded-2xl shadow-xl overflow-hidden animate-in zoom-in-95">
             <div className="p-6 border-b">
-              <h2 className="text-xl font-bold font-display">Log Purchase Invoice</h2>
+              <h2 className="text-xl font-bold">Log Purchase Invoice</h2>
             </div>
             <form onSubmit={form.handleSubmit((d) => create.mutate({ data: d }, { onSuccess: () => { setIsDialogOpen(false); form.reset(); } }))} className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -119,13 +157,22 @@ export default function Purchases() {
                 <label className="block text-sm font-medium mb-1">Product Description</label>
                 <input {...form.register("productName")} className="w-full px-3 py-2 border rounded-xl outline-none focus:border-primary" />
               </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Cost Category</label>
+                <select {...form.register("category")} className="w-full px-3 py-2 border rounded-xl outline-none focus:border-primary bg-white">
+                  {CATEGORIES.map(c => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-slate-400 mt-1">Used for P&L food/beverage cost breakdown</p>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Quantity</label>
                   <input type="number" step="0.01" {...form.register("quantity")} className="w-full px-3 py-2 border rounded-xl outline-none focus:border-primary" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Unit Price</label>
+                  <label className="block text-sm font-medium mb-1">Unit Price (SAR)</label>
                   <input type="number" step="0.01" {...form.register("price")} className="w-full px-3 py-2 border rounded-xl outline-none focus:border-primary" />
                 </div>
               </div>
