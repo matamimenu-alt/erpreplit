@@ -1,0 +1,159 @@
+Build a complete **Restaurant Management & Accounting System** for Saudi Arabia using a simple web app (Python Flask + SQLite or Node.js + SQLite).
+
+The system must include the following modules:
+
+1️⃣ SALES MANAGEMENT
+Create a page to record **daily sales excluding VAT (15%)**.
+
+Fields:
+
+* Date
+* Food Sales
+* Beverage Sales
+
+Automatically calculate:
+
+* Total daily sales
+* Monthly totals
+* Monthly sales summary
+
+2️⃣ PURCHASE MANAGEMENT
+Create a purchases section with:
+
+Fields:
+
+* Date
+* Supplier Name
+* Product Name
+* Quantity
+* Price
+* Checkbox: Price includes VAT (15%)
+
+The system must automatically calculate:
+
+* Purchase amount before VAT
+* VAT amount
+* Total purchase amount
+
+3️⃣ VAT CALCULATION (Saudi ZATCA)
+
+Automatically calculate:
+
+Output VAT = Sales × 15%
+Input VAT = Purchases VAT
+
+VAT Payable = Output VAT – Input VAT
+
+Create a **VAT report page** showing:
+
+* Total sales VAT
+* Total purchase VAT
+* VAT payable to the Saudi government.
+
+4️⃣ SUPPLIER PRICE COMPARISON
+
+Create a system that stores supplier product prices.
+
+Show:
+
+* Supplier
+* Product
+* Previous price
+* Current price
+* Price difference
+
+Highlight price increases or decreases.
+
+5️⃣ EMPLOYEE MANAGEMENT
+
+Create an HR system including:
+
+Employee Data:
+
+* Employee Name
+* Job Title
+* Salary
+* Iqama Expiry Date
+* Iqama Renewal Date
+* Last Travel Date
+* Vacation Balance
+
+Monthly cost calculation including:
+
+* Accommodation cost
+* Medical insurance
+* Saudi GOSI insurance
+* Air ticket cost divided by 12 months
+
+Automatically calculate **total monthly employee cost**.
+
+6️⃣ FIXED EXPENSES
+
+Create a page for fixed monthly restaurant expenses.
+
+Examples:
+
+* Rent
+* Electricity
+* Internet
+* Maintenance
+* Service contracts
+
+Fields:
+
+* Expense name
+* Monthly cost
+* Contract start date
+* Contract end date
+
+7️⃣ FINANCIAL DASHBOARD
+
+Create a dashboard showing:
+
+* Total Food Sales
+* Total Beverage Sales
+* Total Purchases
+* VAT Payable
+* Total Salaries
+* Fixed Expenses
+* Net Profit / Net Loss
+
+Formula:
+
+Net Profit =
+Sales
+
+* Purchases
+* Salaries
+* Expenses
+* VAT payable
+
+8️⃣ REPORTS
+
+Create downloadable reports:
+
+* Monthly Profit & Loss
+* VAT report
+* Employee cost report
+* Expense report
+* Supplier price comparison report
+
+9️⃣ USER INTERFACE
+
+Interface must be:
+
+* Simple
+* Clean
+* Mobile friendly
+* Easy for restaurant managers.
+
+Use a left sidebar menu:
+
+Dashboard
+Sales
+Purchases
+Suppliers
+Employees
+Expenses
+VAT Report
+Financial Reports

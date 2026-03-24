@@ -1,22 +1,37 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Restaurant Management & Accounting System API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: sales
+    description: Sales management
+  - name: purchases
+    description: Purchase management
+  - name: suppliers
+    description: Supplier management
+  - name: employees
+    description: Employee management
+  - name: expenses
+    description: Fixed expenses management
+  - name: vat
+    description: VAT reporting
+  - name: dashboard
+    description: Financial dashboard
+  - name: reports
+    description: Report generation
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +39,515 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # Sales
+  /sales:
+    get:
+      operationId: listSales
+      tags: [sales]
+      summary: List all sales records
+      parameters:
+        - name: month
+          in: query
+          schema:
+            type: string
+          description: Filter by month (YYYY-MM)
+      responses:
+        "200":
+          description: List of sales
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Sale"
+    post:
+      operationId: createSale
+      tags: [sales]
+      summary: Create a sales record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSale"
+      responses:
+        "201":
+          description: Created sale
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sale"
+
+  /sales/{id}:
+    put:
+      operationId: updateSale
+      tags: [sales]
+      summary: Update a sale
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSale"
+      responses:
+        "200":
+          description: Updated sale
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sale"
+    delete:
+      operationId: deleteSale
+      tags: [sales]
+      summary: Delete a sale
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /sales/monthly-summary:
+    get:
+      operationId: getMonthlySalesSummary
+      tags: [sales]
+      summary: Get monthly sales summary
+      responses:
+        "200":
+          description: Monthly summary
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MonthlySalesSummary"
+
+  # Purchases
+  /purchases:
+    get:
+      operationId: listPurchases
+      tags: [purchases]
+      summary: List all purchases
+      parameters:
+        - name: month
+          in: query
+          schema:
+            type: string
+          description: Filter by month (YYYY-MM)
+      responses:
+        "200":
+          description: List of purchases
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Purchase"
+    post:
+      operationId: createPurchase
+      tags: [purchases]
+      summary: Create a purchase
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePurchase"
+      responses:
+        "201":
+          description: Created purchase
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Purchase"
+
+  /purchases/{id}:
+    put:
+      operationId: updatePurchase
+      tags: [purchases]
+      summary: Update a purchase
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePurchase"
+      responses:
+        "200":
+          description: Updated purchase
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Purchase"
+    delete:
+      operationId: deletePurchase
+      tags: [purchases]
+      summary: Delete a purchase
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # Suppliers
+  /suppliers:
+    get:
+      operationId: listSuppliers
+      tags: [suppliers]
+      summary: List all suppliers
+      responses:
+        "200":
+          description: List of suppliers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Supplier"
+    post:
+      operationId: createSupplier
+      tags: [suppliers]
+      summary: Create a supplier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSupplier"
+      responses:
+        "201":
+          description: Created supplier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Supplier"
+
+  /suppliers/{id}:
+    put:
+      operationId: updateSupplier
+      tags: [suppliers]
+      summary: Update a supplier
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSupplier"
+      responses:
+        "200":
+          description: Updated supplier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Supplier"
+    delete:
+      operationId: deleteSupplier
+      tags: [suppliers]
+      summary: Delete a supplier
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /suppliers/price-comparison:
+    get:
+      operationId: getSupplierPriceComparison
+      tags: [suppliers]
+      summary: Get supplier price comparison
+      responses:
+        "200":
+          description: Price comparison data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PriceComparison"
+
+  # Supplier Products
+  /supplier-products:
+    get:
+      operationId: listSupplierProducts
+      tags: [suppliers]
+      summary: List supplier products
+      responses:
+        "200":
+          description: List of supplier products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SupplierProduct"
+    post:
+      operationId: createSupplierProduct
+      tags: [suppliers]
+      summary: Create a supplier product price entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSupplierProduct"
+      responses:
+        "201":
+          description: Created supplier product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupplierProduct"
+
+  /supplier-products/{id}:
+    put:
+      operationId: updateSupplierProduct
+      tags: [suppliers]
+      summary: Update a supplier product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSupplierProduct"
+      responses:
+        "200":
+          description: Updated supplier product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupplierProduct"
+    delete:
+      operationId: deleteSupplierProduct
+      tags: [suppliers]
+      summary: Delete a supplier product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # Employees
+  /employees:
+    get:
+      operationId: listEmployees
+      tags: [employees]
+      summary: List all employees
+      responses:
+        "200":
+          description: List of employees
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Employee"
+    post:
+      operationId: createEmployee
+      tags: [employees]
+      summary: Create an employee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEmployee"
+      responses:
+        "201":
+          description: Created employee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+
+  /employees/{id}:
+    put:
+      operationId: updateEmployee
+      tags: [employees]
+      summary: Update an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEmployee"
+      responses:
+        "200":
+          description: Updated employee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+    delete:
+      operationId: deleteEmployee
+      tags: [employees]
+      summary: Delete an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # Expenses
+  /expenses:
+    get:
+      operationId: listExpenses
+      tags: [expenses]
+      summary: List all fixed expenses
+      responses:
+        "200":
+          description: List of expenses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Expense"
+    post:
+      operationId: createExpense
+      tags: [expenses]
+      summary: Create an expense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExpense"
+      responses:
+        "201":
+          description: Created expense
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+
+  /expenses/{id}:
+    put:
+      operationId: updateExpense
+      tags: [expenses]
+      summary: Update an expense
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExpense"
+      responses:
+        "200":
+          description: Updated expense
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+    delete:
+      operationId: deleteExpense
+      tags: [expenses]
+      summary: Delete an expense
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # VAT Report
+  /vat/report:
+    get:
+      operationId: getVatReport
+      tags: [vat]
+      summary: Get VAT report
+      parameters:
+        - name: month
+          in: query
+          schema:
+            type: string
+          description: Filter by month (YYYY-MM)
+      responses:
+        "200":
+          description: VAT report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VatReport"
+
+  # Dashboard
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get financial dashboard summary
+      parameters:
+        - name: month
+          in: query
+          schema:
+            type: string
+          description: Filter by month (YYYY-MM)
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +558,407 @@ components:
       required:
         - status
 
+    Sale:
+      type: object
+      properties:
+        id:
+          type: integer
+        date:
+          type: string
+        foodSales:
+          type: number
+        beverageSales:
+          type: number
+        totalSales:
+          type: number
+        outputVat:
+          type: number
+        createdAt:
+          type: string
+      required:
+        - id
+        - date
+        - foodSales
+        - beverageSales
+        - totalSales
+        - outputVat
+        - createdAt
+
+    CreateSale:
+      type: object
+      properties:
+        date:
+          type: string
+        foodSales:
+          type: number
+        beverageSales:
+          type: number
+      required:
+        - date
+        - foodSales
+        - beverageSales
+
+    MonthlySalesSummary:
+      type: object
+      properties:
+        month:
+          type: string
+        totalFoodSales:
+          type: number
+        totalBeverageSales:
+          type: number
+        totalSales:
+          type: number
+        totalOutputVat:
+          type: number
+      required:
+        - month
+        - totalFoodSales
+        - totalBeverageSales
+        - totalSales
+        - totalOutputVat
+
+    Purchase:
+      type: object
+      properties:
+        id:
+          type: integer
+        date:
+          type: string
+        supplierName:
+          type: string
+        productName:
+          type: string
+        quantity:
+          type: number
+        price:
+          type: number
+        priceIncludesVat:
+          type: boolean
+        amountBeforeVat:
+          type: number
+        vatAmount:
+          type: number
+        totalAmount:
+          type: number
+        createdAt:
+          type: string
+      required:
+        - id
+        - date
+        - supplierName
+        - productName
+        - quantity
+        - price
+        - priceIncludesVat
+        - amountBeforeVat
+        - vatAmount
+        - totalAmount
+        - createdAt
+
+    CreatePurchase:
+      type: object
+      properties:
+        date:
+          type: string
+        supplierName:
+          type: string
+        productName:
+          type: string
+        quantity:
+          type: number
+        price:
+          type: number
+        priceIncludesVat:
+          type: boolean
+      required:
+        - date
+        - supplierName
+        - productName
+        - quantity
+        - price
+        - priceIncludesVat
+
+    Supplier:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        contactPerson:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - createdAt
+
+    CreateSupplier:
+      type: object
+      properties:
+        name:
+          type: string
+        contactPerson:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+      required:
+        - name
+
+    SupplierProduct:
+      type: object
+      properties:
+        id:
+          type: integer
+        supplierId:
+          type: integer
+        supplierName:
+          type: string
+        productName:
+          type: string
+        previousPrice:
+          type: number
+        currentPrice:
+          type: number
+        priceDifference:
+          type: number
+        priceChangePercent:
+          type: number
+        updatedAt:
+          type: string
+      required:
+        - id
+        - supplierId
+        - supplierName
+        - productName
+        - currentPrice
+        - priceDifference
+        - priceChangePercent
+        - updatedAt
+
+    CreateSupplierProduct:
+      type: object
+      properties:
+        supplierId:
+          type: integer
+        productName:
+          type: string
+        previousPrice:
+          type: number
+        currentPrice:
+          type: number
+      required:
+        - supplierId
+        - productName
+        - currentPrice
+
+    PriceComparison:
+      type: object
+      properties:
+        supplierId:
+          type: integer
+        supplierName:
+          type: string
+        productName:
+          type: string
+        previousPrice:
+          type: number
+        currentPrice:
+          type: number
+        priceDifference:
+          type: number
+        priceChangePercent:
+          type: number
+        trend:
+          type: string
+          enum: [up, down, stable]
+      required:
+        - supplierId
+        - supplierName
+        - productName
+        - currentPrice
+        - priceDifference
+        - priceChangePercent
+        - trend
+
+    Employee:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        jobTitle:
+          type: string
+        salary:
+          type: number
+        iqamaExpiryDate:
+          type: string
+        iqamaRenewalDate:
+          type: string
+        lastTravelDate:
+          type: string
+        vacationBalance:
+          type: number
+        accommodationCost:
+          type: number
+        medicalInsurance:
+          type: number
+        gosiInsurance:
+          type: number
+        airTicketCost:
+          type: number
+        totalMonthlyCost:
+          type: number
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - jobTitle
+        - salary
+        - vacationBalance
+        - accommodationCost
+        - medicalInsurance
+        - gosiInsurance
+        - airTicketCost
+        - totalMonthlyCost
+        - createdAt
+
+    CreateEmployee:
+      type: object
+      properties:
+        name:
+          type: string
+        jobTitle:
+          type: string
+        salary:
+          type: number
+        iqamaExpiryDate:
+          type: string
+        iqamaRenewalDate:
+          type: string
+        lastTravelDate:
+          type: string
+        vacationBalance:
+          type: number
+        accommodationCost:
+          type: number
+        medicalInsurance:
+          type: number
+        gosiInsurance:
+          type: number
+        airTicketCost:
+          type: number
+      required:
+        - name
+        - jobTitle
+        - salary
+        - vacationBalance
+        - accommodationCost
+        - medicalInsurance
+        - gosiInsurance
+        - airTicketCost
+
+    Expense:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        monthlyCost:
+          type: number
+        contractStartDate:
+          type: string
+        contractEndDate:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - monthlyCost
+        - createdAt
+
+    CreateExpense:
+      type: object
+      properties:
+        name:
+          type: string
+        monthlyCost:
+          type: number
+        contractStartDate:
+          type: string
+        contractEndDate:
+          type: string
+      required:
+        - name
+        - monthlyCost
+
+    VatReport:
+      type: object
+      properties:
+        month:
+          type: string
+        totalSales:
+          type: number
+        outputVat:
+          type: number
+        totalPurchases:
+          type: number
+        inputVat:
+          type: number
+        vatPayable:
+          type: number
+      required:
+        - outputVat
+        - totalPurchases
+        - inputVat
+        - vatPayable
+        - totalSales
+
+    DashboardSummary:
+      type: object
+      properties:
+        month:
+          type: string
+        totalFoodSales:
+          type: number
+        totalBeverageSales:
+          type: number
+        totalSales:
+          type: number
+        totalPurchases:
+          type: number
+        vatPayable:
+          type: number
+        totalSalaries:
+          type: number
+        totalFixedExpenses:
+          type: number
+        netProfit:
+          type: number
+        outputVat:
+          type: number
+        inputVat:
+          type: number
+      required:
+        - totalFoodSales
+        - totalBeverageSales
+        - totalSales
+        - totalPurchases
+        - vatPayable
+        - totalSalaries
+        - totalFixedExpenses
+        - netProfit
+        - outputVat
+        - inputVat

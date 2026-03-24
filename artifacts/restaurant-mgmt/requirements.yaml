@@ -1,0 +1,15 @@
+packages:
+  "recharts": "For financial dashboard charts and visualizations"
+  "date-fns": "For date formatting and month filtering"
+  "react-hook-form": "For robust form state management"
+  "@hookform/resolvers": "For Zod schema validation in forms"
+  "zod": "For form schema definitions"
+  "clsx": "For conditional tailwind class merging"
+  "tailwind-merge": "For conditional tailwind class merging"
+
+images: []
+
+notes:
+  - "Using existing React Query hooks from @workspace/api-client-react"
+  - "Forms use Zod for validation to ensure precise payload matches with API schemas"
+  - "ZATCA VAT is calculated at 15%"

@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Restaurant Management & Accounting System"
+version = "1.0.0"
+id = "artifacts/restaurant-mgmt"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 26238
+
+[services.development]
+run = "pnpm --filter @workspace/restaurant-mgmt run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/restaurant-mgmt", "run", "build" ]
+publicDir = "artifacts/restaurant-mgmt/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "26238"
+BASE_PATH = "/"
