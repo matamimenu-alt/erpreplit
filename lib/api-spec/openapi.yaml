@@ -534,6 +534,43 @@ paths:
         "204":
           description: Deleted
 
+  # Inventory
+  /inventory:
+    get:
+      operationId: getInventory
+      tags: [expenses]
+      summary: Get closing inventory for a month
+      parameters:
+        - name: month
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Inventory record (or zeroed defaults)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inventory"
+    put:
+      operationId: upsertInventory
+      tags: [expenses]
+      summary: Upsert closing inventory for a month
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInventory"
+      responses:
+        "200":
+          description: Saved inventory record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inventory"
+
   # VAT Report
   /vat/report:
     get:
@@ -1109,6 +1146,50 @@ components:
         - name
         - monthlyCost
 
+    Inventory:
+      type: object
+      properties:
+        id:
+          type: integer
+        month:
+          type: string
+        foodInventory:
+          type: number
+        beverageInventory:
+          type: number
+        generalInventory:
+          type: number
+        notes:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - month
+        - foodInventory
+        - beverageInventory
+        - generalInventory
+        - createdAt
+
+    CreateInventory:
+      type: object
+      properties:
+        month:
+          type: string
+        foodInventory:
+          type: number
+        beverageInventory:
+          type: number
+        generalInventory:
+          type: number
+        notes:
+          type: string
+      required:
+        - month
+        - foodInventory
+        - beverageInventory
+        - generalInventory
+
     PLReport:
       type: object
       properties:
@@ -1143,6 +1224,22 @@ components:
         otherCost:
           type: number
         totalCOGS:
+          type: number
+        closingFoodInventory:
+          type: number
+        closingBeverageInventory:
+          type: number
+        closingGeneralInventory:
+          type: number
+        totalInventoryAdjustment:
+          type: number
+        adjustedFoodCost:
+          type: number
+        adjustedBeverageCost:
+          type: number
+        adjustedOtherCost:
+          type: number
+        adjustedCOGS:
           type: number
         grossProfit:
           type: number
@@ -1200,6 +1297,14 @@ components:
         - beverageCost
         - otherCost
         - totalCOGS
+        - closingFoodInventory
+        - closingBeverageInventory
+        - closingGeneralInventory
+        - totalInventoryAdjustment
+        - adjustedFoodCost
+        - adjustedBeverageCost
+        - adjustedOtherCost
+        - adjustedCOGS
         - grossProfit
         - grossMarginPercent
         - foodCostPercent

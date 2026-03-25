@@ -9,6 +9,7 @@ import {
   FileBarChart,
   Calculator,
   UtensilsCrossed,
+  Warehouse,
   Menu,
   ChevronDown
 } from "lucide-react";
@@ -29,6 +30,7 @@ const navItems = [
   { name: "Price Comparison", href: "/supplier-prices", icon: TrendingDown },
   { name: "HR & Employees", href: "/employees", icon: Users },
   { name: "Fixed Expenses", href: "/expenses", icon: FileBarChart },
+  { name: "Inventory", href: "/inventory", icon: Warehouse },
   { name: "ZATCA VAT Report", href: "/vat-report", icon: Calculator },
   { name: "Financial Reports", href: "/reports", icon: FileBarChart },
 ];

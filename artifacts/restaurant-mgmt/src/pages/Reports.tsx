@@ -122,10 +122,15 @@ export default function Reports() {
       { Section: "REVENUE", Item: "Total Food Sales", "Amount (SAR)": pl.foodSales },
       { Section: "REVENUE", Item: "Total Beverage Sales", "Amount (SAR)": pl.beverageSales },
       { Section: "REVENUE", Item: "Total Revenue", "Amount (SAR)": pl.totalRevenue },
-      { Section: "COGS", Item: "Food Cost", "Amount (SAR)": pl.foodCost },
-      { Section: "COGS", Item: "Beverage Cost", "Amount (SAR)": pl.beverageCost },
-      { Section: "COGS", Item: "General Cost", "Amount (SAR)": pl.otherCost },
-      { Section: "COGS", Item: "Total COGS", "Amount (SAR)": pl.totalCOGS },
+      { Section: "COGS", Item: "Food Cost (Purchases)", "Amount (SAR)": pl.foodCost },
+      { Section: "COGS", Item: "Beverage Cost (Purchases)", "Amount (SAR)": pl.beverageCost },
+      { Section: "COGS", Item: "General Cost (Purchases)", "Amount (SAR)": pl.otherCost },
+      { Section: "COGS", Item: "Total COGS (Raw Purchases)", "Amount (SAR)": pl.totalCOGS },
+      { Section: "INVENTORY", Item: "Closing Food Inventory (−)", "Amount (SAR)": -(pl.closingFoodInventory ?? 0) },
+      { Section: "INVENTORY", Item: "Closing Beverage Inventory (−)", "Amount (SAR)": -(pl.closingBeverageInventory ?? 0) },
+      { Section: "INVENTORY", Item: "Closing General Inventory (−)", "Amount (SAR)": -(pl.closingGeneralInventory ?? 0) },
+      { Section: "INVENTORY", Item: "Total Inventory Adjustment (−)", "Amount (SAR)": -(pl.totalInventoryAdjustment ?? 0) },
+      { Section: "ADJUSTED COGS", Item: "Adjusted COGS (After Inventory)", "Amount (SAR)": pl.adjustedCOGS ?? pl.totalCOGS },
       { Section: "GROSS PROFIT", Item: "Gross Profit", "Amount (SAR)": pl.grossProfit },
       { Section: "OPEX", Item: "Labour Cost (TLC)", "Amount (SAR)": pl.totalLaborCost },
       { Section: "OPEX", Item: "Fuel & Energy", "Amount (SAR)": pl.fuelEnergyCost },
@@ -283,11 +288,25 @@ export default function Reports() {
                     <Div />
 
                     {/* COGS */}
-                    <SH title="Cost of Goods Sold (COGS)" />
-                    <Row label="Cost of Sale – Food" value={pl?.foodCost ?? 0} indent percent={pl?.foodCostPercent} />
-                    <Row label="Cost of Sale – Beverage" value={pl?.beverageCost ?? 0} indent percent={pl?.beverageCostPercent} />
-                    <Row label="Cost of Sale – General" value={pl?.otherCost ?? 0} indent percent={totalRevenue ? ((pl?.otherCost ?? 0) / totalRevenue * 100) : 0} />
-                    <Row label="Total COGS" value={pl?.totalCOGS ?? 0} bold highlight="neutral" percent={totalRevenue ? ((pl?.totalCOGS ?? 0) / totalRevenue * 100) : 0} />
+                    <SH title="Cost of Goods Sold — Purchases" />
+                    <Row label="Cost of Sale – Food (Purchases)" value={pl?.foodCost ?? 0} indent percent={totalRevenue ? ((pl?.foodCost ?? 0) / totalRevenue * 100) : 0} />
+                    <Row label="Cost of Sale – Beverage (Purchases)" value={pl?.beverageCost ?? 0} indent percent={totalRevenue ? ((pl?.beverageCost ?? 0) / totalRevenue * 100) : 0} />
+                    <Row label="Cost of Sale – General (Purchases)" value={pl?.otherCost ?? 0} indent percent={totalRevenue ? ((pl?.otherCost ?? 0) / totalRevenue * 100) : 0} />
+                    <Row label="Total COGS (Raw Purchases)" value={pl?.totalCOGS ?? 0} bold highlight="neutral" percent={totalRevenue ? ((pl?.totalCOGS ?? 0) / totalRevenue * 100) : 0} />
+
+                    {/* Inventory Adjustment */}
+                    {(pl?.totalInventoryAdjustment ?? 0) > 0 && (
+                      <>
+                        <Div />
+                        <SH title="Closing Inventory Adjustment (−)" />
+                        <Row label="Closing Food Inventory" value={-(pl?.closingFoodInventory ?? 0)} indent percent={totalRevenue ? ((pl?.closingFoodInventory ?? 0) / totalRevenue * 100) : 0} />
+                        <Row label="Closing Beverage Inventory" value={-(pl?.closingBeverageInventory ?? 0)} indent percent={totalRevenue ? ((pl?.closingBeverageInventory ?? 0) / totalRevenue * 100) : 0} />
+                        <Row label="Closing General Inventory" value={-(pl?.closingGeneralInventory ?? 0)} indent percent={totalRevenue ? ((pl?.closingGeneralInventory ?? 0) / totalRevenue * 100) : 0} />
+                        <Row label="Total Inventory Deduction" value={-(pl?.totalInventoryAdjustment ?? 0)} bold highlight="neutral" percent={totalRevenue ? ((pl?.totalInventoryAdjustment ?? 0) / totalRevenue * 100) : 0} />
+                        <Div />
+                        <Row label="Adjusted COGS (After Inventory)" value={pl?.adjustedCOGS ?? pl?.totalCOGS ?? 0} bold highlight="neutral" percent={totalRevenue ? ((pl?.adjustedCOGS ?? pl?.totalCOGS ?? 0) / totalRevenue * 100) : 0} />
+                      </>
+                    )}
                     <Div />
 
                     {/* GROSS PROFIT */}

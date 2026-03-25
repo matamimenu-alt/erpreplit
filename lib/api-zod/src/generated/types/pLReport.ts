@@ -23,6 +23,14 @@ export interface PLReport {
   beverageCost: number;
   otherCost: number;
   totalCOGS: number;
+  closingFoodInventory: number;
+  closingBeverageInventory: number;
+  closingGeneralInventory: number;
+  totalInventoryAdjustment: number;
+  adjustedFoodCost: number;
+  adjustedBeverageCost: number;
+  adjustedOtherCost: number;
+  adjustedCOGS: number;
   grossProfit: number;
   grossMarginPercent: number;
   foodCostPercent: number;

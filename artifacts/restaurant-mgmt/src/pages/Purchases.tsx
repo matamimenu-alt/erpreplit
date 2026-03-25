@@ -4,7 +4,7 @@ import { usePurchasesMutations } from "@/hooks/use-purchases";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { formatSAR, formatDate, formatMonth } from "@/lib/format";
 import { exportToExcel } from "@/lib/export-excel";
-import { PURCHASE_CATEGORIES, getCategoryMeta } from "@/lib/categories";
+import { PURCHASE_CATEGORIES, PURCHASE_CATEGORY_GROUPS, getCategoryMeta } from "@/lib/categories";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -105,18 +105,15 @@ function PurchaseFormModal({
           <div>
             <label className="block text-sm font-medium mb-1">Category <span className="text-rose-500">*</span></label>
             <select {...form.register("category")} className="w-full px-3 py-2 border rounded-xl outline-none focus:border-primary bg-white text-sm">
-              <optgroup label="Cost of Sales (COGS)">
-                {PURCHASE_CATEGORIES.filter(c => c.section === "cogs").map(c => (
-                  <option key={c.value} value={c.value}>{c.label}</option>
-                ))}
-              </optgroup>
-              <optgroup label="Operating Expenses">
-                {PURCHASE_CATEGORIES.filter(c => c.section === "opex").map(c => (
-                  <option key={c.value} value={c.value}>{c.label}</option>
-                ))}
-              </optgroup>
+              {PURCHASE_CATEGORY_GROUPS.map(g => (
+                <optgroup key={g.groupLabel} label={g.groupLabel}>
+                  {g.categories.map(c => (
+                    <option key={c.value} value={c.value}>{c.label} — {c.labelAr}</option>
+                  ))}
+                </optgroup>
+              ))}
             </select>
-            <p className="text-xs text-slate-400 mt-1">COGS categories flow to Gross Profit; Operating Expenses flow to Operating Profit in P&L</p>
+            <p className="text-xs text-slate-400 mt-1">Cost of Sale categories reduce Gross Profit; Operating Expenses reduce Operating Profit in P&L</p>
           </div>
 
           {/* Qty + Unit Price */}

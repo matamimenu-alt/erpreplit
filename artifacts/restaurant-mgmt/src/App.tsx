@@ -12,6 +12,7 @@ import Suppliers from "@/pages/Suppliers";
 import SupplierPrices from "@/pages/SupplierPrices";
 import Employees from "@/pages/Employees";
 import Expenses from "@/pages/Expenses";
+import Inventory from "@/pages/Inventory";
 import VatReport from "@/pages/VatReport";
 import Reports from "@/pages/Reports";
 import { RestaurantProvider } from "@/contexts/RestaurantContext";
@@ -36,6 +37,7 @@ function Router() {
         <Route path="/supplier-prices" component={SupplierPrices} />
         <Route path="/employees" component={Employees} />
         <Route path="/expenses" component={Expenses} />
+        <Route path="/inventory" component={Inventory} />
         <Route path="/vat-report" component={VatReport} />
         <Route path="/reports" component={Reports} />
         <Route component={NotFound} />

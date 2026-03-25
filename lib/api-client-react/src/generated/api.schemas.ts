@@ -215,6 +215,24 @@ export interface CreateExpense {
   contractEndDate?: string;
 }
 
+export interface Inventory {
+  id: number;
+  month: string;
+  foodInventory: number;
+  beverageInventory: number;
+  generalInventory: number;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface CreateInventory {
+  month: string;
+  foodInventory: number;
+  beverageInventory: number;
+  generalInventory: number;
+  notes?: string;
+}
+
 export interface PLReport {
   month?: string;
   dineInFood: number;
@@ -232,6 +250,14 @@ export interface PLReport {
   beverageCost: number;
   otherCost: number;
   totalCOGS: number;
+  closingFoodInventory: number;
+  closingBeverageInventory: number;
+  closingGeneralInventory: number;
+  totalInventoryAdjustment: number;
+  adjustedFoodCost: number;
+  adjustedBeverageCost: number;
+  adjustedOtherCost: number;
+  adjustedCOGS: number;
   grossProfit: number;
   grossMarginPercent: number;
   foodCostPercent: number;
@@ -314,6 +340,10 @@ export type ListPurchasesParams = {
    * Search by product name
    */
   search?: string;
+};
+
+export type GetInventoryParams = {
+  month: string;
 };
 
 export type GetVatReportParams = {

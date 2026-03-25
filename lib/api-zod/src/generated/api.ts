@@ -545,6 +545,44 @@ export const DeleteExpenseParams = zod.object({
 });
 
 /**
+ * @summary Get closing inventory for a month
+ */
+export const GetInventoryQueryParams = zod.object({
+  month: zod.coerce.string(),
+});
+
+export const GetInventoryResponse = zod.object({
+  id: zod.number(),
+  month: zod.string(),
+  foodInventory: zod.number(),
+  beverageInventory: zod.number(),
+  generalInventory: zod.number(),
+  notes: zod.string().optional(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Upsert closing inventory for a month
+ */
+export const UpsertInventoryBody = zod.object({
+  month: zod.string(),
+  foodInventory: zod.number(),
+  beverageInventory: zod.number(),
+  generalInventory: zod.number(),
+  notes: zod.string().optional(),
+});
+
+export const UpsertInventoryResponse = zod.object({
+  id: zod.number(),
+  month: zod.string(),
+  foodInventory: zod.number(),
+  beverageInventory: zod.number(),
+  generalInventory: zod.number(),
+  notes: zod.string().optional(),
+  createdAt: zod.string(),
+});
+
+/**
  * @summary Get VAT report
  */
 export const GetVatReportQueryParams = zod.object({
@@ -584,6 +622,14 @@ export const GetPLReportResponse = zod.object({
   beverageCost: zod.number(),
   otherCost: zod.number(),
   totalCOGS: zod.number(),
+  closingFoodInventory: zod.number(),
+  closingBeverageInventory: zod.number(),
+  closingGeneralInventory: zod.number(),
+  totalInventoryAdjustment: zod.number(),
+  adjustedFoodCost: zod.number(),
+  adjustedBeverageCost: zod.number(),
+  adjustedOtherCost: zod.number(),
+  adjustedCOGS: zod.number(),
   grossProfit: zod.number(),
   grossMarginPercent: zod.number(),
   foodCostPercent: zod.number(),
