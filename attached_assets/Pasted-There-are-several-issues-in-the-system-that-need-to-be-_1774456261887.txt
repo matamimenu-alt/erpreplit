@@ -1,0 +1,64 @@
+There are several issues in the system that need to be fixed and improved.
+1. Numeric Input Problem
+There is a bug when entering numbers in the input fields.
+When I try to type a number, the field refreshes or loses focus after typing one digit, which prevents me from entering the full number (for example 1500 or 25000).
+Required Fix:
+•	Allow users to type the full number in the input field without interruption. 
+•	Prevent any auto refresh or component re-render while typing. 
+•	Ensure the numeric fields accept multi-digit numbers smoothly. 
+•	Keep the cursor focus in the field until the user finishes typing. 
+________________________________________
+2. Saving Edited Data
+When I edit any value in the tables and click Save or Update, the changes are not saved.
+Required Fix:
+•	Fix the Save/Update functionality so the edited data is properly stored in the database. 
+•	Ensure changes remain saved after refreshing or reopening the page. 
+•	Add a confirmation message such as:
+"Changes saved successfully." 
+________________________________________
+3. Improve the Income Statement Structure
+The Income Statement needs to be modified to divide sales into separate revenue channels.
+Add the following revenue categories:
+•	Local Dine-In Sales 
+•	Takeaway Sales 
+•	Delivery Sales 
+•	App Sales (HungerStation, Jahez, Noon, etc.) 
+The system should automatically calculate:
+Total Sales =
+Local Dine-In + Takeaway + Delivery + App Sales
+________________________________________
+4. Add Food and Beverage Breakdown for Each Revenue Channel
+For each revenue category, the sales must also be divided into:
+•	Food Sales 
+•	Beverage Sales 
+Example structure:
+Local Dine-In
+•	Food Sales 
+•	Beverage Sales 
+Takeaway
+•	Food Sales 
+•	Beverage Sales 
+Delivery
+•	Food Sales 
+•	Beverage Sales 
+App Sales
+•	Food Sales 
+•	Beverage Sales 
+________________________________________
+5. Integrate This Structure into the P&L (Profit & Loss)
+The same revenue structure must appear in the P&L report.
+The P&L should include:
+Revenue Section:
+•	Local Dine-In (Food + Beverage) 
+•	Takeaway (Food + Beverage) 
+•	Delivery (Food + Beverage) 
+•	App Sales (Food + Beverage) 
+The system should automatically calculate:
+•	Total Food Sales 
+•	Total Beverage Sales 
+•	Total Revenue 
+________________________________________
+6. Reporting Improvements
+•	Show daily and monthly sales reports. 
+•	Ensure all revenue values are recorded excluding VAT. 
+•	Ensure the totals are calculated automatically

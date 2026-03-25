@@ -19,6 +19,14 @@ export interface Restaurant {
 export interface Sale {
   id: number;
   date: string;
+  dineInFood: number;
+  dineInBeverage: number;
+  takeawayFood: number;
+  takeawayBeverage: number;
+  deliveryFood: number;
+  deliveryBeverage: number;
+  appSalesFood: number;
+  appSalesBeverage: number;
   foodSales: number;
   beverageSales: number;
   totalSales: number;
@@ -28,8 +36,14 @@ export interface Sale {
 
 export interface CreateSale {
   date: string;
-  foodSales: number;
-  beverageSales: number;
+  dineInFood?: number;
+  dineInBeverage?: number;
+  takeawayFood?: number;
+  takeawayBeverage?: number;
+  deliveryFood?: number;
+  deliveryBeverage?: number;
+  appSalesFood?: number;
+  appSalesBeverage?: number;
 }
 
 export interface MonthlySalesSummary {
@@ -199,6 +213,14 @@ export interface CreateExpense {
 
 export interface PLReport {
   month?: string;
+  dineInFood: number;
+  dineInBeverage: number;
+  takeawayFood: number;
+  takeawayBeverage: number;
+  deliveryFood: number;
+  deliveryBeverage: number;
+  appSalesFood: number;
+  appSalesBeverage: number;
   foodSales: number;
   beverageSales: number;
   totalRevenue: number;

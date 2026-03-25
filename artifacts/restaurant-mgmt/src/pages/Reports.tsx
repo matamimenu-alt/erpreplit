@@ -111,8 +111,16 @@ export default function Reports() {
   function exportPL() {
     if (!pl) return;
     const rows = [
-      { Section: "REVENUE", Item: "Food Sales", "Amount (SAR)": pl.foodSales },
-      { Section: "REVENUE", Item: "Beverage Sales", "Amount (SAR)": pl.beverageSales },
+      { Section: "REVENUE", Item: "Dine-In – Food", "Amount (SAR)": pl.dineInFood },
+      { Section: "REVENUE", Item: "Dine-In – Beverage", "Amount (SAR)": pl.dineInBeverage },
+      { Section: "REVENUE", Item: "Takeaway – Food", "Amount (SAR)": pl.takeawayFood },
+      { Section: "REVENUE", Item: "Takeaway – Beverage", "Amount (SAR)": pl.takeawayBeverage },
+      { Section: "REVENUE", Item: "Delivery – Food", "Amount (SAR)": pl.deliveryFood },
+      { Section: "REVENUE", Item: "Delivery – Beverage", "Amount (SAR)": pl.deliveryBeverage },
+      { Section: "REVENUE", Item: "App Sales – Food", "Amount (SAR)": pl.appSalesFood },
+      { Section: "REVENUE", Item: "App Sales – Beverage", "Amount (SAR)": pl.appSalesBeverage },
+      { Section: "REVENUE", Item: "Total Food Sales", "Amount (SAR)": pl.foodSales },
+      { Section: "REVENUE", Item: "Total Beverage Sales", "Amount (SAR)": pl.beverageSales },
       { Section: "REVENUE", Item: "Total Revenue", "Amount (SAR)": pl.totalRevenue },
       { Section: "COGS", Item: "Food Cost", "Amount (SAR)": pl.foodCost },
       { Section: "COGS", Item: "Beverage Cost", "Amount (SAR)": pl.beverageCost },
@@ -237,8 +245,39 @@ export default function Reports() {
                   <tbody>
                     {/* REVENUE */}
                     <SH title="Revenue" />
-                    <Row label="Food Sales" value={pl?.foodSales ?? 0} indent percent={totalRevenue ? ((pl?.foodSales ?? 0) / totalRevenue * 100) : 0} />
-                    <Row label="Beverage Sales" value={pl?.beverageSales ?? 0} indent percent={totalRevenue ? ((pl?.beverageSales ?? 0) / totalRevenue * 100) : 0} />
+
+                    {/* Local Dine-In */}
+                    <tr><td colSpan={3} className="pl-4 pt-3 pb-0.5 text-xs font-semibold text-slate-500 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" /> Local Dine-In
+                    </td></tr>
+                    <Row label="Food Sales" value={pl?.dineInFood ?? 0} indent percent={totalRevenue ? ((pl?.dineInFood ?? 0) / totalRevenue * 100) : 0} />
+                    <Row label="Beverage Sales" value={pl?.dineInBeverage ?? 0} indent percent={totalRevenue ? ((pl?.dineInBeverage ?? 0) / totalRevenue * 100) : 0} />
+
+                    {/* Takeaway */}
+                    <tr><td colSpan={3} className="pl-4 pt-3 pb-0.5 text-xs font-semibold text-slate-500">
+                      <span className="w-2 h-2 rounded-full bg-amber-400 inline-block mr-1.5" />Takeaway
+                    </td></tr>
+                    <Row label="Food Sales" value={pl?.takeawayFood ?? 0} indent percent={totalRevenue ? ((pl?.takeawayFood ?? 0) / totalRevenue * 100) : 0} />
+                    <Row label="Beverage Sales" value={pl?.takeawayBeverage ?? 0} indent percent={totalRevenue ? ((pl?.takeawayBeverage ?? 0) / totalRevenue * 100) : 0} />
+
+                    {/* Delivery */}
+                    <tr><td colSpan={3} className="pl-4 pt-3 pb-0.5 text-xs font-semibold text-slate-500">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block mr-1.5" />Delivery
+                    </td></tr>
+                    <Row label="Food Sales" value={pl?.deliveryFood ?? 0} indent percent={totalRevenue ? ((pl?.deliveryFood ?? 0) / totalRevenue * 100) : 0} />
+                    <Row label="Beverage Sales" value={pl?.deliveryBeverage ?? 0} indent percent={totalRevenue ? ((pl?.deliveryBeverage ?? 0) / totalRevenue * 100) : 0} />
+
+                    {/* App Sales */}
+                    <tr><td colSpan={3} className="pl-4 pt-3 pb-0.5 text-xs font-semibold text-slate-500">
+                      <span className="w-2 h-2 rounded-full bg-purple-400 inline-block mr-1.5" />App Sales (HungerStation, Jahez, Noon…)
+                    </td></tr>
+                    <Row label="Food Sales" value={pl?.appSalesFood ?? 0} indent percent={totalRevenue ? ((pl?.appSalesFood ?? 0) / totalRevenue * 100) : 0} />
+                    <Row label="Beverage Sales" value={pl?.appSalesBeverage ?? 0} indent percent={totalRevenue ? ((pl?.appSalesBeverage ?? 0) / totalRevenue * 100) : 0} />
+
+                    <Div />
+                    {/* Grand totals */}
+                    <Row label="Total Food Sales" value={pl?.foodSales ?? 0} indent percent={totalRevenue ? ((pl?.foodSales ?? 0) / totalRevenue * 100) : 0} />
+                    <Row label="Total Beverage Sales" value={pl?.beverageSales ?? 0} indent percent={totalRevenue ? ((pl?.beverageSales ?? 0) / totalRevenue * 100) : 0} />
                     <Row label="Total Revenue" value={pl?.totalRevenue ?? 0} bold highlight="neutral" percent={100} />
                     <Div />
 

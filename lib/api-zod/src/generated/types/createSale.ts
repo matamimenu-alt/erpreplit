@@ -8,6 +8,12 @@
 
 export interface CreateSale {
   date: string;
-  foodSales: number;
-  beverageSales: number;
+  dineInFood?: number;
+  dineInBeverage?: number;
+  takeawayFood?: number;
+  takeawayBeverage?: number;
+  deliveryFood?: number;
+  deliveryBeverage?: number;
+  appSalesFood?: number;
+  appSalesBeverage?: number;
 }

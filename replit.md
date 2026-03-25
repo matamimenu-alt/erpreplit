@@ -4,6 +4,14 @@
 
 Multi-restaurant Management & Accounting System for Saudi Arabia. Manages 3 restaurants: **Asad Al-Hamra**, **Sabah Al-El**, **Chicken Bar**. Full-stack pnpm monorepo using TypeScript, React, and Express.
 
+## Latest Changes (Session)
+- **Sales Module Overhaul**: 4 revenue channels (Local Dine-In, Takeaway, Delivery, App Sales) each with Food + Beverage breakdown. Color-coded table with totals. Edit + Delete per record. Success toast notifications.
+- **Numeric Input Bug Fix**: Moved inner components (`F`, `SH`, `TD`, `TH`, `THR`, `TDR`) out of function bodies to module level. Used `FormProvider` + `useFormContext` for Employees modal. `memo()` wrapping for all sub-components. This prevents React from remounting form inputs on every `useWatch` re-render.
+- **Save Confirmation Toast**: All save/update/delete actions in Employees and Sales now show "Changes saved successfully." toast.
+- **P&L Revenue Section**: Now shows all 4 channels with Food + Beverage breakdown, color-coded by channel, then aggregated totals.
+- **DB Schema**: Added 8 channel columns to `salesTable` (dineInFood/Bev, takeawayFood/Bev, deliveryFood/Bev, appSalesFood/Bev). Existing foodSales/beverageSales/totalSales/outputVat remain as computed totals.
+- **Excel Export**: Sales Excel export includes all 8 channel columns + totals. P&L Excel export includes channel breakdown.
+
 ## Stack
 
 - **Monorepo tool**: pnpm workspaces

@@ -7,7 +7,7 @@ import { getRestaurantId } from "../lib/restaurant";
 const router: IRouter = Router();
 
 function toNum(v: unknown) {
-  return parseFloat(String(v));
+  return parseFloat(String(v)) || 0;
 }
 
 function pct(part: number, total: number): number {
@@ -15,7 +15,6 @@ function pct(part: number, total: number): number {
   return +((part / total) * 100).toFixed(2);
 }
 
-// Category helpers — support both old and new category values
 function isFoodCost(cat: string) {
   return cat === "cost-food" || cat === "food";
 }
@@ -24,9 +23,6 @@ function isBeverageCost(cat: string) {
 }
 function isGeneralCogs(cat: string) {
   return cat === "cost-general" || cat === "other";
-}
-function isOpex(cat: string) {
-  return ["fuel-energy", "maintenance", "it-communication", "marketing", "others"].includes(cat);
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -38,7 +34,6 @@ const CATEGORY_LABELS: Record<string, string> = {
   "it-communication": "IT & Communication",
   "marketing": "Marketing and Advertising",
   "others": "Others Expenses",
-  // legacy
   "food": "Cost of Sale – Food",
   "beverage": "Cost of Sale – Beverage",
   "other": "Cost of Sale – General",
@@ -62,8 +57,18 @@ router.get("/pl", async (req, res) => {
       purchaseRecords = purchaseRecords.filter((r) => r.date.startsWith(month));
     }
 
-    const foodSales = salesRecords.reduce((s, r) => s + toNum(r.foodSales), 0);
-    const beverageSales = salesRecords.reduce((s, r) => s + toNum(r.beverageSales), 0);
+    // Revenue channel breakdown
+    const dineInFood = salesRecords.reduce((s, r) => s + toNum(r.dineInFood), 0);
+    const dineInBeverage = salesRecords.reduce((s, r) => s + toNum(r.dineInBeverage), 0);
+    const takeawayFood = salesRecords.reduce((s, r) => s + toNum(r.takeawayFood), 0);
+    const takeawayBeverage = salesRecords.reduce((s, r) => s + toNum(r.takeawayBeverage), 0);
+    const deliveryFood = salesRecords.reduce((s, r) => s + toNum(r.deliveryFood), 0);
+    const deliveryBeverage = salesRecords.reduce((s, r) => s + toNum(r.deliveryBeverage), 0);
+    const appSalesFood = salesRecords.reduce((s, r) => s + toNum(r.appSalesFood), 0);
+    const appSalesBeverage = salesRecords.reduce((s, r) => s + toNum(r.appSalesBeverage), 0);
+
+    const foodSales = dineInFood + takeawayFood + deliveryFood + appSalesFood;
+    const beverageSales = dineInBeverage + takeawayBeverage + deliveryBeverage + appSalesBeverage;
     const totalRevenue = foodSales + beverageSales;
     const outputVat = salesRecords.reduce((s, r) => s + toNum(r.outputVat), 0);
 
@@ -82,7 +87,7 @@ router.get("/pl", async (req, res) => {
 
     const grossProfit = totalRevenue - totalCOGS;
 
-    // Purchase Operating Expenses (broken down)
+    // Purchase Operating Expenses
     const fuelEnergyCost = purchaseRecords
       .filter((r) => r.category === "fuel-energy")
       .reduce((s, r) => s + toNum(r.amountBeforeVat), 0);
@@ -100,7 +105,7 @@ router.get("/pl", async (req, res) => {
       .reduce((s, r) => s + toNum(r.amountBeforeVat), 0);
     const totalPurchaseOpex = fuelEnergyCost + maintenanceCost + itCommunicationCost + marketingCost + othersPurchaseCost;
 
-    // Labour Cost (TLC)
+    // Labour Cost
     const employees = await db.select().from(employeesTable)
       .where(eq(employeesTable.restaurantId, restaurantId));
     const totalLaborCost = employees.reduce((s, e) => s + toNum(e.totalMonthlyCost), 0);
@@ -110,7 +115,6 @@ router.get("/pl", async (req, res) => {
       .where(eq(expensesTable.restaurantId, restaurantId));
     const totalFixedExpenses = expenses.reduce((s, e) => s + toNum(e.monthlyCost), 0);
 
-    // Total Operating Expenses = Labour + Purchase Opex + Fixed Expenses
     const totalOperatingExpenses = totalLaborCost + totalPurchaseOpex + totalFixedExpenses;
     const operatingProfit = grossProfit - totalOperatingExpenses;
     const vatPayable = outputVat - inputVat;
@@ -118,6 +122,16 @@ router.get("/pl", async (req, res) => {
 
     res.json({
       month: month ?? "all",
+      // Channel breakdown
+      dineInFood: +dineInFood.toFixed(2),
+      dineInBeverage: +dineInBeverage.toFixed(2),
+      takeawayFood: +takeawayFood.toFixed(2),
+      takeawayBeverage: +takeawayBeverage.toFixed(2),
+      deliveryFood: +deliveryFood.toFixed(2),
+      deliveryBeverage: +deliveryBeverage.toFixed(2),
+      appSalesFood: +appSalesFood.toFixed(2),
+      appSalesBeverage: +appSalesBeverage.toFixed(2),
+      // Totals
       foodSales: +foodSales.toFixed(2),
       beverageSales: +beverageSales.toFixed(2),
       totalRevenue: +totalRevenue.toFixed(2),

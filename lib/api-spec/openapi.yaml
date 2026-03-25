@@ -664,6 +664,22 @@ components:
           type: integer
         date:
           type: string
+        dineInFood:
+          type: number
+        dineInBeverage:
+          type: number
+        takeawayFood:
+          type: number
+        takeawayBeverage:
+          type: number
+        deliveryFood:
+          type: number
+        deliveryBeverage:
+          type: number
+        appSalesFood:
+          type: number
+        appSalesBeverage:
+          type: number
         foodSales:
           type: number
         beverageSales:
@@ -677,6 +693,14 @@ components:
       required:
         - id
         - date
+        - dineInFood
+        - dineInBeverage
+        - takeawayFood
+        - takeawayBeverage
+        - deliveryFood
+        - deliveryBeverage
+        - appSalesFood
+        - appSalesBeverage
         - foodSales
         - beverageSales
         - totalSales
@@ -688,14 +712,24 @@ components:
       properties:
         date:
           type: string
-        foodSales:
+        dineInFood:
           type: number
-        beverageSales:
+        dineInBeverage:
+          type: number
+        takeawayFood:
+          type: number
+        takeawayBeverage:
+          type: number
+        deliveryFood:
+          type: number
+        deliveryBeverage:
+          type: number
+        appSalesFood:
+          type: number
+        appSalesBeverage:
           type: number
       required:
         - date
-        - foodSales
-        - beverageSales
 
     MonthlySalesSummary:
       type: object
@@ -1071,6 +1105,22 @@ components:
       properties:
         month:
           type: string
+        dineInFood:
+          type: number
+        dineInBeverage:
+          type: number
+        takeawayFood:
+          type: number
+        takeawayBeverage:
+          type: number
+        deliveryFood:
+          type: number
+        deliveryBeverage:
+          type: number
+        appSalesFood:
+          type: number
+        appSalesBeverage:
+          type: number
         foodSales:
           type: number
         beverageSales:
@@ -1124,6 +1174,14 @@ components:
         netMarginPercent:
           type: number
       required:
+        - dineInFood
+        - dineInBeverage
+        - takeawayFood
+        - takeawayBeverage
+        - deliveryFood
+        - deliveryBeverage
+        - appSalesFood
+        - appSalesBeverage
         - foodSales
         - beverageSales
         - totalRevenue

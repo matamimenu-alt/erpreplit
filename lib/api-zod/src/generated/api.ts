@@ -35,6 +35,14 @@ export const ListSalesQueryParams = zod.object({
 export const ListSalesResponseItem = zod.object({
   id: zod.number(),
   date: zod.string(),
+  dineInFood: zod.number(),
+  dineInBeverage: zod.number(),
+  takeawayFood: zod.number(),
+  takeawayBeverage: zod.number(),
+  deliveryFood: zod.number(),
+  deliveryBeverage: zod.number(),
+  appSalesFood: zod.number(),
+  appSalesBeverage: zod.number(),
   foodSales: zod.number(),
   beverageSales: zod.number(),
   totalSales: zod.number(),
@@ -48,8 +56,14 @@ export const ListSalesResponse = zod.array(ListSalesResponseItem);
  */
 export const CreateSaleBody = zod.object({
   date: zod.string(),
-  foodSales: zod.number(),
-  beverageSales: zod.number(),
+  dineInFood: zod.number().optional(),
+  dineInBeverage: zod.number().optional(),
+  takeawayFood: zod.number().optional(),
+  takeawayBeverage: zod.number().optional(),
+  deliveryFood: zod.number().optional(),
+  deliveryBeverage: zod.number().optional(),
+  appSalesFood: zod.number().optional(),
+  appSalesBeverage: zod.number().optional(),
 });
 
 /**
@@ -61,13 +75,27 @@ export const UpdateSaleParams = zod.object({
 
 export const UpdateSaleBody = zod.object({
   date: zod.string(),
-  foodSales: zod.number(),
-  beverageSales: zod.number(),
+  dineInFood: zod.number().optional(),
+  dineInBeverage: zod.number().optional(),
+  takeawayFood: zod.number().optional(),
+  takeawayBeverage: zod.number().optional(),
+  deliveryFood: zod.number().optional(),
+  deliveryBeverage: zod.number().optional(),
+  appSalesFood: zod.number().optional(),
+  appSalesBeverage: zod.number().optional(),
 });
 
 export const UpdateSaleResponse = zod.object({
   id: zod.number(),
   date: zod.string(),
+  dineInFood: zod.number(),
+  dineInBeverage: zod.number(),
+  takeawayFood: zod.number(),
+  takeawayBeverage: zod.number(),
+  deliveryFood: zod.number(),
+  deliveryBeverage: zod.number(),
+  appSalesFood: zod.number(),
+  appSalesBeverage: zod.number(),
   foodSales: zod.number(),
   beverageSales: zod.number(),
   totalSales: zod.number(),
@@ -533,6 +561,14 @@ export const GetPLReportQueryParams = zod.object({
 
 export const GetPLReportResponse = zod.object({
   month: zod.string().optional(),
+  dineInFood: zod.number(),
+  dineInBeverage: zod.number(),
+  takeawayFood: zod.number(),
+  takeawayBeverage: zod.number(),
+  deliveryFood: zod.number(),
+  deliveryBeverage: zod.number(),
+  appSalesFood: zod.number(),
+  appSalesBeverage: zod.number(),
   foodSales: zod.number(),
   beverageSales: zod.number(),
   totalRevenue: zod.number(),
