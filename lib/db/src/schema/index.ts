@@ -5,3 +5,5 @@ export * from "./suppliers";
 export * from "./employees";
 export * from "./expenses";
 export * from "./inventory";
+export * from "./stock-movements";
+export * from "./branch-transfers";

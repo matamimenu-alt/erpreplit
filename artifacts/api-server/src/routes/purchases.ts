@@ -1,8 +1,36 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { purchasesTable } from "@workspace/db/schema";
+import { purchasesTable, stockMovementsTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getRestaurantId } from "../lib/restaurant";
+
+async function upsertStockMovementForPurchase(
+  restaurantId: number,
+  purchaseId: number,
+  data: { date: string; productName: string; category: string; quantity: number; price: number; amountBeforeVat: number }
+) {
+  // Delete existing movement for this purchase (handles update scenario)
+  await db.delete(stockMovementsTable).where(
+    and(eq(stockMovementsTable.referenceType, "purchase"), eq(stockMovementsTable.referenceId, purchaseId))
+  );
+  // Create new movement
+  if (data.quantity > 0) {
+    await db.insert(stockMovementsTable).values({
+      restaurantId,
+      itemName: data.productName,
+      category: data.category || "others",
+      unit: "unit",
+      movementType: "purchase",
+      quantity: String(data.quantity.toFixed(3)),
+      unitPrice: String(data.price.toFixed(2)),
+      totalValue: String(data.amountBeforeVat.toFixed(2)),
+      movementDate: data.date,
+      referenceType: "purchase",
+      referenceId: purchaseId,
+      notes: null,
+    });
+  }
+}
 
 const router: IRouter = Router();
 
@@ -107,6 +135,17 @@ router.post("/", async (req, res) => {
         notes: notes || null,
       })
       .returning();
+
+    // Auto-create stock movement for this purchase
+    await upsertStockMovementForPurchase(restaurantId, record.id, {
+      date,
+      productName,
+      category: category || "others",
+      quantity: Number(quantity),
+      price: Number(price),
+      amountBeforeVat,
+    });
+
     res.status(201).json(toRecord(record));
   } catch (err) {
     req.log.error({ err }, "Error creating purchase");
@@ -143,6 +182,17 @@ router.put("/:id", async (req, res) => {
       .where(and(eq(purchasesTable.id, id), eq(purchasesTable.restaurantId, restaurantId)))
       .returning();
     if (!record) return res.status(404).json({ error: "Not found" });
+
+    // Update linked stock movement
+    await upsertStockMovementForPurchase(restaurantId, id, {
+      date,
+      productName,
+      category: category || "others",
+      quantity: Number(quantity),
+      price: Number(price),
+      amountBeforeVat,
+    });
+
     res.json(toRecord(record));
   } catch (err) {
     req.log.error({ err }, "Error updating purchase");
@@ -155,6 +205,10 @@ router.delete("/:id", async (req, res) => {
   try {
     const restaurantId = getRestaurantId(req);
     const id = parseInt(req.params.id);
+    // Remove linked stock movement first
+    await db.delete(stockMovementsTable).where(
+      and(eq(stockMovementsTable.referenceType, "purchase"), eq(stockMovementsTable.referenceId, id))
+    );
     await db.delete(purchasesTable).where(and(eq(purchasesTable.id, id), eq(purchasesTable.restaurantId, restaurantId)));
     res.status(204).send();
   } catch (err) {

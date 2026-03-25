@@ -91,9 +91,11 @@ router.get("/pl", async (req, res) => {
     const totalCOGS = foodCost + beverageCost + otherCost;
     const inputVat = purchaseRecords.reduce((s, r) => s + toNum(r.vatAmount), 0);
 
-    // Closing Inventory Adjustment
+    // Opening + Closing Inventory (for proper COGS: Opening + Purchases - Closing)
     let closingFoodInventory = 0, closingBeverageInventory = 0, closingGeneralInventory = 0;
+    let openingInventory = 0;
     if (month) {
+      // Closing inventory for current month
       const [inv] = await db.select().from(inventoryTable)
         .where(and(eq(inventoryTable.restaurantId, restaurantId), eq(inventoryTable.month, month)));
       if (inv) {
@@ -101,12 +103,22 @@ router.get("/pl", async (req, res) => {
         closingBeverageInventory = toNum(inv.beverageInventory);
         closingGeneralInventory  = toNum(inv.generalInventory);
       }
+      // Opening inventory = previous month's closing inventory
+      const [y, m] = month.split("-").map(Number);
+      const prevDate = new Date(y, m - 2, 1);
+      const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, "0")}`;
+      const [prevInv] = await db.select().from(inventoryTable)
+        .where(and(eq(inventoryTable.restaurantId, restaurantId), eq(inventoryTable.month, prevMonth)));
+      if (prevInv) {
+        openingInventory = toNum(prevInv.foodInventory) + toNum(prevInv.beverageInventory) + toNum(prevInv.generalInventory);
+      }
     }
     const totalInventoryAdjustment = closingFoodInventory + closingBeverageInventory + closingGeneralInventory;
+    // Actual COGS = Opening Inventory + Purchases - Closing Inventory
     const adjustedFoodCost     = Math.max(0, foodCost - closingFoodInventory);
     const adjustedBeverageCost = Math.max(0, beverageCost - closingBeverageInventory);
     const adjustedOtherCost    = Math.max(0, otherCost - closingGeneralInventory);
-    const adjustedCOGS         = adjustedFoodCost + adjustedBeverageCost + adjustedOtherCost;
+    const adjustedCOGS         = openingInventory + adjustedFoodCost + adjustedBeverageCost + adjustedOtherCost;
 
     const grossProfit = totalRevenue - adjustedCOGS;
 
@@ -152,7 +164,8 @@ router.get("/pl", async (req, res) => {
       beverageCost: +beverageCost.toFixed(2),
       otherCost: +otherCost.toFixed(2),
       totalCOGS: +totalCOGS.toFixed(2),
-      // Inventory deductions
+      // Inventory (Opening + Closing)
+      openingInventory: +openingInventory.toFixed(2),
       closingFoodInventory: +closingFoodInventory.toFixed(2),
       closingBeverageInventory: +closingBeverageInventory.toFixed(2),
       closingGeneralInventory: +closingGeneralInventory.toFixed(2),

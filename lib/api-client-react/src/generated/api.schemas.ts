@@ -250,6 +250,7 @@ export interface PLReport {
   beverageCost: number;
   otherCost: number;
   totalCOGS: number;
+  openingInventory?: number;
   closingFoodInventory: number;
   closingBeverageInventory: number;
   closingGeneralInventory: number;
@@ -320,6 +321,116 @@ export interface DashboardSummary {
   inputVat: number;
 }
 
+export interface StockItem {
+  itemName: string;
+  category: string;
+  subCategory?: string;
+  unit: string;
+  openingQuantity: number;
+  purchasesQuantity: number;
+  consumptionQuantity: number;
+  transferInQuantity: number;
+  transferOutQuantity: number;
+  adjustmentQuantity: number;
+  currentQuantity: number;
+  lastPurchasePrice: number;
+  currentValue: number;
+  lastMovementDate?: string;
+}
+
+export interface StockMovement {
+  id: number;
+  restaurantId: number;
+  itemName: string;
+  category: string;
+  subCategory?: string;
+  unit: string;
+  movementType: string;
+  quantity: number;
+  unitPrice: number;
+  totalValue: number;
+  movementDate: string;
+  referenceType?: string;
+  referenceId?: number;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface CreateStockMovement {
+  itemName: string;
+  category: string;
+  subCategory?: string;
+  unit: string;
+  movementType: string;
+  quantity: number;
+  unitPrice: number;
+  movementDate: string;
+  notes?: string;
+}
+
+export interface BranchTransfer {
+  id: number;
+  fromRestaurantId: number;
+  toRestaurantId: number;
+  fromRestaurantName?: string;
+  toRestaurantName?: string;
+  itemName: string;
+  category: string;
+  subCategory?: string;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+  totalValue: number;
+  referenceNumber?: string;
+  transferDate: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface CreateBranchTransfer {
+  fromRestaurantId: number;
+  toRestaurantId: number;
+  itemName: string;
+  category: string;
+  subCategory?: string;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+  referenceNumber?: string;
+  transferDate: string;
+  notes?: string;
+}
+
+export interface StockItemReport {
+  itemName: string;
+  category: string;
+  subCategory?: string;
+  unit: string;
+  openingQty: number;
+  openingValue: number;
+  purchasesQty: number;
+  purchasesValue: number;
+  consumptionQty: number;
+  consumptionValue: number;
+  transferInQty: number;
+  transferOutQty: number;
+  adjustmentQty: number;
+  closingQty: number;
+  closingValue: number;
+  lastPrice: number;
+}
+
+export interface StockMonthlyReport {
+  month: string;
+  items: StockItemReport[];
+  totalOpeningValue: number;
+  totalPurchasesValue: number;
+  totalConsumptionValue: number;
+  totalClosingValue: number;
+  totalTransferIn: number;
+  totalTransferOut: number;
+}
+
 export type ListSalesParams = {
   /**
    * Filter by month (YYYY-MM)
@@ -372,4 +483,32 @@ export type GetDashboardSummaryParams = {
    * Filter by month (YYYY-MM)
    */
   month?: string;
+};
+
+export type ListStockItemsParams = {
+  category?: string;
+  search?: string;
+  dateFrom?: string;
+  dateTo?: string;
+};
+
+export type ListStockMovementsParams = {
+  category?: string;
+  movementType?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  search?: string;
+};
+
+export type ListBranchTransfersParams = {
+  dateFrom?: string;
+  dateTo?: string;
+};
+
+export type GetStockReportParams = {
+  /**
+   * Month in YYYY-MM format
+   */
+  month: string;
+  category?: string;
 };

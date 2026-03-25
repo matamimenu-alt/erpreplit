@@ -6,12 +6,15 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./branchTransfer";
 export * from "./categoryExpenseReport";
+export * from "./createBranchTransfer";
 export * from "./createEmployee";
 export * from "./createExpense";
 export * from "./createInventory";
 export * from "./createPurchase";
 export * from "./createSale";
+export * from "./createStockMovement";
 export * from "./createSupplier";
 export * from "./createSupplierProduct";
 export * from "./dashboardSummary";
@@ -21,11 +24,15 @@ export * from "./getCategoryExpenseReportParams";
 export * from "./getDashboardSummaryParams";
 export * from "./getInventoryParams";
 export * from "./getPLReportParams";
+export * from "./getStockReportParams";
 export * from "./getVatReportParams";
 export * from "./healthStatus";
 export * from "./inventory";
+export * from "./listBranchTransfersParams";
 export * from "./listPurchasesParams";
 export * from "./listSalesParams";
+export * from "./listStockItemsParams";
+export * from "./listStockMovementsParams";
 export * from "./monthlyPurchaseReport";
 export * from "./monthlySalesSummary";
 export * from "./pLReport";
@@ -35,6 +42,10 @@ export * from "./purchase";
 export * from "./purchaseCategory";
 export * from "./restaurant";
 export * from "./sale";
+export * from "./stockItem";
+export * from "./stockItemReport";
+export * from "./stockMonthlyReport";
+export * from "./stockMovement";
 export * from "./supplier";
 export * from "./supplierProduct";
 export * from "./vatReport";

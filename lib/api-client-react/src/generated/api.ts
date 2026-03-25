@@ -17,12 +17,15 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  BranchTransfer,
   CategoryExpenseReport,
+  CreateBranchTransfer,
   CreateEmployee,
   CreateExpense,
   CreateInventory,
   CreatePurchase,
   CreateSale,
+  CreateStockMovement,
   CreateSupplier,
   CreateSupplierProduct,
   DashboardSummary,
@@ -32,11 +35,15 @@ import type {
   GetDashboardSummaryParams,
   GetInventoryParams,
   GetPLReportParams,
+  GetStockReportParams,
   GetVatReportParams,
   HealthStatus,
   Inventory,
+  ListBranchTransfersParams,
   ListPurchasesParams,
   ListSalesParams,
+  ListStockItemsParams,
+  ListStockMovementsParams,
   MonthlyPurchaseReport,
   MonthlySalesSummary,
   PLReport,
@@ -44,6 +51,9 @@ import type {
   Purchase,
   Restaurant,
   Sale,
+  StockItem,
+  StockMonthlyReport,
+  StockMovement,
   Supplier,
   SupplierProduct,
   VatReport,
@@ -3035,6 +3045,731 @@ export function useGetDashboardSummary<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetDashboardSummaryQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get current stock levels per item
+ */
+export const getListStockItemsUrl = (params?: ListStockItemsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/stock/items?${stringifiedParams}`
+    : `/api/stock/items`;
+};
+
+export const listStockItems = async (
+  params?: ListStockItemsParams,
+  options?: RequestInit,
+): Promise<StockItem[]> => {
+  return customFetch<StockItem[]>(getListStockItemsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListStockItemsQueryKey = (params?: ListStockItemsParams) => {
+  return [`/api/stock/items`, ...(params ? [params] : [])] as const;
+};
+
+export const getListStockItemsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listStockItems>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListStockItemsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listStockItems>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListStockItemsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listStockItems>>> = ({
+    signal,
+  }) => listStockItems(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listStockItems>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListStockItemsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listStockItems>>
+>;
+export type ListStockItemsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get current stock levels per item
+ */
+
+export function useListStockItems<
+  TData = Awaited<ReturnType<typeof listStockItems>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListStockItemsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listStockItems>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListStockItemsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List stock movements
+ */
+export const getListStockMovementsUrl = (params?: ListStockMovementsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/stock/movements?${stringifiedParams}`
+    : `/api/stock/movements`;
+};
+
+export const listStockMovements = async (
+  params?: ListStockMovementsParams,
+  options?: RequestInit,
+): Promise<StockMovement[]> => {
+  return customFetch<StockMovement[]>(getListStockMovementsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListStockMovementsQueryKey = (
+  params?: ListStockMovementsParams,
+) => {
+  return [`/api/stock/movements`, ...(params ? [params] : [])] as const;
+};
+
+export const getListStockMovementsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listStockMovements>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListStockMovementsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listStockMovements>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListStockMovementsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listStockMovements>>
+  > = ({ signal }) => listStockMovements(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listStockMovements>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListStockMovementsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listStockMovements>>
+>;
+export type ListStockMovementsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List stock movements
+ */
+
+export function useListStockMovements<
+  TData = Awaited<ReturnType<typeof listStockMovements>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListStockMovementsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listStockMovements>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListStockMovementsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Add a stock movement (consumption, adjustment, opening balance)
+ */
+export const getCreateStockMovementUrl = () => {
+  return `/api/stock/movements`;
+};
+
+export const createStockMovement = async (
+  createStockMovement: CreateStockMovement,
+  options?: RequestInit,
+): Promise<StockMovement> => {
+  return customFetch<StockMovement>(getCreateStockMovementUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createStockMovement),
+  });
+};
+
+export const getCreateStockMovementMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createStockMovement>>,
+    TError,
+    { data: BodyType<CreateStockMovement> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createStockMovement>>,
+  TError,
+  { data: BodyType<CreateStockMovement> },
+  TContext
+> => {
+  const mutationKey = ["createStockMovement"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createStockMovement>>,
+    { data: BodyType<CreateStockMovement> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createStockMovement(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateStockMovementMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createStockMovement>>
+>;
+export type CreateStockMovementMutationBody = BodyType<CreateStockMovement>;
+export type CreateStockMovementMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Add a stock movement (consumption, adjustment, opening balance)
+ */
+export const useCreateStockMovement = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createStockMovement>>,
+    TError,
+    { data: BodyType<CreateStockMovement> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createStockMovement>>,
+  TError,
+  { data: BodyType<CreateStockMovement> },
+  TContext
+> => {
+  return useMutation(getCreateStockMovementMutationOptions(options));
+};
+
+/**
+ * @summary Delete a stock movement
+ */
+export const getDeleteStockMovementUrl = (id: number) => {
+  return `/api/stock/movements/${id}`;
+};
+
+export const deleteStockMovement = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteStockMovementUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteStockMovementMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteStockMovement>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteStockMovement>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteStockMovement"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteStockMovement>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteStockMovement(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteStockMovementMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteStockMovement>>
+>;
+
+export type DeleteStockMovementMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a stock movement
+ */
+export const useDeleteStockMovement = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteStockMovement>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteStockMovement>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteStockMovementMutationOptions(options));
+};
+
+/**
+ * @summary List branch transfers
+ */
+export const getListBranchTransfersUrl = (
+  params?: ListBranchTransfersParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/stock/transfers?${stringifiedParams}`
+    : `/api/stock/transfers`;
+};
+
+export const listBranchTransfers = async (
+  params?: ListBranchTransfersParams,
+  options?: RequestInit,
+): Promise<BranchTransfer[]> => {
+  return customFetch<BranchTransfer[]>(getListBranchTransfersUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListBranchTransfersQueryKey = (
+  params?: ListBranchTransfersParams,
+) => {
+  return [`/api/stock/transfers`, ...(params ? [params] : [])] as const;
+};
+
+export const getListBranchTransfersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listBranchTransfers>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListBranchTransfersParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listBranchTransfers>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListBranchTransfersQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listBranchTransfers>>
+  > = ({ signal }) =>
+    listBranchTransfers(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listBranchTransfers>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListBranchTransfersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listBranchTransfers>>
+>;
+export type ListBranchTransfersQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List branch transfers
+ */
+
+export function useListBranchTransfers<
+  TData = Awaited<ReturnType<typeof listBranchTransfers>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListBranchTransfersParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listBranchTransfers>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListBranchTransfersQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a branch transfer
+ */
+export const getCreateBranchTransferUrl = () => {
+  return `/api/stock/transfers`;
+};
+
+export const createBranchTransfer = async (
+  createBranchTransfer: CreateBranchTransfer,
+  options?: RequestInit,
+): Promise<BranchTransfer> => {
+  return customFetch<BranchTransfer>(getCreateBranchTransferUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createBranchTransfer),
+  });
+};
+
+export const getCreateBranchTransferMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createBranchTransfer>>,
+    TError,
+    { data: BodyType<CreateBranchTransfer> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createBranchTransfer>>,
+  TError,
+  { data: BodyType<CreateBranchTransfer> },
+  TContext
+> => {
+  const mutationKey = ["createBranchTransfer"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createBranchTransfer>>,
+    { data: BodyType<CreateBranchTransfer> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createBranchTransfer(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateBranchTransferMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createBranchTransfer>>
+>;
+export type CreateBranchTransferMutationBody = BodyType<CreateBranchTransfer>;
+export type CreateBranchTransferMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a branch transfer
+ */
+export const useCreateBranchTransfer = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createBranchTransfer>>,
+    TError,
+    { data: BodyType<CreateBranchTransfer> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createBranchTransfer>>,
+  TError,
+  { data: BodyType<CreateBranchTransfer> },
+  TContext
+> => {
+  return useMutation(getCreateBranchTransferMutationOptions(options));
+};
+
+/**
+ * @summary Delete a branch transfer and reverse its stock movements
+ */
+export const getDeleteBranchTransferUrl = (id: number) => {
+  return `/api/stock/transfers/${id}`;
+};
+
+export const deleteBranchTransfer = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteBranchTransferUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteBranchTransferMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteBranchTransfer>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteBranchTransfer>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteBranchTransfer"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteBranchTransfer>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteBranchTransfer(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteBranchTransferMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteBranchTransfer>>
+>;
+
+export type DeleteBranchTransferMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a branch transfer and reverse its stock movements
+ */
+export const useDeleteBranchTransfer = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteBranchTransfer>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteBranchTransfer>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteBranchTransferMutationOptions(options));
+};
+
+/**
+ * @summary Get monthly inventory report
+ */
+export const getGetStockReportUrl = (params: GetStockReportParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/stock/report?${stringifiedParams}`
+    : `/api/stock/report`;
+};
+
+export const getStockReport = async (
+  params: GetStockReportParams,
+  options?: RequestInit,
+): Promise<StockMonthlyReport> => {
+  return customFetch<StockMonthlyReport>(getGetStockReportUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetStockReportQueryKey = (params?: GetStockReportParams) => {
+  return [`/api/stock/report`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetStockReportQueryOptions = <
+  TData = Awaited<ReturnType<typeof getStockReport>>,
+  TError = ErrorType<unknown>,
+>(
+  params: GetStockReportParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getStockReport>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetStockReportQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getStockReport>>> = ({
+    signal,
+  }) => getStockReport(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getStockReport>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetStockReportQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getStockReport>>
+>;
+export type GetStockReportQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get monthly inventory report
+ */
+
+export function useGetStockReport<
+  TData = Awaited<ReturnType<typeof getStockReport>>,
+  TError = ErrorType<unknown>,
+>(
+  params: GetStockReportParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getStockReport>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetStockReportQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

@@ -1,0 +1,76 @@
+Update the system to add a complete Inventory Management module.
+
+Requirements:
+
+1. Inventory Structure
+The inventory must be organized based on the existing sub-categories of items (for example: Food, Beverages, Supplies, Packaging, etc.) and their sub-items.
+
+2. Automatic Item Creation from Purchases
+All inventory items should be automatically created and updated based on the Purchases module.
+- When a purchase invoice is entered, the purchased quantities should automatically increase the stock.
+- Each item must store:
+  item name
+  category
+  sub-category
+  unit
+  quantity
+  purchase price
+  total value
+
+3. Stock Movement Tracking
+Add full stock movement tracking including:
+- Opening balance
+- Purchases
+- Consumption / usage
+- Transfers between branches
+- Adjustments
+- Closing balance
+
+4. Inventory Filters
+Create an Inventory Filter system that allows filtering by:
+- Category
+- Sub-category
+- Item
+- Branch
+- Date range
+
+5. Monthly Inventory Report
+Create a Monthly Inventory Report that automatically calculates:
+- Opening stock
+- Total purchases during the month
+- Total consumption
+- Transfers in and transfers out
+- Closing stock at the end of the month
+
+6. End of Month Stock
+The end-of-month inventory (closing stock) should be automatically calculated and displayed in the monthly stock report.
+
+7. Integration with P&L
+The inventory system must be connected with the P&L system:
+- The consumed inventory should be reflected in Cost of Goods Sold (COGS).
+- Inventory value should be deducted from total purchases to calculate the actual cost.
+
+8. Purchase Adjustment
+In the financial reports, the system should calculate:
+Actual Cost = Purchases + Opening Inventory – Closing Inventory
+
+9. Branch Transfers
+Add a feature to transfer items between branches.
+Each transfer should record:
+- From branch
+- To branch
+- Item name
+- Quantity
+- Date
+- Reference number
+
+Transfers should reduce stock in the sending branch and increase stock in the receiving branch.
+
+10. Reporting
+The system should show inventory data inside the Monthly Financial Report.
+
+11. Export
+Allow exporting inventory reports and monthly stock reports to Excel or PDF.
+
+12. Interface
+The interface should be clean, simple, and suitable for restaurant inventory management.

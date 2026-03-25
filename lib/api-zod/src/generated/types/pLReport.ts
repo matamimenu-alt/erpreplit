@@ -23,6 +23,7 @@ export interface PLReport {
   beverageCost: number;
   otherCost: number;
   totalCOGS: number;
+  openingInventory?: number;
   closingFoodInventory: number;
   closingBeverageInventory: number;
   closingGeneralInventory: number;

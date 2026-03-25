@@ -5,12 +5,12 @@
 Multi-restaurant Management & Accounting System for Saudi Arabia. Manages 3 restaurants: **Asad Al-Hamra**, **Sabah Al-El**, **Chicken Bar**. Full-stack pnpm monorepo using TypeScript, React, and Express.
 
 ## Latest Changes (Session)
-- **Sales Module Overhaul**: 4 revenue channels (Local Dine-In, Takeaway, Delivery, App Sales) each with Food + Beverage breakdown. Color-coded table with totals. Edit + Delete per record. Success toast notifications.
-- **Numeric Input Bug Fix**: Moved inner components (`F`, `SH`, `TD`, `TH`, `THR`, `TDR`) out of function bodies to module level. Used `FormProvider` + `useFormContext` for Employees modal. `memo()` wrapping for all sub-components. This prevents React from remounting form inputs on every `useWatch` re-render.
-- **Save Confirmation Toast**: All save/update/delete actions in Employees and Sales now show "Changes saved successfully." toast.
-- **P&L Revenue Section**: Now shows all 4 channels with Food + Beverage breakdown, color-coded by channel, then aggregated totals.
-- **DB Schema**: Added 8 channel columns to `salesTable` (dineInFood/Bev, takeawayFood/Bev, deliveryFood/Bev, appSalesFood/Bev). Existing foodSales/beverageSales/totalSales/outputVat remain as computed totals.
-- **Excel Export**: Sales Excel export includes all 8 channel columns + totals. P&L Excel export includes channel breakdown.
+- **Full Inventory Management System Built**: 5-tab UI (Stock Levels, Movements, Transfers, Monthly Report, P&L Closing Stock). New `stock_movements` and `branch_transfers` DB tables. Stock backend routes added for items/movements/transfers/report.
+- **Purchases → Stock Auto-Sync**: Creating/editing/deleting a purchase automatically creates/updates/deletes the linked stock movement entry.
+- **COGS Formula Updated**: P&L uses `Opening Inventory + Purchases − Closing Inventory`. Opening inventory auto-calculated as previous month's closing stock.
+- **Branch Transfers**: Inter-branch transfer form creates two stock movements (transfer-out for source, transfer-in for destination). Deleting a transfer removes both movements.
+- **Monthly Stock Report**: Shows item-level COGS breakdown with Excel export.
+- **OpenAPI + codegen updated**: All new stock endpoints documented; Orval codegen ran to generate React Query hooks.
 
 ## Stack
 
@@ -47,23 +47,32 @@ artifacts-monorepo/
 ## Restaurant Management System Features
 
 1. **Financial Dashboard** — KPI cards (Total Sales, Purchases, VAT Payable, Net Profit/Loss), charts (Cost Distribution, Sales Mix). Month filter.
-2. **Sales Management** — Daily sales records with Food Sales, Beverage Sales, auto-calculated Total and 15% Output VAT. Monthly summary.
-3. **Purchase Management** — Full CRUD with 8 categories across COGS (cost-food, cost-beverage, cost-general) and Operating Expenses (fuel-energy, maintenance, it-communication, marketing, others). Supplier name optional, notes field, search/filter by product/category/month, auto-calculated VAT, Excel export. Edit modal with live total preview.
+2. **Sales Management** — Daily sales records with 4 revenue channels (Local Dine-In, Takeaway, Delivery, App Sales), each with Food + Beverage breakdown. Auto-calculated Total and 15% Output VAT. Excel export.
+3. **Purchase Management** — Full CRUD with 15 subcategories across COGS (cost-food, cost-beverage, cost-general) and Operating Expenses (fuel-energy, maintenance, it-communication, marketing, others). Supplier name optional, notes field, search/filter by product/category/month, auto-calculated VAT, Excel export. Auto-syncs stock movements on create/update/delete.
 4. **Supplier Management** — Supplier directory with contact info.
 5. **Supplier Price Comparison** — Track previous/current prices per product per supplier, highlight increases (red) / decreases (green).
-6. **HR & Payroll** — Full payroll table with grouped columns: Employee Info (Designation, Full Time/Part Time, Name, Nationality, Joining Date, # Months auto-calc), Basic Salary, Monthly Payroll Taxes (Social Security, Labor Fees, Iqama/mo = yearly÷12, Total Taxes), Employee Benefits (Medical÷12, Indemnity=Salary÷12, AirTicket÷12, Vacation=(Salary÷30×21)÷12, Food Meal, Total Benefits), Total Labor Cost. Labor Cost Summary dashboard shows 4 KPI cards. Full Edit capability. Excel export. P&L auto-updates on save.
+6. **HR & Payroll** — Full payroll table with grouped columns: Employee Info (Designation, Full/Part Time, Name, Nationality, Joining Date, # Months auto-calc), Basic Salary, Monthly Payroll Taxes (Social Security, Labor Fees, Iqama/mo = yearly÷3÷12, Total Taxes), Employee Benefits (Medical÷12, Indemnity=Salary÷12, AirTicket÷24, Vacation=(Salary÷30×21)÷12, Food Meal, Total Benefits), Total Labor Cost. Labor Cost Summary dashboard shows 4 KPI cards. Full Edit capability. Excel export.
 7. **Fixed Expenses** — Monthly recurring costs with contract start/end dates.
-8. **ZATCA VAT Report** — Output VAT (Sales × 15%), Input VAT (from purchases), VAT Payable = Output - Input. Month filter.
-9. **Financial Reports** — 3 tabs: (1) P&L Statement with full COGS + OpEx breakdown (Labour TLC, Purchase OpEx categories, Fixed Expenses), % of Revenue column, KPI cards, Print & Excel export; (2) Monthly Purchases summary; (3) Category Expense breakdown with P&L section labels. All tabs have Excel export.
+8. **Inventory Management** — 5-tab system:
+   - *Stock Levels*: Real-time stock per item (quantity, cost, value), search + category filter, Export Excel
+   - *Movements*: Log consumptions/adjustments/opening balances; filter by type/item/date; delete entries
+   - *Transfers*: Inter-branch transfer form; auto-creates transfer-in and transfer-out movements
+   - *Monthly Report*: COGS breakdown by item with Opening/Purchases/Consumption/Closing; Export Excel
+   - *P&L Closing Stock*: Save monthly closing stock values (Food, Beverage, General) for P&L calculation
+9. **ZATCA VAT Report** — Output VAT (Sales × 15%), Input VAT (from purchases), VAT Payable = Output - Input. Month filter.
+10. **Financial Reports** — 3 tabs: (1) P&L Statement with full COGS + OpEx breakdown (COGS uses Opening Inventory + Purchases − Closing Inventory formula, Labour TLC, Purchase OpEx categories, Fixed Expenses), % of Revenue column, KPI cards, Print & Excel export; (2) Monthly Purchases summary; (3) Category Expense breakdown.
 
 ## Database Schema
 
-- `sales` — daily sales records
-- `purchases` — purchase records with VAT calculation
+- `sales` — daily sales records (8 channel columns + computed totals)
+- `purchases` — purchase records with VAT calculation (15 categories)
 - `suppliers` — supplier directory
 - `supplier_products` — supplier product price history
 - `employees` — employee data and monthly cost components
 - `expenses` — fixed monthly expenses
+- `inventory` — monthly closing stock values (food/beverage/general per restaurant)
+- `stock_movements` — all stock movements (purchases, consumption, adjustments, transfers, opening balances)
+- `branch_transfers` — inter-branch transfer records
 
 ## VAT Rules (Saudi ZATCA)
 - VAT Rate: 15%
@@ -71,12 +80,30 @@ artifacts-monorepo/
 - Input VAT = VAT paid on purchases
 - VAT Payable = Output VAT − Input VAT
 
+## COGS Formula (P&L)
+`COGS = Opening Inventory + Total Purchases − Closing Inventory`
+Opening inventory = previous month's closing stock sum; Closing inventory = saved from P&L Closing Stock tab
+
 ## API Routes
 All routes under `/api/`:
 - `/sales` — CRUD + `/monthly-summary`
-- `/purchases` — CRUD
+- `/purchases` — CRUD (auto-syncs stock movements)
 - `/suppliers` — CRUD + `/price-comparison` + `/products` (CRUD)
 - `/employees` — CRUD
 - `/expenses` — CRUD
+- `/inventory` — GET/UPSERT closing stock by month
+- `/stock/items` — list stock items with current quantities
+- `/stock/movements` — CRUD stock movements
+- `/stock/transfers` — CRUD branch transfers
+- `/stock/report` — monthly stock COGS report by item
 - `/vat/report` — VAT report (optional ?month=YYYY-MM)
 - `/dashboard/summary` — Financial summary (optional ?month=YYYY-MM)
+- `/reports/pl` — P&L report (optional ?month=YYYY-MM)
+
+## Important Technical Notes
+- App is served at root path `/` (BASE_PATH="/"). All routes are relative to root.
+- `X-Restaurant-ID` header is set globally in the API client to filter data by restaurant.
+- React Query v5: `onSuccess` callback removed; use `useEffect` watching `data` instead.
+- Wouter router uses `base={import.meta.env.BASE_URL.replace(/\/$/, "")}` for SPA routing.
+- After OpenAPI changes: run `pnpm --filter @workspace/api-spec run codegen`
+- After DB schema changes: run `pnpm --filter @workspace/db run push`

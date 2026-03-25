@@ -25,6 +25,8 @@ tags:
     description: Financial dashboard
   - name: reports
     description: Report generation
+  - name: stock
+    description: Inventory & stock management
 
 paths:
   /healthz:
@@ -667,6 +669,187 @@ paths:
               schema:
                 $ref: "#/components/schemas/DashboardSummary"
 
+  # Stock / Inventory Management
+  /stock/items:
+    get:
+      operationId: listStockItems
+      tags: [stock]
+      summary: Get current stock levels per item
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of stock items with current quantities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StockItem"
+
+  /stock/movements:
+    get:
+      operationId: listStockMovements
+      tags: [stock]
+      summary: List stock movements
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: movementType
+          in: query
+          schema:
+            type: string
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of stock movements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StockMovement"
+    post:
+      operationId: createStockMovement
+      tags: [stock]
+      summary: Add a stock movement (consumption, adjustment, opening balance)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStockMovement"
+      responses:
+        "201":
+          description: Created stock movement
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockMovement"
+
+  /stock/movements/{id}:
+    delete:
+      operationId: deleteStockMovement
+      tags: [stock]
+      summary: Delete a stock movement
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /stock/transfers:
+    get:
+      operationId: listBranchTransfers
+      tags: [stock]
+      summary: List branch transfers
+      parameters:
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of branch transfers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BranchTransfer"
+    post:
+      operationId: createBranchTransfer
+      tags: [stock]
+      summary: Create a branch transfer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBranchTransfer"
+      responses:
+        "201":
+          description: Created transfer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BranchTransfer"
+
+  /stock/transfers/{id}:
+    delete:
+      operationId: deleteBranchTransfer
+      tags: [stock]
+      summary: Delete a branch transfer and reverse its stock movements
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /stock/report:
+    get:
+      operationId: getStockReport
+      tags: [stock]
+      summary: Get monthly inventory report
+      parameters:
+        - name: month
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Month in YYYY-MM format
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Monthly stock report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockMonthlyReport"
+
 components:
   schemas:
     HealthStatus:
@@ -1225,6 +1408,8 @@ components:
           type: number
         totalCOGS:
           type: number
+        openingInventory:
+          type: number
         closingFoodInventory:
           type: number
         closingBeverageInventory:
@@ -1427,3 +1612,290 @@ components:
         - netProfit
         - outputVat
         - inputVat
+
+    StockItem:
+      type: object
+      properties:
+        itemName:
+          type: string
+        category:
+          type: string
+        subCategory:
+          type: string
+        unit:
+          type: string
+        openingQuantity:
+          type: number
+        purchasesQuantity:
+          type: number
+        consumptionQuantity:
+          type: number
+        transferInQuantity:
+          type: number
+        transferOutQuantity:
+          type: number
+        adjustmentQuantity:
+          type: number
+        currentQuantity:
+          type: number
+        lastPurchasePrice:
+          type: number
+        currentValue:
+          type: number
+        lastMovementDate:
+          type: string
+      required:
+        - itemName
+        - category
+        - unit
+        - currentQuantity
+        - currentValue
+        - lastPurchasePrice
+        - openingQuantity
+        - purchasesQuantity
+        - consumptionQuantity
+        - transferInQuantity
+        - transferOutQuantity
+        - adjustmentQuantity
+
+    StockMovement:
+      type: object
+      properties:
+        id:
+          type: integer
+        restaurantId:
+          type: integer
+        itemName:
+          type: string
+        category:
+          type: string
+        subCategory:
+          type: string
+        unit:
+          type: string
+        movementType:
+          type: string
+        quantity:
+          type: number
+        unitPrice:
+          type: number
+        totalValue:
+          type: number
+        movementDate:
+          type: string
+        referenceType:
+          type: string
+        referenceId:
+          type: integer
+        notes:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - restaurantId
+        - itemName
+        - category
+        - unit
+        - movementType
+        - quantity
+        - unitPrice
+        - totalValue
+        - movementDate
+        - createdAt
+
+    CreateStockMovement:
+      type: object
+      properties:
+        itemName:
+          type: string
+        category:
+          type: string
+        subCategory:
+          type: string
+        unit:
+          type: string
+        movementType:
+          type: string
+        quantity:
+          type: number
+        unitPrice:
+          type: number
+        movementDate:
+          type: string
+        notes:
+          type: string
+      required:
+        - itemName
+        - category
+        - unit
+        - movementType
+        - quantity
+        - unitPrice
+        - movementDate
+
+    BranchTransfer:
+      type: object
+      properties:
+        id:
+          type: integer
+        fromRestaurantId:
+          type: integer
+        toRestaurantId:
+          type: integer
+        fromRestaurantName:
+          type: string
+        toRestaurantName:
+          type: string
+        itemName:
+          type: string
+        category:
+          type: string
+        subCategory:
+          type: string
+        unit:
+          type: string
+        quantity:
+          type: number
+        unitPrice:
+          type: number
+        totalValue:
+          type: number
+        referenceNumber:
+          type: string
+        transferDate:
+          type: string
+        notes:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - fromRestaurantId
+        - toRestaurantId
+        - itemName
+        - category
+        - unit
+        - quantity
+        - unitPrice
+        - totalValue
+        - transferDate
+        - createdAt
+
+    CreateBranchTransfer:
+      type: object
+      properties:
+        fromRestaurantId:
+          type: integer
+        toRestaurantId:
+          type: integer
+        itemName:
+          type: string
+        category:
+          type: string
+        subCategory:
+          type: string
+        unit:
+          type: string
+        quantity:
+          type: number
+        unitPrice:
+          type: number
+        referenceNumber:
+          type: string
+        transferDate:
+          type: string
+        notes:
+          type: string
+      required:
+        - fromRestaurantId
+        - toRestaurantId
+        - itemName
+        - category
+        - unit
+        - quantity
+        - unitPrice
+        - transferDate
+
+    StockItemReport:
+      type: object
+      properties:
+        itemName:
+          type: string
+        category:
+          type: string
+        subCategory:
+          type: string
+        unit:
+          type: string
+        openingQty:
+          type: number
+        openingValue:
+          type: number
+        purchasesQty:
+          type: number
+        purchasesValue:
+          type: number
+        consumptionQty:
+          type: number
+        consumptionValue:
+          type: number
+        transferInQty:
+          type: number
+        transferOutQty:
+          type: number
+        adjustmentQty:
+          type: number
+        closingQty:
+          type: number
+        closingValue:
+          type: number
+        lastPrice:
+          type: number
+      required:
+        - itemName
+        - category
+        - unit
+        - openingQty
+        - openingValue
+        - purchasesQty
+        - purchasesValue
+        - consumptionQty
+        - consumptionValue
+        - transferInQty
+        - transferOutQty
+        - adjustmentQty
+        - closingQty
+        - closingValue
+        - lastPrice
+
+    StockMonthlyReport:
+      type: object
+      properties:
+        month:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/StockItemReport"
+        totalOpeningValue:
+          type: number
+        totalPurchasesValue:
+          type: number
+        totalConsumptionValue:
+          type: number
+        totalClosingValue:
+          type: number
+        totalTransferIn:
+          type: number
+        totalTransferOut:
+          type: number
+      required:
+        - month
+        - items
+        - totalOpeningValue
+        - totalPurchasesValue
+        - totalConsumptionValue
+        - totalClosingValue
+        - totalTransferIn
+        - totalTransferOut

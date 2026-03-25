@@ -622,6 +622,7 @@ export const GetPLReportResponse = zod.object({
   beverageCost: zod.number(),
   otherCost: zod.number(),
   totalCOGS: zod.number(),
+  openingInventory: zod.number().optional(),
   closingFoodInventory: zod.number(),
   closingBeverageInventory: zod.number(),
   closingGeneralInventory: zod.number(),
@@ -704,4 +705,178 @@ export const GetDashboardSummaryResponse = zod.object({
   netProfit: zod.number(),
   outputVat: zod.number(),
   inputVat: zod.number(),
+});
+
+/**
+ * @summary Get current stock levels per item
+ */
+export const ListStockItemsQueryParams = zod.object({
+  category: zod.coerce.string().optional(),
+  search: zod.coerce.string().optional(),
+  dateFrom: zod.coerce.string().optional(),
+  dateTo: zod.coerce.string().optional(),
+});
+
+export const ListStockItemsResponseItem = zod.object({
+  itemName: zod.string(),
+  category: zod.string(),
+  subCategory: zod.string().optional(),
+  unit: zod.string(),
+  openingQuantity: zod.number(),
+  purchasesQuantity: zod.number(),
+  consumptionQuantity: zod.number(),
+  transferInQuantity: zod.number(),
+  transferOutQuantity: zod.number(),
+  adjustmentQuantity: zod.number(),
+  currentQuantity: zod.number(),
+  lastPurchasePrice: zod.number(),
+  currentValue: zod.number(),
+  lastMovementDate: zod.string().optional(),
+});
+export const ListStockItemsResponse = zod.array(ListStockItemsResponseItem);
+
+/**
+ * @summary List stock movements
+ */
+export const ListStockMovementsQueryParams = zod.object({
+  category: zod.coerce.string().optional(),
+  movementType: zod.coerce.string().optional(),
+  dateFrom: zod.coerce.string().optional(),
+  dateTo: zod.coerce.string().optional(),
+  search: zod.coerce.string().optional(),
+});
+
+export const ListStockMovementsResponseItem = zod.object({
+  id: zod.number(),
+  restaurantId: zod.number(),
+  itemName: zod.string(),
+  category: zod.string(),
+  subCategory: zod.string().optional(),
+  unit: zod.string(),
+  movementType: zod.string(),
+  quantity: zod.number(),
+  unitPrice: zod.number(),
+  totalValue: zod.number(),
+  movementDate: zod.string(),
+  referenceType: zod.string().optional(),
+  referenceId: zod.number().optional(),
+  notes: zod.string().optional(),
+  createdAt: zod.string(),
+});
+export const ListStockMovementsResponse = zod.array(
+  ListStockMovementsResponseItem,
+);
+
+/**
+ * @summary Add a stock movement (consumption, adjustment, opening balance)
+ */
+export const CreateStockMovementBody = zod.object({
+  itemName: zod.string(),
+  category: zod.string(),
+  subCategory: zod.string().optional(),
+  unit: zod.string(),
+  movementType: zod.string(),
+  quantity: zod.number(),
+  unitPrice: zod.number(),
+  movementDate: zod.string(),
+  notes: zod.string().optional(),
+});
+
+/**
+ * @summary Delete a stock movement
+ */
+export const DeleteStockMovementParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary List branch transfers
+ */
+export const ListBranchTransfersQueryParams = zod.object({
+  dateFrom: zod.coerce.string().optional(),
+  dateTo: zod.coerce.string().optional(),
+});
+
+export const ListBranchTransfersResponseItem = zod.object({
+  id: zod.number(),
+  fromRestaurantId: zod.number(),
+  toRestaurantId: zod.number(),
+  fromRestaurantName: zod.string().optional(),
+  toRestaurantName: zod.string().optional(),
+  itemName: zod.string(),
+  category: zod.string(),
+  subCategory: zod.string().optional(),
+  unit: zod.string(),
+  quantity: zod.number(),
+  unitPrice: zod.number(),
+  totalValue: zod.number(),
+  referenceNumber: zod.string().optional(),
+  transferDate: zod.string(),
+  notes: zod.string().optional(),
+  createdAt: zod.string(),
+});
+export const ListBranchTransfersResponse = zod.array(
+  ListBranchTransfersResponseItem,
+);
+
+/**
+ * @summary Create a branch transfer
+ */
+export const CreateBranchTransferBody = zod.object({
+  fromRestaurantId: zod.number(),
+  toRestaurantId: zod.number(),
+  itemName: zod.string(),
+  category: zod.string(),
+  subCategory: zod.string().optional(),
+  unit: zod.string(),
+  quantity: zod.number(),
+  unitPrice: zod.number(),
+  referenceNumber: zod.string().optional(),
+  transferDate: zod.string(),
+  notes: zod.string().optional(),
+});
+
+/**
+ * @summary Delete a branch transfer and reverse its stock movements
+ */
+export const DeleteBranchTransferParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Get monthly inventory report
+ */
+export const GetStockReportQueryParams = zod.object({
+  month: zod.coerce.string().describe("Month in YYYY-MM format"),
+  category: zod.coerce.string().optional(),
+});
+
+export const GetStockReportResponse = zod.object({
+  month: zod.string(),
+  items: zod.array(
+    zod.object({
+      itemName: zod.string(),
+      category: zod.string(),
+      subCategory: zod.string().optional(),
+      unit: zod.string(),
+      openingQty: zod.number(),
+      openingValue: zod.number(),
+      purchasesQty: zod.number(),
+      purchasesValue: zod.number(),
+      consumptionQty: zod.number(),
+      consumptionValue: zod.number(),
+      transferInQty: zod.number(),
+      transferOutQty: zod.number(),
+      adjustmentQty: zod.number(),
+      closingQty: zod.number(),
+      closingValue: zod.number(),
+      lastPrice: zod.number(),
+    }),
+  ),
+  totalOpeningValue: zod.number(),
+  totalPurchasesValue: zod.number(),
+  totalConsumptionValue: zod.number(),
+  totalClosingValue: zod.number(),
+  totalTransferIn: zod.number(),
+  totalTransferOut: zod.number(),
 });
