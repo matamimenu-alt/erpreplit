@@ -35,6 +35,7 @@ export interface PLReport {
   totalPurchaseOpex: number;
   totalLaborCost: number;
   totalFixedExpenses: number;
+  totalAppCommissions: number;
   totalOperatingExpenses: number;
   operatingProfit: number;
   outputVat: number;

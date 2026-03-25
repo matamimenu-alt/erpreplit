@@ -488,8 +488,10 @@ export const DeleteEmployeeParams = zod.object({
  */
 export const ListExpensesResponseItem = zod.object({
   id: zod.number(),
+  category: zod.string(),
   name: zod.string(),
   monthlyCost: zod.number(),
+  notes: zod.string().optional(),
   contractStartDate: zod.string().optional(),
   contractEndDate: zod.string().optional(),
   createdAt: zod.string(),
@@ -500,8 +502,10 @@ export const ListExpensesResponse = zod.array(ListExpensesResponseItem);
  * @summary Create an expense
  */
 export const CreateExpenseBody = zod.object({
+  category: zod.string().optional(),
   name: zod.string(),
   monthlyCost: zod.number(),
+  notes: zod.string().optional(),
   contractStartDate: zod.string().optional(),
   contractEndDate: zod.string().optional(),
 });
@@ -514,16 +518,20 @@ export const UpdateExpenseParams = zod.object({
 });
 
 export const UpdateExpenseBody = zod.object({
+  category: zod.string().optional(),
   name: zod.string(),
   monthlyCost: zod.number(),
+  notes: zod.string().optional(),
   contractStartDate: zod.string().optional(),
   contractEndDate: zod.string().optional(),
 });
 
 export const UpdateExpenseResponse = zod.object({
   id: zod.number(),
+  category: zod.string(),
   name: zod.string(),
   monthlyCost: zod.number(),
+  notes: zod.string().optional(),
   contractStartDate: zod.string().optional(),
   contractEndDate: zod.string().optional(),
   createdAt: zod.string(),
@@ -588,6 +596,7 @@ export const GetPLReportResponse = zod.object({
   totalPurchaseOpex: zod.number(),
   totalLaborCost: zod.number(),
   totalFixedExpenses: zod.number(),
+  totalAppCommissions: zod.number(),
   totalOperatingExpenses: zod.number(),
   operatingProfit: zod.number(),
   outputVat: zod.number(),

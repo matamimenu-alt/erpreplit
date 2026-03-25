@@ -8,8 +8,10 @@
 
 export interface Expense {
   id: number;
+  category: string;
   name: string;
   monthlyCost: number;
+  notes?: string;
   contractStartDate?: string;
   contractEndDate?: string;
   createdAt: string;

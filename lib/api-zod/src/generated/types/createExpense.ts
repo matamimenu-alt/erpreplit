@@ -7,8 +7,10 @@
  */
 
 export interface CreateExpense {
+  category?: string;
   name: string;
   monthlyCost: number;
+  notes?: string;
   contractStartDate?: string;
   contractEndDate?: string;
 }

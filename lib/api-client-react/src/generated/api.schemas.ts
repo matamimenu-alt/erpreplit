@@ -197,16 +197,20 @@ export interface CreateEmployee {
 
 export interface Expense {
   id: number;
+  category: string;
   name: string;
   monthlyCost: number;
+  notes?: string;
   contractStartDate?: string;
   contractEndDate?: string;
   createdAt: string;
 }
 
 export interface CreateExpense {
+  category?: string;
   name: string;
   monthlyCost: number;
+  notes?: string;
   contractStartDate?: string;
   contractEndDate?: string;
 }
@@ -240,6 +244,7 @@ export interface PLReport {
   totalPurchaseOpex: number;
   totalLaborCost: number;
   totalFixedExpenses: number;
+  totalAppCommissions: number;
   totalOperatingExpenses: number;
   operatingProfit: number;
   outputVat: number;

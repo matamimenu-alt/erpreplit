@@ -1,81 +1,391 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { useListExpenses } from "@workspace/api-client-react";
 import { useExpenseMutations } from "@/hooks/use-expenses";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { formatSAR, formatDate } from "@/lib/format";
-import { useForm } from "react-hook-form";
+import { exportToExcel } from "@/lib/export-excel";
+import { useForm, FormProvider, useFormContext } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Trash2, CalendarDays } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { Plus, Trash2, Pencil, CalendarDays, Smartphone, Building2, X, FileSpreadsheet } from "lucide-react";
 
-const expSchema = z.object({
-  name: z.string().min(1),
-  monthlyCost: z.coerce.number().min(0),
+// ────────────── Schemas ───────────────────────────────────────────────────────
+
+const fixedSchema = z.object({
+  category: z.literal("fixed"),
+  name: z.string().min(1, "Required"),
+  monthlyCost: z.coerce.number().min(0, "Must be ≥ 0"),
+  notes: z.string().optional(),
   contractStartDate: z.string().optional(),
-  contractEndDate: z.string().optional()
+  contractEndDate: z.string().optional(),
 });
-type ExpForm = z.infer<typeof expSchema>;
 
+const commissionSchema = z.object({
+  category: z.literal("app-commission"),
+  name: z.string().min(1, "Required"),
+  monthlyCost: z.coerce.number().min(0, "Must be ≥ 0"),
+  notes: z.string().optional(),
+  contractStartDate: z.string().optional(),
+  contractEndDate: z.string().optional(),
+});
+
+type FixedForm = z.infer<typeof fixedSchema>;
+type CommissionForm = z.infer<typeof commissionSchema>;
+type AnyExpenseForm = FixedForm | CommissionForm;
+
+const APP_OPTIONS = ["HungerStation", "Jahez", "Noon Food", "Careem", "Other App"];
+
+// ────────────── Module-level Form Field ──────────────────────────────────────
+const Field = memo(({ label, name, type = "text", step, placeholder }: {
+  label: string; name: string; type?: string; step?: string; placeholder?: string;
+}) => {
+  const form = useFormContext();
+  const err = form.formState.errors[name] as { message?: string } | undefined;
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-slate-600 mb-1">{label}</label>
+      <input
+        type={type}
+        step={step}
+        min={type === "number" ? "0" : undefined}
+        placeholder={placeholder}
+        {...form.register(name)}
+        className="w-full px-3 py-2 border rounded-xl text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+      />
+      {err?.message && <p className="text-xs text-rose-500 mt-0.5">{err.message}</p>}
+    </div>
+  );
+});
+
+// ────────────── Fixed Expense Modal ──────────────────────────────────────────
+function FixedModal({ open, title, defaultValues, onClose, onSubmit, isPending }: {
+  open: boolean; title: string; defaultValues: FixedForm;
+  onClose: () => void; onSubmit: (d: FixedForm) => void; isPending: boolean;
+}) {
+  const form = useForm<FixedForm>({ resolver: zodResolver(fixedSchema), defaultValues });
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-card w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in zoom-in-95">
+        <div className="p-5 border-b flex items-center justify-between">
+          <h2 className="text-lg font-bold">{title}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500"><X className="w-4 h-4" /></button>
+        </div>
+        <FormProvider {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="p-5 space-y-4">
+            <Field label="Expense Name (e.g. Rent, POS License, Utilities)" name="name" placeholder="e.g. Monthly Rent" />
+            <Field label="Monthly Cost (SAR)" name="monthlyCost" type="number" step="0.01" placeholder="0.00" />
+            <Field label="Notes (optional)" name="notes" placeholder="Any additional details" />
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Contract Start" name="contractStartDate" type="date" />
+              <Field label="Contract End" name="contractEndDate" type="date" />
+            </div>
+            <div className="pt-3 flex justify-end gap-3 border-t">
+              <button type="button" onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl">Cancel</button>
+              <button type="submit" disabled={isPending} className="px-6 py-2 bg-primary text-white rounded-xl shadow-md disabled:opacity-60">
+                {isPending ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </form>
+        </FormProvider>
+      </div>
+    </div>
+  );
+}
+
+// ────────────── App Commission Modal ─────────────────────────────────────────
+function CommissionModal({ open, title, defaultValues, onClose, onSubmit, isPending }: {
+  open: boolean; title: string; defaultValues: CommissionForm;
+  onClose: () => void; onSubmit: (d: CommissionForm) => void; isPending: boolean;
+}) {
+  const form = useForm<CommissionForm>({ resolver: zodResolver(commissionSchema), defaultValues });
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-card w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in zoom-in-95">
+        <div className="p-5 border-b flex items-center justify-between">
+          <h2 className="text-lg font-bold flex items-center gap-2"><Smartphone className="w-5 h-5 text-purple-600" />{title}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500"><X className="w-4 h-4" /></button>
+        </div>
+        <FormProvider {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="p-5 space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">App / Platform</label>
+              <select
+                {...form.register("name")}
+                className="w-full px-3 py-2 border rounded-xl text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-white"
+              >
+                <option value="">Select app...</option>
+                {APP_OPTIONS.map(a => <option key={a} value={a}>{a}</option>)}
+              </select>
+              {form.formState.errors.name && <p className="text-xs text-rose-500 mt-0.5">{form.formState.errors.name.message}</p>}
+            </div>
+            <Field label="Monthly Commission Amount (SAR)" name="monthlyCost" type="number" step="0.01" placeholder="0.00" />
+            <Field label="Notes (e.g. commission %, contract reference)" name="notes" placeholder="e.g. 18% of app sales" />
+            <div className="pt-3 flex justify-end gap-3 border-t">
+              <button type="button" onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl">Cancel</button>
+              <button type="submit" disabled={isPending} className="px-6 py-2 bg-purple-600 text-white rounded-xl shadow-md disabled:opacity-60">
+                {isPending ? "Saving..." : "Save Commission"}
+              </button>
+            </div>
+          </form>
+        </FormProvider>
+      </div>
+    </div>
+  );
+}
+
+// ────────────── Edit Modal (generic) ─────────────────────────────────────────
+function EditModal({ open, record, onClose, onSubmit, isPending }: {
+  open: boolean; record: { id: number; category: string; name: string; monthlyCost: number; notes?: string; contractStartDate?: string; contractEndDate?: string } | null;
+  onClose: () => void; onSubmit: (d: AnyExpenseForm) => void; isPending: boolean;
+}) {
+  if (!open || !record) return null;
+  if (record.category === "app-commission") {
+    return (
+      <CommissionModal
+        open={open}
+        title="Edit App Commission"
+        defaultValues={{ category: "app-commission", name: record.name, monthlyCost: record.monthlyCost, notes: record.notes || "", contractStartDate: record.contractStartDate || "", contractEndDate: record.contractEndDate || "" }}
+        onClose={onClose}
+        onSubmit={onSubmit as (d: CommissionForm) => void}
+        isPending={isPending}
+      />
+    );
+  }
+  return (
+    <FixedModal
+      open={open}
+      title="Edit Fixed Expense"
+      defaultValues={{ category: "fixed", name: record.name, monthlyCost: record.monthlyCost, notes: record.notes || "", contractStartDate: record.contractStartDate || "", contractEndDate: record.contractEndDate || "" }}
+      onClose={onClose}
+      onSubmit={onSubmit as (d: FixedForm) => void}
+      isPending={isPending}
+    />
+  );
+}
+
+// ────────────── Main Page ─────────────────────────────────────────────────────
 export default function Expenses() {
-  const [open, setOpen] = useState(false);
-  const { data: expenses, isLoading } = useListExpenses();
-  const { create, remove } = useExpenseMutations();
+  const [addFixed, setAddFixed] = useState(false);
+  const [addCommission, setAddCommission] = useState(false);
+  const [editRecord, setEditRecord] = useState<{ id: number; category: string; name: string; monthlyCost: number; notes?: string; contractStartDate?: string; contractEndDate?: string } | null>(null);
 
-  const form = useForm<ExpForm>({ resolver: zodResolver(expSchema) });
+  const { data: allExpenses = [], isLoading } = useListExpenses();
+  const { create, update, remove } = useExpenseMutations();
+
+  const fixedExpenses = allExpenses.filter(e => (e.category ?? "fixed") === "fixed");
+  const commissions = allExpenses.filter(e => e.category === "app-commission");
+
+  const totalFixed = fixedExpenses.reduce((s, e) => s + e.monthlyCost, 0);
+  const totalCommissions = commissions.reduce((s, e) => s + e.monthlyCost, 0);
+  const grandTotal = totalFixed + totalCommissions;
+
+  function handleCreate(data: AnyExpenseForm) {
+    create.mutate({ data: data as Parameters<typeof create.mutate>[0]["data"] }, {
+      onSuccess: () => {
+        setAddFixed(false);
+        setAddCommission(false);
+        toast({ title: "Expense added", description: "Changes saved successfully." });
+      },
+    });
+  }
+
+  function handleUpdate(data: AnyExpenseForm) {
+    if (!editRecord) return;
+    update.mutate({ id: editRecord.id, data: data as Parameters<typeof update.mutate>[0]["data"] }, {
+      onSuccess: () => {
+        setEditRecord(null);
+        toast({ title: "Expense updated", description: "Changes saved successfully." });
+      },
+    });
+  }
+
+  function handleDelete(id: number) {
+    if (!confirm("Delete this expense?")) return;
+    remove.mutate({ id }, { onSuccess: () => toast({ title: "Expense deleted" }) });
+  }
+
+  function handleExport() {
+    const rows = allExpenses.map(e => ({
+      Category: e.category === "app-commission" ? "App Commission" : "Fixed Expense",
+      Name: e.name,
+      "Monthly Cost (SAR)": e.monthlyCost,
+      Notes: e.notes || "",
+      "Contract Start": e.contractStartDate || "",
+      "Contract End": e.contractEndDate || "",
+    }));
+    exportToExcel(rows, "expenses", "Expenses");
+  }
 
   return (
     <div>
-      <PageHeader 
-        title="Fixed Monthly Expenses" 
-        description="Rent, utilities, licenses, and other recurring costs."
+      <PageHeader
+        title="Fixed Expenses & App Commissions"
+        description="Track recurring monthly costs and delivery app commission fees."
         action={
-          <button onClick={() => setOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl shadow-lg hover:-translate-y-0.5 transition-all">
-            <Plus className="w-4 h-4" /> Add Expense
-          </button>
+          <div className="flex gap-2 flex-wrap">
+            <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 text-sm">
+              <FileSpreadsheet className="w-4 h-4" /> Export Excel
+            </button>
+            <button
+              onClick={() => setAddCommission(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl shadow-lg hover:-translate-y-0.5 transition-all text-sm"
+            >
+              <Smartphone className="w-4 h-4" /> Add App Commission
+            </button>
+            <button
+              onClick={() => setAddFixed(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl shadow-lg hover:-translate-y-0.5 transition-all text-sm"
+            >
+              <Plus className="w-4 h-4" /> Add Fixed Expense
+            </button>
+          </div>
         }
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {isLoading ? <p>Loading...</p> : 
-          expenses?.map(e => (
-            <div key={e.id} className="bg-card rounded-2xl p-6 shadow-sm border relative group flex flex-col justify-between">
-              <button onClick={() => remove.mutate({ id: e.id })} className="absolute top-4 right-4 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all">
-                <Trash2 className="w-4 h-4" />
-              </button>
-              <div>
-                <h3 className="font-bold text-lg text-slate-900 mb-1">{e.name}</h3>
-                <p className="text-3xl font-display font-bold text-blue-600 mt-4">{formatSAR(e.monthlyCost)}<span className="text-sm text-slate-400 font-normal"> /mo</span></p>
-              </div>
-              {(e.contractStartDate || e.contractEndDate) && (
-                <div className="mt-6 pt-4 border-t border-slate-100 text-sm text-slate-500 flex items-center gap-2">
-                  <CalendarDays className="w-4 h-4" />
-                  <span>{formatDate(e.contractStartDate)} &rarr; {formatDate(e.contractEndDate)}</span>
-                </div>
-              )}
-            </div>
-          ))
-        }
+      {/* ── Summary KPI ── */}
+      <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 text-blue-700">
+          <div className="flex items-center gap-2 mb-1">
+            <Building2 className="w-4 h-4 opacity-70" />
+            <p className="text-xs font-bold uppercase tracking-wide opacity-60">Fixed Expenses</p>
+          </div>
+          <p className="text-2xl font-extrabold">{formatSAR(totalFixed)}</p>
+          <p className="text-[11px] opacity-50 mt-1">{fixedExpenses.length} items / month</p>
+        </div>
+        <div className="bg-purple-50 border border-purple-200 rounded-2xl p-5 text-purple-700">
+          <div className="flex items-center gap-2 mb-1">
+            <Smartphone className="w-4 h-4 opacity-70" />
+            <p className="text-xs font-bold uppercase tracking-wide opacity-60">App Commissions</p>
+          </div>
+          <p className="text-2xl font-extrabold">{formatSAR(totalCommissions)}</p>
+          <p className="text-[11px] opacity-50 mt-1">{commissions.length} apps / month</p>
+        </div>
+        <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 text-white">
+          <p className="text-xs font-bold uppercase tracking-wide opacity-60 mb-1">Total Monthly Overhead</p>
+          <p className="text-2xl font-extrabold">{formatSAR(grandTotal)}</p>
+          <p className="text-[11px] opacity-50 mt-1">Fixed + Commissions</p>
+        </div>
       </div>
 
-      {open && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-card w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in zoom-in-95">
-            <div className="p-6 border-b"><h2 className="text-xl font-bold">New Fixed Expense</h2></div>
-            <form onSubmit={form.handleSubmit(d => create.mutate({ data: d }, { onSuccess: () => { setOpen(false); form.reset(); } }))} className="p-6 space-y-4">
-              <div><label className="block text-sm mb-1">Expense Name (e.g. Rent, POS License)</label><input {...form.register("name")} className="w-full px-3 py-2 border rounded-xl" /></div>
-              <div><label className="block text-sm mb-1">Monthly Cost (SAR)</label><input type="number" step="0.01" {...form.register("monthlyCost")} className="w-full px-3 py-2 border rounded-xl" /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm mb-1">Contract Start</label><input type="date" {...form.register("contractStartDate")} className="w-full px-3 py-2 border rounded-xl" /></div>
-                <div><label className="block text-sm mb-1">Contract End</label><input type="date" {...form.register("contractEndDate")} className="w-full px-3 py-2 border rounded-xl" /></div>
-              </div>
-              <div className="pt-4 flex justify-end gap-3 border-t">
-                <button type="button" onClick={() => setOpen(false)} className="px-4 py-2">Cancel</button>
-                <button type="submit" disabled={create.isPending} className="px-6 py-2 bg-primary text-white rounded-xl shadow-md">Save</button>
-              </div>
-            </form>
-          </div>
+      {/* ── Fixed Expenses Section ── */}
+      <section className="mb-10">
+        <div className="flex items-center gap-2 mb-4">
+          <Building2 className="w-5 h-5 text-blue-600" />
+          <h2 className="text-lg font-bold text-slate-800">Fixed Monthly Expenses</h2>
+          <span className="ml-auto text-sm font-semibold text-blue-700">{formatSAR(totalFixed)} / month</span>
         </div>
-      )}
+        {isLoading ? (
+          <p className="text-slate-400 text-sm">Loading...</p>
+        ) : fixedExpenses.length === 0 ? (
+          <div className="border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center text-slate-400 text-sm">
+            No fixed expenses yet — click "Add Fixed Expense" to add rent, utilities, licenses, etc.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {fixedExpenses.map(e => (
+              <div key={e.id} className="bg-card rounded-2xl p-5 shadow-sm border relative group flex flex-col justify-between hover:shadow-md transition-shadow">
+                <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                  <button
+                    onClick={() => setEditRecord({ id: e.id, category: e.category ?? "fixed", name: e.name, monthlyCost: e.monthlyCost, notes: e.notes, contractStartDate: e.contractStartDate, contractEndDate: e.contractEndDate })}
+                    className="p-1.5 text-primary hover:bg-primary/10 rounded-lg"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={() => handleDelete(e.id)} className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[10px] font-bold uppercase">Fixed</span>
+                  </div>
+                  <h3 className="font-bold text-slate-900 text-base">{e.name}</h3>
+                  {e.notes && <p className="text-xs text-slate-500 mt-1">{e.notes}</p>}
+                  <p className="text-3xl font-extrabold text-blue-600 mt-3">{formatSAR(e.monthlyCost)}<span className="text-sm text-slate-400 font-normal"> /mo</span></p>
+                </div>
+                {(e.contractStartDate || e.contractEndDate) && (
+                  <div className="mt-4 pt-3 border-t text-xs text-slate-500 flex items-center gap-2">
+                    <CalendarDays className="w-3.5 h-3.5" />
+                    <span>{e.contractStartDate ? formatDate(e.contractStartDate) : "—"} → {e.contractEndDate ? formatDate(e.contractEndDate) : "—"}</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* ── App Commission Section ── */}
+      <section>
+        <div className="flex items-center gap-2 mb-4">
+          <Smartphone className="w-5 h-5 text-purple-600" />
+          <h2 className="text-lg font-bold text-slate-800">App Commission Expenses</h2>
+          <span className="text-xs text-slate-400 ml-1">(HungerStation, Jahez, Noon, Careem…)</span>
+          <span className="ml-auto text-sm font-semibold text-purple-700">{formatSAR(totalCommissions)} / month</span>
+        </div>
+        {isLoading ? (
+          <p className="text-slate-400 text-sm">Loading...</p>
+        ) : commissions.length === 0 ? (
+          <div className="border-2 border-dashed border-purple-200 rounded-2xl p-8 text-center text-slate-400 text-sm">
+            No app commissions yet — click "Add App Commission" to track HungerStation, Jahez, Noon, etc.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {commissions.map(e => (
+              <div key={e.id} className="bg-card rounded-2xl p-5 shadow-sm border border-purple-100 relative group flex flex-col justify-between hover:shadow-md transition-shadow hover:border-purple-200">
+                <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                  <button
+                    onClick={() => setEditRecord({ id: e.id, category: e.category ?? "app-commission", name: e.name, monthlyCost: e.monthlyCost, notes: e.notes, contractStartDate: e.contractStartDate, contractEndDate: e.contractEndDate })}
+                    className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={() => handleDelete(e.id)} className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Smartphone className="w-4 h-4 text-purple-500" />
+                    <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-[10px] font-bold uppercase">App Commission</span>
+                  </div>
+                  <h3 className="font-bold text-slate-900 text-base">{e.name}</h3>
+                  {e.notes && <p className="text-xs text-slate-500 mt-1">{e.notes}</p>}
+                  <p className="text-3xl font-extrabold text-purple-600 mt-3">{formatSAR(e.monthlyCost)}<span className="text-sm text-slate-400 font-normal"> /mo</span></p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Modals */}
+      <FixedModal
+        open={addFixed}
+        title="Add Fixed Expense"
+        defaultValues={{ category: "fixed", name: "", monthlyCost: 0, notes: "", contractStartDate: "", contractEndDate: "" }}
+        onClose={() => setAddFixed(false)}
+        onSubmit={handleCreate}
+        isPending={create.isPending}
+      />
+      <CommissionModal
+        open={addCommission}
+        title="Add App Commission"
+        defaultValues={{ category: "app-commission", name: "", monthlyCost: 0, notes: "", contractStartDate: "", contractEndDate: "" }}
+        onClose={() => setAddCommission(false)}
+        onSubmit={handleCreate}
+        isPending={create.isPending}
+      />
+      <EditModal
+        open={!!editRecord}
+        record={editRecord}
+        onClose={() => setEditRecord(null)}
+        onSubmit={handleUpdate}
+        isPending={update.isPending}
+      />
     </div>
   );
 }

@@ -13,8 +13,10 @@ function toNum(v: unknown) {
 function toRecord(r: typeof expensesTable.$inferSelect) {
   return {
     id: r.id,
+    category: r.category ?? "fixed",
     name: r.name,
     monthlyCost: toNum(r.monthlyCost),
+    notes: r.notes ?? undefined,
     contractStartDate: r.contractStartDate ?? undefined,
     contractEndDate: r.contractEndDate ?? undefined,
     createdAt: r.createdAt.toISOString(),
@@ -39,13 +41,15 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const restaurantId = getRestaurantId(req);
-    const { name, monthlyCost, contractStartDate, contractEndDate } = req.body;
+    const { category, name, monthlyCost, notes, contractStartDate, contractEndDate } = req.body;
     const [record] = await db
       .insert(expensesTable)
       .values({
         restaurantId,
+        category: category || "fixed",
         name,
         monthlyCost: String(Number(monthlyCost).toFixed(2)),
+        notes: notes || null,
         contractStartDate: contractStartDate || null,
         contractEndDate: contractEndDate || null,
       })
@@ -62,12 +66,14 @@ router.put("/:id", async (req, res) => {
   try {
     const restaurantId = getRestaurantId(req);
     const id = parseInt(req.params.id);
-    const { name, monthlyCost, contractStartDate, contractEndDate } = req.body;
+    const { category, name, monthlyCost, notes, contractStartDate, contractEndDate } = req.body;
     const [record] = await db
       .update(expensesTable)
       .set({
+        category: category || "fixed",
         name,
         monthlyCost: String(Number(monthlyCost).toFixed(2)),
+        notes: notes || null,
         contractStartDate: contractStartDate || null,
         contractEndDate: contractEndDate || null,
       })
