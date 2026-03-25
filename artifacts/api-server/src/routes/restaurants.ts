@@ -11,11 +11,10 @@ const SEED_RESTAURANTS = [
 ];
 
 export async function seedRestaurants() {
+  const existing = await db.select().from(restaurantsTable);
+  if (existing.length > 0) return; // already seeded, skip
   for (const r of SEED_RESTAURANTS) {
-    await db
-      .insert(restaurantsTable)
-      .values({ name: r.name, nameAr: r.nameAr })
-      .onConflictDoNothing();
+    await db.insert(restaurantsTable).values({ name: r.name, nameAr: r.nameAr });
   }
 }
 
