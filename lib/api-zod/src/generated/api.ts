@@ -880,3 +880,169 @@ export const GetStockReportResponse = zod.object({
   totalTransferIn: zod.number(),
   totalTransferOut: zod.number(),
 });
+
+/**
+ * @summary List all dishes with ingredients
+ */
+export const ListDishesResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  category: zod.string(),
+  wastePercentage: zod.number(),
+  targetFoodCostPct: zod.number(),
+  notes: zod.string().optional(),
+  createdAt: zod.string(),
+  ingredients: zod.array(
+    zod.object({
+      id: zod.number(),
+      ingredientName: zod.string(),
+      unit: zod.string(),
+      quantityPerDish: zod.number(),
+    }),
+  ),
+});
+export const ListDishesResponse = zod.array(ListDishesResponseItem);
+
+/**
+ * @summary Create a new dish
+ */
+export const CreateDishBody = zod.object({
+  name: zod.string(),
+  category: zod.string().optional(),
+  wastePercentage: zod.number().optional(),
+  targetFoodCostPct: zod.number().optional(),
+  notes: zod.string().optional(),
+  ingredients: zod
+    .array(
+      zod.object({
+        ingredientName: zod.string(),
+        unit: zod.string(),
+        quantityPerDish: zod.number(),
+      }),
+    )
+    .optional(),
+});
+
+/**
+ * @summary Get full pricing breakdown for all dishes
+ */
+export const GetDishPricingResponse = zod.object({
+  config: zod.object({
+    monthlyOrders: zod.number(),
+    deliveryCostPerOrder: zod.number(),
+    deliveryCommissionPct: zod.number(),
+  }),
+  fixedCostSummary: zod.object({
+    totalExpenses: zod.number(),
+    totalSalaries: zod.number(),
+    totalFixedCosts: zod.number(),
+    fixedCostPerDish: zod.number(),
+  }),
+  dishes: zod.array(
+    zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      category: zod.string(),
+      wastePercentage: zod.number(),
+      targetFoodCostPct: zod.number(),
+      notes: zod.string().optional(),
+      ingredients: zod.array(
+        zod.object({
+          id: zod.number(),
+          ingredientName: zod.string(),
+          unit: zod.string(),
+          quantityPerDish: zod.number(),
+          unitPrice: zod.number(),
+          cost: zod.number(),
+          found: zod.boolean(),
+        }),
+      ),
+      pricing: zod.object({
+        ingredientCost: zod.number(),
+        wasteCost: zod.number(),
+        totalIngredientCost: zod.number(),
+        fixedCostAllocation: zod.number(),
+        deliveryCostAllocation: zod.number(),
+        finalDishCost: zod.number(),
+        suggestedDineInPrice: zod.number(),
+        deliveryAppPrice: zod.number(),
+        psychologicalDineInPrice: zod.number(),
+        psychologicalDeliveryPrice: zod.number(),
+        foodCostPct: zod.number(),
+        profitMarginPct: zod.number(),
+      }),
+    }),
+  ),
+});
+
+/**
+ * @summary Get pricing configuration
+ */
+export const GetPricingConfigResponse = zod.object({
+  monthlyOrders: zod.number(),
+  deliveryCostPerOrder: zod.number(),
+  deliveryCommissionPct: zod.number(),
+});
+
+/**
+ * @summary Update pricing configuration
+ */
+export const UpdatePricingConfigBody = zod.object({
+  monthlyOrders: zod.number(),
+  deliveryCostPerOrder: zod.number(),
+  deliveryCommissionPct: zod.number(),
+});
+
+export const UpdatePricingConfigResponse = zod.object({
+  monthlyOrders: zod.number(),
+  deliveryCostPerOrder: zod.number(),
+  deliveryCommissionPct: zod.number(),
+});
+
+/**
+ * @summary List available product names from purchases (for ingredient autocomplete)
+ */
+export const ListPurchaseProductsResponseItem = zod.string();
+export const ListPurchaseProductsResponse = zod.array(
+  ListPurchaseProductsResponseItem,
+);
+
+/**
+ * @summary Update a dish
+ */
+export const UpdateDishParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateDishBody = zod.object({
+  name: zod.string(),
+  category: zod.string().optional(),
+  wastePercentage: zod.number().optional(),
+  targetFoodCostPct: zod.number().optional(),
+  notes: zod.string().optional(),
+  ingredients: zod
+    .array(
+      zod.object({
+        ingredientName: zod.string(),
+        unit: zod.string(),
+        quantityPerDish: zod.number(),
+      }),
+    )
+    .optional(),
+});
+
+export const UpdateDishResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+});
+
+/**
+ * @summary Delete a dish
+ */
+export const DeleteDishParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeleteDishResponse = zod.object({
+  success: zod.boolean(),
+});

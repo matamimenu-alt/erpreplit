@@ -5,12 +5,12 @@
 Multi-restaurant Management & Accounting System for Saudi Arabia. Manages 3 restaurants: **Asad Al-Hamra**, **Sabah Al-El**, **Chicken Bar**. Full-stack pnpm monorepo using TypeScript, React, and Express.
 
 ## Latest Changes (Session)
-- **Full Inventory Management System Built**: 5-tab UI (Stock Levels, Movements, Transfers, Monthly Report, P&L Closing Stock). New `stock_movements` and `branch_transfers` DB tables. Stock backend routes added for items/movements/transfers/report.
-- **Purchases → Stock Auto-Sync**: Creating/editing/deleting a purchase automatically creates/updates/deletes the linked stock movement entry.
-- **COGS Formula Updated**: P&L uses `Opening Inventory + Purchases − Closing Inventory`. Opening inventory auto-calculated as previous month's closing stock.
-- **Branch Transfers**: Inter-branch transfer form creates two stock movements (transfer-out for source, transfer-in for destination). Deleting a transfer removes both movements.
-- **Monthly Stock Report**: Shows item-level COGS breakdown with Excel export.
-- **OpenAPI + codegen updated**: All new stock endpoints documented; Orval codegen ran to generate React Query hooks.
+- **Food Cost & Pricing Engine Built**: New page at `/food-cost` with 3 tabs (Dishes, Pricing Analysis, Profit Simulator). New DB tables: `dishes`, `dish_ingredients`, `pricing_config`. Backend route `/api/dishes` with full pricing calculation logic.
+- **Automated pricing formula**: Ingredient Cost (from purchases) + Waste % + Fixed Cost Allocation (expenses + salaries ÷ monthly orders) + Delivery Cost = Final Dish Cost → ÷ Target Food Cost % = Suggested Price.
+- **Psychological pricing**: Rounds up to X.90 format (SAR 25 → SAR 25.90).
+- **Delivery app pricing**: Adds delivery commission uplift (default 25%) for delivery platform price.
+- **Profit Simulator**: Interactive sliders for target food cost % and waste %, shows live price/margin changes with original vs simulated comparison.
+- **Ingredient autocomplete**: Pulls product names from purchase records for easy ingredient entry.
 
 ## Stack
 

@@ -1,0 +1,95 @@
+### 🔧 Feature Request: Automated Food Cost & Pricing Engine
+
+**Objective:**
+Build an automated food cost calculation and smart pricing system that integrates with existing purchase and expense data.
+
+---
+
+### 📥 Inputs Required:
+
+1. Dish ingredients (entered manually per item)
+2. Quantity of each ingredient used per dish
+3. Existing purchase data (cost per unit already stored in system)
+4. Fixed monthly expenses (already stored)
+5. Staff salaries (already stored)
+
+---
+
+### ⚙️ System Logic:
+
+#### 1. Ingredient Cost Calculation:
+
+* Fetch ingredient cost from purchase database
+* Calculate total ingredient cost per dish based on quantity used
+
+#### 2. Add Waste Percentage:
+
+* Apply food waste percentage (default: 5–10%)
+
+#### 3. Allocate Fixed Costs:
+
+* Distribute fixed expenses + salaries across dishes based on:
+
+  * Total monthly sales OR
+  * Number of orders (configurable)
+
+#### 4. Delivery Cost Allocation:
+
+* Average delivery cost per order: **7 SAR**
+* Minimum order value: **30 SAR**
+* System should distribute delivery cost proportionally per dish
+
+#### 5. Target Food Cost Percentage:
+
+* Default target: **25%**
+
+---
+
+### 🧮 Pricing Formula:
+
+Final Dish Cost =
+(Ingredient Cost + Waste + Allocated Fixed Costs + Allocated Delivery Cost)
+
+Suggested Selling Price =
+Final Dish Cost ÷ Target Food Cost % (25%)
+
+---
+
+### 📊 Output Required:
+
+For each dish, the system should display:
+
+* Total ingredient cost
+* Waste cost
+* Fixed cost allocation
+* Delivery cost allocation
+* Final cost per dish
+* Suggested selling price
+* Profit margin %
+* Food cost %
+
+---
+
+### 📈 Advanced Feature:
+
+* Show comparison with:
+
+  * Average delivery app pricing (based on 25% commission assumption)
+* Suggest:
+
+  * Dine-in price
+  * Delivery app price (higher to cover commission)
+
+---
+
+### ⚡ Optional Enhancements:
+
+* Allow manual override of target food cost %
+* Dynamic pricing suggestions (e.g. psychological pricing: 24.9 instead of 25)
+* Profit simulator (adjust % and see price changes live)
+
+---
+
+### 🎯 Goal:
+
+Enable automatic, accurate, and scalable menu pricing using real purchase data and operational costs.

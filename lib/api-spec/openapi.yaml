@@ -850,6 +850,154 @@ paths:
               schema:
                 $ref: "#/components/schemas/StockMonthlyReport"
 
+  /dishes:
+    get:
+      operationId: listDishes
+      tags: [dishes]
+      summary: List all dishes with ingredients
+      responses:
+        "200":
+          description: List of dishes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DishWithIngredients"
+    post:
+      operationId: createDish
+      tags: [dishes]
+      summary: Create a new dish
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDish"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                required: [id, name]
+
+  /dishes/pricing:
+    get:
+      operationId: getDishPricing
+      tags: [dishes]
+      summary: Get full pricing breakdown for all dishes
+      responses:
+        "200":
+          description: Pricing breakdown
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DishPricingResult"
+
+  /dishes/config:
+    get:
+      operationId: getPricingConfig
+      tags: [dishes]
+      summary: Get pricing configuration
+      responses:
+        "200":
+          description: Pricing config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PricingConfig"
+    put:
+      operationId: updatePricingConfig
+      tags: [dishes]
+      summary: Update pricing configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PricingConfig"
+      responses:
+        "200":
+          description: Updated config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PricingConfig"
+
+  /dishes/products:
+    get:
+      operationId: listPurchaseProducts
+      tags: [dishes]
+      summary: List available product names from purchases (for ingredient autocomplete)
+      responses:
+        "200":
+          description: Product names
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
+  /dishes/{id}:
+    put:
+      operationId: updateDish
+      tags: [dishes]
+      summary: Update a dish
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDish"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                required: [id, name]
+    delete:
+      operationId: deleteDish
+      tags: [dishes]
+      summary: Delete a dish
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required: [success]
+
 components:
   schemas:
     HealthStatus:
@@ -1899,3 +2047,189 @@ components:
         - totalClosingValue
         - totalTransferIn
         - totalTransferOut
+
+    DishIngredient:
+      type: object
+      properties:
+        id:
+          type: integer
+        ingredientName:
+          type: string
+        unit:
+          type: string
+        quantityPerDish:
+          type: number
+      required: [id, ingredientName, unit, quantityPerDish]
+
+    DishWithIngredients:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        category:
+          type: string
+        wastePercentage:
+          type: number
+        targetFoodCostPct:
+          type: number
+        notes:
+          type: string
+        createdAt:
+          type: string
+        ingredients:
+          type: array
+          items:
+            $ref: "#/components/schemas/DishIngredient"
+      required: [id, name, category, wastePercentage, targetFoodCostPct, createdAt, ingredients]
+
+    CreateDishIngredient:
+      type: object
+      properties:
+        ingredientName:
+          type: string
+        unit:
+          type: string
+        quantityPerDish:
+          type: number
+      required: [ingredientName, unit, quantityPerDish]
+
+    CreateDish:
+      type: object
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        wastePercentage:
+          type: number
+        targetFoodCostPct:
+          type: number
+        notes:
+          type: string
+        ingredients:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateDishIngredient"
+      required: [name]
+
+    DishPricingBreakdown:
+      type: object
+      properties:
+        ingredientCost:
+          type: number
+        wasteCost:
+          type: number
+        totalIngredientCost:
+          type: number
+        fixedCostAllocation:
+          type: number
+        deliveryCostAllocation:
+          type: number
+        finalDishCost:
+          type: number
+        suggestedDineInPrice:
+          type: number
+        deliveryAppPrice:
+          type: number
+        psychologicalDineInPrice:
+          type: number
+        psychologicalDeliveryPrice:
+          type: number
+        foodCostPct:
+          type: number
+        profitMarginPct:
+          type: number
+      required:
+        - ingredientCost
+        - wasteCost
+        - totalIngredientCost
+        - fixedCostAllocation
+        - deliveryCostAllocation
+        - finalDishCost
+        - suggestedDineInPrice
+        - deliveryAppPrice
+        - psychologicalDineInPrice
+        - psychologicalDeliveryPrice
+        - foodCostPct
+        - profitMarginPct
+
+    DishIngredientPriced:
+      type: object
+      properties:
+        id:
+          type: integer
+        ingredientName:
+          type: string
+        unit:
+          type: string
+        quantityPerDish:
+          type: number
+        unitPrice:
+          type: number
+        cost:
+          type: number
+        found:
+          type: boolean
+      required: [id, ingredientName, unit, quantityPerDish, unitPrice, cost, found]
+
+    DishPricingItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        category:
+          type: string
+        wastePercentage:
+          type: number
+        targetFoodCostPct:
+          type: number
+        notes:
+          type: string
+        ingredients:
+          type: array
+          items:
+            $ref: "#/components/schemas/DishIngredientPriced"
+        pricing:
+          $ref: "#/components/schemas/DishPricingBreakdown"
+      required: [id, name, category, wastePercentage, targetFoodCostPct, ingredients, pricing]
+
+    FixedCostSummary:
+      type: object
+      properties:
+        totalExpenses:
+          type: number
+        totalSalaries:
+          type: number
+        totalFixedCosts:
+          type: number
+        fixedCostPerDish:
+          type: number
+      required: [totalExpenses, totalSalaries, totalFixedCosts, fixedCostPerDish]
+
+    PricingConfig:
+      type: object
+      properties:
+        monthlyOrders:
+          type: integer
+        deliveryCostPerOrder:
+          type: number
+        deliveryCommissionPct:
+          type: number
+      required: [monthlyOrders, deliveryCostPerOrder, deliveryCommissionPct]
+
+    DishPricingResult:
+      type: object
+      properties:
+        config:
+          $ref: "#/components/schemas/PricingConfig"
+        fixedCostSummary:
+          $ref: "#/components/schemas/FixedCostSummary"
+        dishes:
+          type: array
+          items:
+            $ref: "#/components/schemas/DishPricingItem"
+      required: [config, fixedCostSummary, dishes]

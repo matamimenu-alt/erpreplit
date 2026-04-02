@@ -431,6 +431,94 @@ export interface StockMonthlyReport {
   totalTransferOut: number;
 }
 
+export interface DishIngredient {
+  id: number;
+  ingredientName: string;
+  unit: string;
+  quantityPerDish: number;
+}
+
+export interface DishWithIngredients {
+  id: number;
+  name: string;
+  category: string;
+  wastePercentage: number;
+  targetFoodCostPct: number;
+  notes?: string;
+  createdAt: string;
+  ingredients: DishIngredient[];
+}
+
+export interface CreateDishIngredient {
+  ingredientName: string;
+  unit: string;
+  quantityPerDish: number;
+}
+
+export interface CreateDish {
+  name: string;
+  category?: string;
+  wastePercentage?: number;
+  targetFoodCostPct?: number;
+  notes?: string;
+  ingredients?: CreateDishIngredient[];
+}
+
+export interface DishPricingBreakdown {
+  ingredientCost: number;
+  wasteCost: number;
+  totalIngredientCost: number;
+  fixedCostAllocation: number;
+  deliveryCostAllocation: number;
+  finalDishCost: number;
+  suggestedDineInPrice: number;
+  deliveryAppPrice: number;
+  psychologicalDineInPrice: number;
+  psychologicalDeliveryPrice: number;
+  foodCostPct: number;
+  profitMarginPct: number;
+}
+
+export interface DishIngredientPriced {
+  id: number;
+  ingredientName: string;
+  unit: string;
+  quantityPerDish: number;
+  unitPrice: number;
+  cost: number;
+  found: boolean;
+}
+
+export interface DishPricingItem {
+  id: number;
+  name: string;
+  category: string;
+  wastePercentage: number;
+  targetFoodCostPct: number;
+  notes?: string;
+  ingredients: DishIngredientPriced[];
+  pricing: DishPricingBreakdown;
+}
+
+export interface FixedCostSummary {
+  totalExpenses: number;
+  totalSalaries: number;
+  totalFixedCosts: number;
+  fixedCostPerDish: number;
+}
+
+export interface PricingConfig {
+  monthlyOrders: number;
+  deliveryCostPerOrder: number;
+  deliveryCommissionPct: number;
+}
+
+export interface DishPricingResult {
+  config: PricingConfig;
+  fixedCostSummary: FixedCostSummary;
+  dishes: DishPricingItem[];
+}
+
 export type ListSalesParams = {
   /**
    * Filter by month (YYYY-MM)
@@ -511,4 +599,18 @@ export type GetStockReportParams = {
    */
   month: string;
   category?: string;
+};
+
+export type CreateDish201 = {
+  id: number;
+  name: string;
+};
+
+export type UpdateDish200 = {
+  id: number;
+  name: string;
+};
+
+export type DeleteDish200 = {
+  success: boolean;
 };
