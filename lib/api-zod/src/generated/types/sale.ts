@@ -9,17 +9,24 @@
 export interface Sale {
   id: number;
   date: string;
-  dineInFood: number;
-  dineInBeverage: number;
-  takeawayFood: number;
-  takeawayBeverage: number;
-  deliveryFood: number;
-  deliveryBeverage: number;
-  appSalesFood: number;
-  appSalesBeverage: number;
-  foodSales: number;
-  beverageSales: number;
-  totalSales: number;
+  cash: number;
+  card: number;
+  app1: number;
+  app2: number;
+  app3: number;
+  app4: number;
+  app5: number;
+  app6: number;
+  vatMode: string;
+  totalRevenue: number;
+  netSales: number;
   outputVat: number;
+  openingBalance: number;
+  cashExpenses: number;
+  pettyCash: number;
+  closingBalance: number;
+  expectedClosing: number;
+  cashDiscrepancy: number;
+  dailyNotes: string;
   createdAt: string;
 }

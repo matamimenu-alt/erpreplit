@@ -1,5 +1,6 @@
 export * from "./restaurants";
 export * from "./sales";
+export * from "./sales-app-config";
 export * from "./purchases";
 export * from "./suppliers";
 export * from "./employees";

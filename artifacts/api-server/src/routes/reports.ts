@@ -66,20 +66,24 @@ router.get("/pl", async (req, res) => {
       purchaseRecords = purchaseRecords.filter((r) => r.date.startsWith(month));
     }
 
-    // Revenue channel breakdown
-    const dineInFood     = salesRecords.reduce((s, r) => s + toNum(r.dineInFood), 0);
-    const dineInBeverage = salesRecords.reduce((s, r) => s + toNum(r.dineInBeverage), 0);
-    const takeawayFood   = salesRecords.reduce((s, r) => s + toNum(r.takeawayFood), 0);
-    const takeawayBeverage = salesRecords.reduce((s, r) => s + toNum(r.takeawayBeverage), 0);
-    const deliveryFood   = salesRecords.reduce((s, r) => s + toNum(r.deliveryFood), 0);
-    const deliveryBeverage = salesRecords.reduce((s, r) => s + toNum(r.deliveryBeverage), 0);
-    const appSalesFood   = salesRecords.reduce((s, r) => s + toNum(r.appSalesFood), 0);
-    const appSalesBeverage = salesRecords.reduce((s, r) => s + toNum(r.appSalesBeverage), 0);
+    // Revenue channel breakdown (new schema: cash / card / app1-6)
+    const cashSales   = salesRecords.reduce((s, r) => s + toNum(r.cash), 0);
+    const cardSales   = salesRecords.reduce((s, r) => s + toNum(r.card), 0);
+    const app1Sales   = salesRecords.reduce((s, r) => s + toNum(r.app1), 0);
+    const app2Sales   = salesRecords.reduce((s, r) => s + toNum(r.app2), 0);
+    const app3Sales   = salesRecords.reduce((s, r) => s + toNum(r.app3), 0);
+    const app4Sales   = salesRecords.reduce((s, r) => s + toNum(r.app4), 0);
+    const app5Sales   = salesRecords.reduce((s, r) => s + toNum(r.app5), 0);
+    const app6Sales   = salesRecords.reduce((s, r) => s + toNum(r.app6), 0);
+    const appSalesTotal = app1Sales + app2Sales + app3Sales + app4Sales + app5Sales + app6Sales;
 
-    const foodSales      = dineInFood + takeawayFood + deliveryFood + appSalesFood;
-    const beverageSales  = dineInBeverage + takeawayBeverage + deliveryBeverage + appSalesBeverage;
-    const totalRevenue   = foodSales + beverageSales;
+    const netSales       = salesRecords.reduce((s, r) => s + toNum(r.netSales), 0);
+    const totalRevenue   = salesRecords.reduce((s, r) => s + toNum(r.totalRevenue), 0);
     const outputVat      = salesRecords.reduce((s, r) => s + toNum(r.outputVat), 0);
+
+    // Aliases for P&L compatibility
+    const foodSales    = netSales;
+    const beverageSales = 0;
 
     // COGS from purchases
     const foodCost = purchaseRecords.filter(r => isFoodCost(r.category))
@@ -146,16 +150,18 @@ router.get("/pl", async (req, res) => {
 
     res.json({
       month: month ?? "all",
-      // Channel breakdown
-      dineInFood: +dineInFood.toFixed(2),
-      dineInBeverage: +dineInBeverage.toFixed(2),
-      takeawayFood: +takeawayFood.toFixed(2),
-      takeawayBeverage: +takeawayBeverage.toFixed(2),
-      deliveryFood: +deliveryFood.toFixed(2),
-      deliveryBeverage: +deliveryBeverage.toFixed(2),
-      appSalesFood: +appSalesFood.toFixed(2),
-      appSalesBeverage: +appSalesBeverage.toFixed(2),
+      // Channel breakdown (new schema)
+      cashSales: +cashSales.toFixed(2),
+      cardSales: +cardSales.toFixed(2),
+      app1Sales: +app1Sales.toFixed(2),
+      app2Sales: +app2Sales.toFixed(2),
+      app3Sales: +app3Sales.toFixed(2),
+      app4Sales: +app4Sales.toFixed(2),
+      app5Sales: +app5Sales.toFixed(2),
+      app6Sales: +app6Sales.toFixed(2),
+      appSalesTotal: +appSalesTotal.toFixed(2),
       // Revenue totals
+      netSales: +netSales.toFixed(2),
       foodSales: +foodSales.toFixed(2),
       beverageSales: +beverageSales.toFixed(2),
       totalRevenue: +totalRevenue.toFixed(2),

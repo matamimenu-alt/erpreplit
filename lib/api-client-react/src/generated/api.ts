@@ -40,6 +40,7 @@ import type {
   GetDashboardSummaryParams,
   GetInventoryParams,
   GetPLReportParams,
+  GetSalesReportParams,
   GetStockReportParams,
   GetVatReportParams,
   HealthStatus,
@@ -57,6 +58,8 @@ import type {
   Purchase,
   Restaurant,
   Sale,
+  SalesAppConfig,
+  SalesReport,
   StockItem,
   StockMonthlyReport,
   StockMovement,
@@ -644,6 +647,261 @@ export function useGetMonthlySalesSummary<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetMonthlySalesSummaryQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get sales app configuration (app names, default VAT mode)
+ */
+export const getGetSalesAppConfigUrl = () => {
+  return `/api/sales/app-config`;
+};
+
+export const getSalesAppConfig = async (
+  options?: RequestInit,
+): Promise<SalesAppConfig> => {
+  return customFetch<SalesAppConfig>(getGetSalesAppConfigUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSalesAppConfigQueryKey = () => {
+  return [`/api/sales/app-config`] as const;
+};
+
+export const getGetSalesAppConfigQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSalesAppConfig>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getSalesAppConfig>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSalesAppConfigQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getSalesAppConfig>>
+  > = ({ signal }) => getSalesAppConfig({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSalesAppConfig>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetSalesAppConfigQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSalesAppConfig>>
+>;
+export type GetSalesAppConfigQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get sales app configuration (app names, default VAT mode)
+ */
+
+export function useGetSalesAppConfig<
+  TData = Awaited<ReturnType<typeof getSalesAppConfig>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getSalesAppConfig>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetSalesAppConfigQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update sales app configuration
+ */
+export const getUpdateSalesAppConfigUrl = () => {
+  return `/api/sales/app-config`;
+};
+
+export const updateSalesAppConfig = async (
+  salesAppConfig: SalesAppConfig,
+  options?: RequestInit,
+): Promise<SalesAppConfig> => {
+  return customFetch<SalesAppConfig>(getUpdateSalesAppConfigUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(salesAppConfig),
+  });
+};
+
+export const getUpdateSalesAppConfigMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateSalesAppConfig>>,
+    TError,
+    { data: BodyType<SalesAppConfig> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateSalesAppConfig>>,
+  TError,
+  { data: BodyType<SalesAppConfig> },
+  TContext
+> => {
+  const mutationKey = ["updateSalesAppConfig"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateSalesAppConfig>>,
+    { data: BodyType<SalesAppConfig> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateSalesAppConfig(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateSalesAppConfigMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateSalesAppConfig>>
+>;
+export type UpdateSalesAppConfigMutationBody = BodyType<SalesAppConfig>;
+export type UpdateSalesAppConfigMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update sales app configuration
+ */
+export const useUpdateSalesAppConfig = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateSalesAppConfig>>,
+    TError,
+    { data: BodyType<SalesAppConfig> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateSalesAppConfig>>,
+  TError,
+  { data: BodyType<SalesAppConfig> },
+  TContext
+> => {
+  return useMutation(getUpdateSalesAppConfigMutationOptions(options));
+};
+
+/**
+ * @summary Get sales report with date range
+ */
+export const getGetSalesReportUrl = (params?: GetSalesReportParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/sales/report?${stringifiedParams}`
+    : `/api/sales/report`;
+};
+
+export const getSalesReport = async (
+  params?: GetSalesReportParams,
+  options?: RequestInit,
+): Promise<SalesReport> => {
+  return customFetch<SalesReport>(getGetSalesReportUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSalesReportQueryKey = (params?: GetSalesReportParams) => {
+  return [`/api/sales/report`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetSalesReportQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSalesReport>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetSalesReportParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getSalesReport>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSalesReportQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSalesReport>>> = ({
+    signal,
+  }) => getSalesReport(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSalesReport>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetSalesReportQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSalesReport>>
+>;
+export type GetSalesReportQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get sales report with date range
+ */
+
+export function useGetSalesReport<
+  TData = Awaited<ReturnType<typeof getSalesReport>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetSalesReportParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getSalesReport>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetSalesReportQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

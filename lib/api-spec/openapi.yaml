@@ -70,6 +70,16 @@ paths:
           schema:
             type: string
           description: Filter by month (YYYY-MM)
+        - name: from
+          in: query
+          schema:
+            type: string
+          description: Filter from date (YYYY-MM-DD)
+        - name: to
+          in: query
+          schema:
+            type: string
+          description: Filter to date (YYYY-MM-DD)
       responses:
         "200":
           description: List of sales
@@ -149,6 +159,60 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/MonthlySalesSummary"
+
+  /sales/app-config:
+    get:
+      operationId: getSalesAppConfig
+      tags: [sales]
+      summary: Get sales app configuration (app names, default VAT mode)
+      responses:
+        "200":
+          description: App config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesAppConfig"
+    put:
+      operationId: updateSalesAppConfig
+      tags: [sales]
+      summary: Update sales app configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SalesAppConfig"
+      responses:
+        "200":
+          description: Updated config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesAppConfig"
+
+  /sales/report:
+    get:
+      operationId: getSalesReport
+      tags: [sales]
+      summary: Get sales report with date range
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+          description: From date (YYYY-MM-DD)
+        - name: to
+          in: query
+          schema:
+            type: string
+          description: To date (YYYY-MM-DD)
+      responses:
+        "200":
+          description: Sales report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesReport"
 
   # Purchases
   /purchases:
@@ -1032,47 +1096,68 @@ components:
           type: integer
         date:
           type: string
-        dineInFood:
+        cash:
           type: number
-        dineInBeverage:
+        card:
           type: number
-        takeawayFood:
+        app1:
           type: number
-        takeawayBeverage:
+        app2:
           type: number
-        deliveryFood:
+        app3:
           type: number
-        deliveryBeverage:
+        app4:
           type: number
-        appSalesFood:
+        app5:
           type: number
-        appSalesBeverage:
+        app6:
           type: number
-        foodSales:
+        vatMode:
+          type: string
+        totalRevenue:
           type: number
-        beverageSales:
-          type: number
-        totalSales:
+        netSales:
           type: number
         outputVat:
           type: number
+        openingBalance:
+          type: number
+        cashExpenses:
+          type: number
+        pettyCash:
+          type: number
+        closingBalance:
+          type: number
+        expectedClosing:
+          type: number
+        cashDiscrepancy:
+          type: number
+        dailyNotes:
+          type: string
         createdAt:
           type: string
       required:
         - id
         - date
-        - dineInFood
-        - dineInBeverage
-        - takeawayFood
-        - takeawayBeverage
-        - deliveryFood
-        - deliveryBeverage
-        - appSalesFood
-        - appSalesBeverage
-        - foodSales
-        - beverageSales
-        - totalSales
+        - cash
+        - card
+        - app1
+        - app2
+        - app3
+        - app4
+        - app5
+        - app6
+        - vatMode
+        - totalRevenue
+        - netSales
         - outputVat
+        - openingBalance
+        - cashExpenses
+        - pettyCash
+        - closingBalance
+        - expectedClosing
+        - cashDiscrepancy
+        - dailyNotes
         - createdAt
 
     CreateSale:
@@ -1080,22 +1165,34 @@ components:
       properties:
         date:
           type: string
-        dineInFood:
+        cash:
           type: number
-        dineInBeverage:
+        card:
           type: number
-        takeawayFood:
+        app1:
           type: number
-        takeawayBeverage:
+        app2:
           type: number
-        deliveryFood:
+        app3:
           type: number
-        deliveryBeverage:
+        app4:
           type: number
-        appSalesFood:
+        app5:
           type: number
-        appSalesBeverage:
+        app6:
           type: number
+        vatMode:
+          type: string
+        openingBalance:
+          type: number
+        cashExpenses:
+          type: number
+        pettyCash:
+          type: number
+        closingBalance:
+          type: number
+        dailyNotes:
+          type: string
       required:
         - date
 
@@ -1104,20 +1201,155 @@ components:
       properties:
         month:
           type: string
-        totalFoodSales:
+        cash:
           type: number
-        totalBeverageSales:
+        card:
           type: number
-        totalSales:
+        app1:
+          type: number
+        app2:
+          type: number
+        app3:
+          type: number
+        app4:
+          type: number
+        app5:
+          type: number
+        app6:
+          type: number
+        totalRevenue:
+          type: number
+        netSales:
           type: number
         totalOutputVat:
           type: number
+        totalCashDiscrepancy:
+          type: number
       required:
         - month
-        - totalFoodSales
-        - totalBeverageSales
-        - totalSales
+        - cash
+        - card
+        - totalRevenue
+        - netSales
         - totalOutputVat
+
+    SalesAppConfig:
+      type: object
+      properties:
+        id:
+          type: integer
+          nullable: true
+        app1Name:
+          type: string
+        app2Name:
+          type: string
+        app3Name:
+          type: string
+        app4Name:
+          type: string
+        app5Name:
+          type: string
+        app6Name:
+          type: string
+        defaultVatMode:
+          type: string
+      required:
+        - app1Name
+        - app2Name
+        - app3Name
+        - app4Name
+        - app5Name
+        - app6Name
+        - defaultVatMode
+
+    SalesReport:
+      type: object
+      properties:
+        from:
+          type: string
+          nullable: true
+        to:
+          type: string
+          nullable: true
+        recordCount:
+          type: integer
+        totals:
+          type: object
+          properties:
+            cash:
+              type: number
+            card:
+              type: number
+            app1:
+              type: number
+            app2:
+              type: number
+            app3:
+              type: number
+            app4:
+              type: number
+            app5:
+              type: number
+            app6:
+              type: number
+            appsTotal:
+              type: number
+            totalRevenue:
+              type: number
+            netSales:
+              type: number
+            outputVat:
+              type: number
+            cashDiscrepancy:
+              type: number
+          required:
+            - cash
+            - card
+            - appsTotal
+            - totalRevenue
+            - netSales
+            - outputVat
+        daily:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+              cash:
+                type: number
+              card:
+                type: number
+              app1:
+                type: number
+              app2:
+                type: number
+              app3:
+                type: number
+              app4:
+                type: number
+              app5:
+                type: number
+              app6:
+                type: number
+              appsTotal:
+                type: number
+              totalRevenue:
+                type: number
+              netSales:
+                type: number
+              outputVat:
+                type: number
+              vatMode:
+                type: string
+              cashDiscrepancy:
+                type: number
+              dailyNotes:
+                type: string
+      required:
+        - recordCount
+        - totals
+        - daily
 
     PurchaseCategory:
       type: string
@@ -1156,6 +1388,9 @@ components:
           type: number
         totalAmount:
           type: number
+        paymentType:
+          type: string
+          enum: [cash, card, credit]
         notes:
           type: string
           nullable: true
@@ -1173,6 +1408,7 @@ components:
         - amountBeforeVat
         - vatAmount
         - totalAmount
+        - paymentType
         - createdAt
 
     CreatePurchase:
@@ -1192,6 +1428,9 @@ components:
           type: number
         priceIncludesVat:
           type: boolean
+        paymentType:
+          type: string
+          enum: [cash, card, credit]
         notes:
           type: string
           nullable: true
@@ -1526,21 +1765,25 @@ components:
       properties:
         month:
           type: string
-        dineInFood:
+        cashSales:
           type: number
-        dineInBeverage:
+        cardSales:
           type: number
-        takeawayFood:
+        app1Sales:
           type: number
-        takeawayBeverage:
+        app2Sales:
           type: number
-        deliveryFood:
+        app3Sales:
           type: number
-        deliveryBeverage:
+        app4Sales:
           type: number
-        appSalesFood:
+        app5Sales:
           type: number
-        appSalesBeverage:
+        app6Sales:
+          type: number
+        appSalesTotal:
+          type: number
+        netSales:
           type: number
         foodSales:
           type: number
@@ -1615,14 +1858,9 @@ components:
         netMarginPercent:
           type: number
       required:
-        - dineInFood
-        - dineInBeverage
-        - takeawayFood
-        - takeawayBeverage
-        - deliveryFood
-        - deliveryBeverage
-        - appSalesFood
-        - appSalesBeverage
+        - cashSales
+        - cardSales
+        - netSales
         - foodSales
         - beverageSales
         - totalRevenue

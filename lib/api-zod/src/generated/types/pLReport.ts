@@ -8,14 +8,16 @@
 
 export interface PLReport {
   month?: string;
-  dineInFood: number;
-  dineInBeverage: number;
-  takeawayFood: number;
-  takeawayBeverage: number;
-  deliveryFood: number;
-  deliveryBeverage: number;
-  appSalesFood: number;
-  appSalesBeverage: number;
+  cashSales: number;
+  cardSales: number;
+  app1Sales?: number;
+  app2Sales?: number;
+  app3Sales?: number;
+  app4Sales?: number;
+  app5Sales?: number;
+  app6Sales?: number;
+  appSalesTotal?: number;
+  netSales: number;
   foodSales: number;
   beverageSales: number;
   totalRevenue: number;

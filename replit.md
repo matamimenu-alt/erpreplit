@@ -5,6 +5,16 @@
 Multi-restaurant Management & Accounting System for Saudi Arabia. Manages 3 restaurants: **Asad Al-Hamra**, **Sabah Al-El**, **Chicken Bar**. Full-stack pnpm monorepo using TypeScript, React, and Express.
 
 ## Latest Changes (Session)
+- **Sales Module Completely Rewritten**: New `sales` DB table with `cash`, `card`, `app1-6`, `vatMode`, `totalRevenue`, `netSales`, `outputVat`, `openingBalance`, `cashExpenses`, `pettyCash`, `closingBalance`, `expectedClosing`, `cashDiscrepancy`, `dailyNotes`. Old food/beverage/channel structure dropped.
+- **Sales App Config Table**: `sales_app_config` for per-restaurant delivery app names (6 slots) and default VAT mode.
+- **New Sales UI**: 4-tab layout: *Daily Records* (table with all new fields), *Reports* (date-range filter + channel breakdown), *Cash Management* (discrepancy analysis per day), *Settings* (app names + VAT mode config).
+- **VAT Calculation**: Exclusive mode → `netSales = totalRevenue`, `outputVat = totalRevenue × 15%`; Inclusive mode → `netSales = totalRevenue / 1.15`, `outputVat = totalRevenue - netSales`.
+- **Cash Discrepancy**: `expectedClosing = openingBalance + cash - cashExpenses - pettyCash`; `cashDiscrepancy = closingBalance - expectedClosing`.
+- **Live Preview**: Real-time calculation in the record entry modal (fixed numeric coercion bug).
+- **Purchases Module Updated**: Added `paymentType` field (cash/card/credit) — shown as badge in table, dropdown in form, included in OpenAPI + codegen.
+- **P&L Report Updated**: Revenue section now shows Cash Sales, Card/POS, Delivery Apps, Net Sales (excl. VAT) instead of old food/beverage channel breakdown.
+- **Dashboard Updated**: Pie chart now shows Net Sales vs Output VAT instead of Food Sales vs Beverage Sales.
+- **OpenAPI/Codegen**: All schemas updated (Sale, CreateSale, MonthlySalesSummary, SalesAppConfig, SalesReport, PLReport, Purchase, CreatePurchase). New endpoints: GET/PUT /api/sales/app-config, GET /api/sales/report. Codegen ran successfully.
 - **Food Cost & Pricing Engine Built**: New page at `/food-cost` with 3 tabs (Dishes, Pricing Analysis, Profit Simulator). New DB tables: `dishes`, `dish_ingredients`, `pricing_config`. Backend route `/api/dishes` with full pricing calculation logic.
 - **Automated pricing formula**: Ingredient Cost (from purchases) + Waste % + Fixed Cost Allocation (expenses + salaries ÷ monthly orders) + Delivery Cost = Final Dish Cost → ÷ Target Food Cost % = Suggested Price.
 - **Psychological pricing**: Rounds up to X.90 format (SAR 25 → SAR 25.90).

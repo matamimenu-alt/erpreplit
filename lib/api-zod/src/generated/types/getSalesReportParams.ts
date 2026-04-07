@@ -6,17 +6,13 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ListSalesParams = {
+export type GetSalesReportParams = {
   /**
-   * Filter by month (YYYY-MM)
-   */
-  month?: string;
-  /**
-   * Filter from date (YYYY-MM-DD)
+   * From date (YYYY-MM-DD)
    */
   from?: string;
   /**
-   * Filter to date (YYYY-MM-DD)
+   * To date (YYYY-MM-DD)
    */
   to?: string;
 };

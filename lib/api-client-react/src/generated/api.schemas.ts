@@ -19,39 +19,114 @@ export interface Restaurant {
 export interface Sale {
   id: number;
   date: string;
-  dineInFood: number;
-  dineInBeverage: number;
-  takeawayFood: number;
-  takeawayBeverage: number;
-  deliveryFood: number;
-  deliveryBeverage: number;
-  appSalesFood: number;
-  appSalesBeverage: number;
-  foodSales: number;
-  beverageSales: number;
-  totalSales: number;
+  cash: number;
+  card: number;
+  app1: number;
+  app2: number;
+  app3: number;
+  app4: number;
+  app5: number;
+  app6: number;
+  vatMode: string;
+  totalRevenue: number;
+  netSales: number;
   outputVat: number;
+  openingBalance: number;
+  cashExpenses: number;
+  pettyCash: number;
+  closingBalance: number;
+  expectedClosing: number;
+  cashDiscrepancy: number;
+  dailyNotes: string;
   createdAt: string;
 }
 
 export interface CreateSale {
   date: string;
-  dineInFood?: number;
-  dineInBeverage?: number;
-  takeawayFood?: number;
-  takeawayBeverage?: number;
-  deliveryFood?: number;
-  deliveryBeverage?: number;
-  appSalesFood?: number;
-  appSalesBeverage?: number;
+  cash?: number;
+  card?: number;
+  app1?: number;
+  app2?: number;
+  app3?: number;
+  app4?: number;
+  app5?: number;
+  app6?: number;
+  vatMode?: string;
+  openingBalance?: number;
+  cashExpenses?: number;
+  pettyCash?: number;
+  closingBalance?: number;
+  dailyNotes?: string;
 }
 
 export interface MonthlySalesSummary {
   month: string;
-  totalFoodSales: number;
-  totalBeverageSales: number;
-  totalSales: number;
+  cash: number;
+  card: number;
+  app1?: number;
+  app2?: number;
+  app3?: number;
+  app4?: number;
+  app5?: number;
+  app6?: number;
+  totalRevenue: number;
+  netSales: number;
   totalOutputVat: number;
+  totalCashDiscrepancy?: number;
+}
+
+export interface SalesAppConfig {
+  id?: number | null;
+  app1Name: string;
+  app2Name: string;
+  app3Name: string;
+  app4Name: string;
+  app5Name: string;
+  app6Name: string;
+  defaultVatMode: string;
+}
+
+export type SalesReportTotals = {
+  cash: number;
+  card: number;
+  app1?: number;
+  app2?: number;
+  app3?: number;
+  app4?: number;
+  app5?: number;
+  app6?: number;
+  appsTotal: number;
+  totalRevenue: number;
+  netSales: number;
+  outputVat: number;
+  cashDiscrepancy?: number;
+};
+
+export type SalesReportDailyItem = {
+  date?: string;
+  cash?: number;
+  card?: number;
+  app1?: number;
+  app2?: number;
+  app3?: number;
+  app4?: number;
+  app5?: number;
+  app6?: number;
+  appsTotal?: number;
+  totalRevenue?: number;
+  netSales?: number;
+  outputVat?: number;
+  vatMode?: string;
+  cashDiscrepancy?: number;
+  dailyNotes?: string;
+};
+
+export interface SalesReport {
+  from?: string | null;
+  to?: string | null;
+  recordCount: number;
+  totals: SalesReportTotals;
+  daily: SalesReportDailyItem[];
 }
 
 export type PurchaseCategory =
@@ -68,6 +143,15 @@ export const PurchaseCategory = {
   others: "others",
 } as const;
 
+export type PurchasePaymentType =
+  (typeof PurchasePaymentType)[keyof typeof PurchasePaymentType];
+
+export const PurchasePaymentType = {
+  cash: "cash",
+  card: "card",
+  credit: "credit",
+} as const;
+
 export interface Purchase {
   id: number;
   date: string;
@@ -80,9 +164,19 @@ export interface Purchase {
   amountBeforeVat: number;
   vatAmount: number;
   totalAmount: number;
+  paymentType: PurchasePaymentType;
   notes?: string | null;
   createdAt: string;
 }
+
+export type CreatePurchasePaymentType =
+  (typeof CreatePurchasePaymentType)[keyof typeof CreatePurchasePaymentType];
+
+export const CreatePurchasePaymentType = {
+  cash: "cash",
+  card: "card",
+  credit: "credit",
+} as const;
 
 export interface CreatePurchase {
   date: string;
@@ -92,6 +186,7 @@ export interface CreatePurchase {
   quantity: number;
   price: number;
   priceIncludesVat: boolean;
+  paymentType?: CreatePurchasePaymentType;
   notes?: string | null;
 }
 
@@ -235,14 +330,16 @@ export interface CreateInventory {
 
 export interface PLReport {
   month?: string;
-  dineInFood: number;
-  dineInBeverage: number;
-  takeawayFood: number;
-  takeawayBeverage: number;
-  deliveryFood: number;
-  deliveryBeverage: number;
-  appSalesFood: number;
-  appSalesBeverage: number;
+  cashSales: number;
+  cardSales: number;
+  app1Sales?: number;
+  app2Sales?: number;
+  app3Sales?: number;
+  app4Sales?: number;
+  app5Sales?: number;
+  app6Sales?: number;
+  appSalesTotal?: number;
+  netSales: number;
   foodSales: number;
   beverageSales: number;
   totalRevenue: number;
@@ -524,6 +621,25 @@ export type ListSalesParams = {
    * Filter by month (YYYY-MM)
    */
   month?: string;
+  /**
+   * Filter from date (YYYY-MM-DD)
+   */
+  from?: string;
+  /**
+   * Filter to date (YYYY-MM-DD)
+   */
+  to?: string;
+};
+
+export type GetSalesReportParams = {
+  /**
+   * From date (YYYY-MM-DD)
+   */
+  from?: string;
+  /**
+   * To date (YYYY-MM-DD)
+   */
+  to?: string;
 };
 
 export type ListPurchasesParams = {

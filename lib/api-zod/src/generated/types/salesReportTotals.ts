@@ -6,8 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface MonthlySalesSummary {
-  month: string;
+export type SalesReportTotals = {
   cash: number;
   card: number;
   app1?: number;
@@ -16,8 +15,9 @@ export interface MonthlySalesSummary {
   app4?: number;
   app5?: number;
   app6?: number;
+  appsTotal: number;
   totalRevenue: number;
   netSales: number;
-  totalOutputVat: number;
-  totalCashDiscrepancy?: number;
-}
+  outputVat: number;
+  cashDiscrepancy?: number;
+};

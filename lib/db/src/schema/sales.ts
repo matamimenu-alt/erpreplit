@@ -8,21 +8,34 @@ export const salesTable = pgTable("sales", {
   restaurantId: integer("restaurant_id").notNull().references(() => restaurantsTable.id).default(1),
   date: text("date").notNull(),
 
-  // Channel breakdown — Food & Beverage per channel
-  dineInFood: numeric("dine_in_food", { precision: 12, scale: 2 }).notNull().default("0"),
-  dineInBeverage: numeric("dine_in_beverage", { precision: 12, scale: 2 }).notNull().default("0"),
-  takeawayFood: numeric("takeaway_food", { precision: 12, scale: 2 }).notNull().default("0"),
-  takeawayBeverage: numeric("takeaway_beverage", { precision: 12, scale: 2 }).notNull().default("0"),
-  deliveryFood: numeric("delivery_food", { precision: 12, scale: 2 }).notNull().default("0"),
-  deliveryBeverage: numeric("delivery_beverage", { precision: 12, scale: 2 }).notNull().default("0"),
-  appSalesFood: numeric("app_sales_food", { precision: 12, scale: 2 }).notNull().default("0"),
-  appSalesBeverage: numeric("app_sales_beverage", { precision: 12, scale: 2 }).notNull().default("0"),
+  // Payment channel breakdown
+  cash: numeric("cash", { precision: 12, scale: 2 }).notNull().default("0"),
+  card: numeric("card", { precision: 12, scale: 2 }).notNull().default("0"),
+  app1: numeric("app1", { precision: 12, scale: 2 }).notNull().default("0"),
+  app2: numeric("app2", { precision: 12, scale: 2 }).notNull().default("0"),
+  app3: numeric("app3", { precision: 12, scale: 2 }).notNull().default("0"),
+  app4: numeric("app4", { precision: 12, scale: 2 }).notNull().default("0"),
+  app5: numeric("app5", { precision: 12, scale: 2 }).notNull().default("0"),
+  app6: numeric("app6", { precision: 12, scale: 2 }).notNull().default("0"),
 
-  // Computed totals (stored for easy querying)
-  foodSales: numeric("food_sales", { precision: 12, scale: 2 }).notNull().default("0"),
-  beverageSales: numeric("beverage_sales", { precision: 12, scale: 2 }).notNull().default("0"),
-  totalSales: numeric("total_sales", { precision: 12, scale: 2 }).notNull().default("0"),
+  // VAT mode: 'exclusive' (user enters ex-VAT) or 'inclusive' (user enters incl-VAT)
+  vatMode: text("vat_mode").notNull().default("exclusive"),
+
+  // Computed/stored totals
+  totalRevenue: numeric("total_revenue", { precision: 12, scale: 2 }).notNull().default("0"),
+  netSales: numeric("net_sales", { precision: 12, scale: 2 }).notNull().default("0"),
   outputVat: numeric("output_vat", { precision: 12, scale: 2 }).notNull().default("0"),
+
+  // Cash management
+  openingBalance: numeric("opening_balance", { precision: 12, scale: 2 }).notNull().default("0"),
+  cashExpenses: numeric("cash_expenses", { precision: 12, scale: 2 }).notNull().default("0"),
+  pettyCash: numeric("petty_cash", { precision: 12, scale: 2 }).notNull().default("0"),
+  closingBalance: numeric("closing_balance", { precision: 12, scale: 2 }).notNull().default("0"),
+  expectedClosing: numeric("expected_closing", { precision: 12, scale: 2 }).notNull().default("0"),
+  cashDiscrepancy: numeric("cash_discrepancy", { precision: 12, scale: 2 }).notNull().default("0"),
+
+  // Notes
+  dailyNotes: text("daily_notes"),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

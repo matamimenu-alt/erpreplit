@@ -18,6 +18,7 @@ const purchaseSchema = z.object({
   quantity: z.coerce.number().min(0.001, "Must be > 0"),
   price: z.coerce.number().min(0, "Must be ≥ 0"),
   priceIncludesVat: z.boolean(),
+  paymentType: z.enum(["cash", "card", "credit"]).default("cash"),
   notes: z.string().optional(),
 });
 type PurchaseForm = z.infer<typeof purchaseSchema>;
@@ -155,6 +156,16 @@ function PurchaseFormModal({
             </div>
           </div>
 
+          {/* Payment Type */}
+          <div>
+            <label className="block text-sm font-medium mb-1">Payment Type</label>
+            <select {...form.register("paymentType")} className="w-full px-3 py-2 border rounded-xl outline-none focus:border-primary bg-white text-sm">
+              <option value="cash">💵 Cash</option>
+              <option value="card">💳 Card / Bank Transfer</option>
+              <option value="credit">📄 Credit / On Account</option>
+            </select>
+          </div>
+
           {/* Notes */}
           <div>
             <label className="block text-sm font-medium mb-1">Notes (optional)</label>
@@ -207,6 +218,7 @@ export default function Purchases() {
     quantity: 1,
     price: 0,
     priceIncludesVat: false,
+    paymentType: "cash",
     notes: "",
   };
 
@@ -236,6 +248,7 @@ export default function Purchases() {
         quantity: p.quantity,
         price: p.price,
         priceIncludesVat: p.priceIncludesVat,
+        paymentType: (p.paymentType as "cash" | "card" | "credit") ?? "cash",
         notes: p.notes ?? "",
       },
     });
@@ -359,6 +372,7 @@ export default function Purchases() {
                 <th className="px-4 py-3">Product</th>
                 <th className="px-4 py-3">Category</th>
                 <th className="px-4 py-3">Supplier</th>
+                <th className="px-4 py-3">Payment</th>
                 <th className="px-4 py-3 text-right">Qty</th>
                 <th className="px-4 py-3 text-right">Unit Price</th>
                 <th className="px-4 py-3 text-right">Net Amount</th>
@@ -369,10 +383,10 @@ export default function Purchases() {
             </thead>
             <tbody className="divide-y text-slate-700">
               {isLoading ? (
-                <tr><td colSpan={10} className="text-center py-12 text-slate-400">Loading...</td></tr>
+                <tr><td colSpan={11} className="text-center py-12 text-slate-400">Loading...</td></tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="text-center py-12 text-slate-400">
+                  <td colSpan={11} className="text-center py-12 text-slate-400">
                     {(searchQuery || categoryFilter) ? "No records match your filters" : `No purchases found for ${formatMonth(month)}`}
                   </td>
                 </tr>
@@ -392,6 +406,15 @@ export default function Purchases() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-slate-500 text-xs">{p.supplierName || "—"}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                          p.paymentType === "card" ? "bg-blue-50 text-blue-700" :
+                          p.paymentType === "credit" ? "bg-amber-50 text-amber-700" :
+                          "bg-slate-100 text-slate-600"
+                        }`}>
+                          {p.paymentType === "card" ? "💳 Card" : p.paymentType === "credit" ? "📄 Credit" : "💵 Cash"}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-right">{p.quantity}</td>
                       <td className="px-4 py-3 text-right">
                         {formatSAR(p.price)}

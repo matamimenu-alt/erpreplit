@@ -28,10 +28,13 @@ router.get("/summary", async (req, res) => {
       purchaseRecords = purchaseRecords.filter((r) => r.date.startsWith(month));
     }
 
-    const totalFoodSales = salesRecords.reduce((s, r) => s + toNum(r.foodSales), 0);
-    const totalBeverageSales = salesRecords.reduce((s, r) => s + toNum(r.beverageSales), 0);
-    const totalSales = salesRecords.reduce((s, r) => s + toNum(r.totalSales), 0);
+    const totalNetSales = salesRecords.reduce((s, r) => s + toNum(r.netSales), 0);
+    const totalRevenue = salesRecords.reduce((s, r) => s + toNum(r.totalRevenue), 0);
     const outputVat = salesRecords.reduce((s, r) => s + toNum(r.outputVat), 0);
+    const totalCash = salesRecords.reduce((s, r) => s + toNum(r.cash), 0);
+    const totalCard = salesRecords.reduce((s, r) => s + toNum(r.card), 0);
+    const totalApps = salesRecords.reduce((s, r) =>
+      s + toNum(r.app1) + toNum(r.app2) + toNum(r.app3) + toNum(r.app4) + toNum(r.app5) + toNum(r.app6), 0);
 
     const totalPurchases = purchaseRecords.reduce((s, r) => s + toNum(r.amountBeforeVat), 0);
     const inputVat = purchaseRecords.reduce((s, r) => s + toNum(r.vatAmount), 0);
@@ -45,13 +48,19 @@ router.get("/summary", async (req, res) => {
     const totalSalaries = employees.reduce((s, e) => s + toNum(e.totalMonthlyCost), 0);
     const totalFixedExpenses = expenses.reduce((s, e) => s + toNum(e.monthlyCost), 0);
 
-    const netProfit = totalSales - totalPurchases - totalSalaries - totalFixedExpenses - vatPayable;
+    const netProfit = totalNetSales - totalPurchases - totalSalaries - totalFixedExpenses - vatPayable;
 
     res.json({
       month: month ?? "all",
-      totalFoodSales: +totalFoodSales.toFixed(2),
-      totalBeverageSales: +totalBeverageSales.toFixed(2),
-      totalSales: +totalSales.toFixed(2),
+      totalNetSales: +totalNetSales.toFixed(2),
+      totalRevenue: +totalRevenue.toFixed(2),
+      // Legacy aliases for dashboard compatibility
+      totalFoodSales: +totalNetSales.toFixed(2),
+      totalBeverageSales: 0,
+      totalSales: +totalNetSales.toFixed(2),
+      totalCash: +totalCash.toFixed(2),
+      totalCard: +totalCard.toFixed(2),
+      totalApps: +totalApps.toFixed(2),
       totalPurchases: +totalPurchases.toFixed(2),
       outputVat: +outputVat.toFixed(2),
       inputVat: +inputVat.toFixed(2),

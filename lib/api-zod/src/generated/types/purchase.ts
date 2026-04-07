@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { PurchaseCategory } from "./purchaseCategory";
+import type { PurchasePaymentType } from "./purchasePaymentType";
 
 export interface Purchase {
   id: number;
@@ -19,6 +20,7 @@ export interface Purchase {
   amountBeforeVat: number;
   vatAmount: number;
   totalAmount: number;
+  paymentType: PurchasePaymentType;
   notes?: string | null;
   createdAt: string;
 }

@@ -73,6 +73,7 @@ function toRecord(r: typeof purchasesTable.$inferSelect) {
     amountBeforeVat: toNum(r.amountBeforeVat),
     vatAmount: toNum(r.vatAmount),
     totalAmount: toNum(r.totalAmount),
+    paymentType: r.paymentType ?? "cash",
     notes: r.notes ?? undefined,
     createdAt: r.createdAt.toISOString(),
   };
@@ -112,7 +113,7 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const restaurantId = getRestaurantId(req);
-    const { date, supplierName, productName, category, quantity, price, priceIncludesVat, notes } = req.body;
+    const { date, supplierName, productName, category, quantity, price, priceIncludesVat, paymentType, notes } = req.body;
     const { amountBeforeVat, vatAmount, totalAmount } = calcPurchase(
       Number(quantity),
       Number(price),
@@ -132,6 +133,7 @@ router.post("/", async (req, res) => {
         amountBeforeVat: String(amountBeforeVat),
         vatAmount: String(vatAmount),
         totalAmount: String(totalAmount),
+        paymentType: paymentType || "cash",
         notes: notes || null,
       })
       .returning();
@@ -158,7 +160,7 @@ router.put("/:id", async (req, res) => {
   try {
     const restaurantId = getRestaurantId(req);
     const id = parseInt(req.params.id);
-    const { date, supplierName, productName, category, quantity, price, priceIncludesVat, notes } = req.body;
+    const { date, supplierName, productName, category, quantity, price, priceIncludesVat, paymentType, notes } = req.body;
     const { amountBeforeVat, vatAmount, totalAmount } = calcPurchase(
       Number(quantity),
       Number(price),
@@ -177,6 +179,7 @@ router.put("/:id", async (req, res) => {
         amountBeforeVat: String(amountBeforeVat),
         vatAmount: String(vatAmount),
         totalAmount: String(totalAmount),
+        paymentType: paymentType || "cash",
         notes: notes || null,
       })
       .where(and(eq(purchasesTable.id, id), eq(purchasesTable.restaurantId, restaurantId)))

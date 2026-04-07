@@ -5,6 +5,7 @@
  * Restaurant Management & Accounting System API
  * OpenAPI spec version: 0.1.0
  */
+import type { CreatePurchasePaymentType } from "./createPurchasePaymentType";
 import type { PurchaseCategory } from "./purchaseCategory";
 
 export interface CreatePurchase {
@@ -15,5 +16,6 @@ export interface CreatePurchase {
   quantity: number;
   price: number;
   priceIncludesVat: boolean;
+  paymentType?: CreatePurchasePaymentType;
   notes?: string | null;
 }

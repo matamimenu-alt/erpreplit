@@ -16,6 +16,7 @@ export const purchasesTable = pgTable("purchases", {
   amountBeforeVat: numeric("amount_before_vat", { precision: 12, scale: 2 }).notNull(),
   vatAmount: numeric("vat_amount", { precision: 12, scale: 2 }).notNull(),
   totalAmount: numeric("total_amount", { precision: 12, scale: 2 }).notNull(),
+  paymentType: text("payment_type").notNull().default("cash"), // 'cash' | 'card' | 'credit'
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

@@ -6,18 +6,21 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface MonthlySalesSummary {
-  month: string;
-  cash: number;
-  card: number;
+export type SalesReportDailyItem = {
+  date?: string;
+  cash?: number;
+  card?: number;
   app1?: number;
   app2?: number;
   app3?: number;
   app4?: number;
   app5?: number;
   app6?: number;
-  totalRevenue: number;
-  netSales: number;
-  totalOutputVat: number;
-  totalCashDiscrepancy?: number;
-}
+  appsTotal?: number;
+  totalRevenue?: number;
+  netSales?: number;
+  outputVat?: number;
+  vatMode?: string;
+  cashDiscrepancy?: number;
+  dailyNotes?: string;
+};

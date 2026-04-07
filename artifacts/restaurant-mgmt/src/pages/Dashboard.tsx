@@ -60,8 +60,8 @@ export default function Dashboard() {
   ];
 
   const salesBreakdown = [
-    { name: 'Food Sales', value: summary?.totalFoodSales || 0 },
-    { name: 'Beverage Sales', value: summary?.totalBeverageSales || 0 },
+    { name: 'Net Sales', value: summary?.totalNetSales || summary?.totalFoodSales || 0 },
+    { name: 'Output VAT', value: summary?.vatPayable || 0 },
   ];
 
   const expensesBreakdown = [

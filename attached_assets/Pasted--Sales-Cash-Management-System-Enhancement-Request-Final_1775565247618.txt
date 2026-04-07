@@ -1,0 +1,93 @@
+📌 Sales & Cash Management System Enhancement Request (Final Version)
+
+I would like to upgrade the system to include advanced sales tracking, cash control, VAT handling, and reporting features as follows:
+
+1️⃣ Daily Sales Dashboard
+
+Create a Daily Sales Dashboard that includes:
+
+Total Daily Revenue (Single Combined Value)
+🔹 No separation between Food & Beverage
+🔹 All income shown as one total revenue figure
+Breakdown of sales by:
+Cash
+Card (POS / Visa)
+Applications (Delivery Platforms)
+Applications Section:
+Support up to 6 customizable applications
+Ability to add/edit application names manually
+Display individual sales per application
+Notes Section:
+Add a Daily Notes field to log:
+Cash shortages
+Cash overages
+Operational issues
+2️⃣ VAT Handling (IMPORTANT 💰)
+Add an option to define if sales are:
+VAT Inclusive (Tax Included)
+VAT Exclusive (Tax Added)
+System should:
+Automatically calculate VAT (e.g. 15%)
+Show:
+Total including VAT
+VAT amount
+Net sales (excluding VAT)
+Allow setting default VAT mode, with ability to override per entry if needed
+3️⃣ Cash Management System
+
+Implement a complete cash tracking system:
+
+Opening Balance
+Cash Sales
+Daily Expenses (deducted from cash)
+Closing Balance
+Additional Features:
+Record daily purchases paid in cash
+Auto deduction from cash balance
+Add Petty Cash / Cash Float
+Used for daily expenses
+Fully tracked
+4️⃣ Purchases Management Update
+
+Enhance purchases module with payment types:
+
+Cash
+Card / Bank
+Credit (Accounts Payable)
+5️⃣ Advanced Reporting System
+
+Create reports with date range filter (From – To):
+
+Reports Required:
+Cash Report
+Card Report
+Applications Report (per app)
+Full Summary Report
+Each report should show:
+Total sales
+VAT amount
+Net sales
+Daily breakdown
+6️⃣ Sales Section Update
+Remove Food & Beverage separation
+Show Total Sales as one combined value
+Breakdown only by:
+Cash
+Card
+Applications
+7️⃣ KPI & Control Features 🔥
+Cash discrepancy detection (Expected vs Actual)
+Alerts for differences
+KPI dashboard:
+Daily revenue
+Sales by channel
+Cash flow
+8️⃣ Additional Requirements
+Simple and user-friendly UI
+Fast performance
+Accurate calculations
+Arabic language support
+Future Excel export
+
+💡 Note:
+All sales entries may sometimes be VAT inclusive, so the system must handle both scenarios dynamically and accurately.

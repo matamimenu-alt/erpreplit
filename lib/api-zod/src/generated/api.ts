@@ -30,23 +30,35 @@ export const ListRestaurantsResponse = zod.array(ListRestaurantsResponseItem);
  */
 export const ListSalesQueryParams = zod.object({
   month: zod.coerce.string().optional().describe("Filter by month (YYYY-MM)"),
+  from: zod.coerce
+    .string()
+    .optional()
+    .describe("Filter from date (YYYY-MM-DD)"),
+  to: zod.coerce.string().optional().describe("Filter to date (YYYY-MM-DD)"),
 });
 
 export const ListSalesResponseItem = zod.object({
   id: zod.number(),
   date: zod.string(),
-  dineInFood: zod.number(),
-  dineInBeverage: zod.number(),
-  takeawayFood: zod.number(),
-  takeawayBeverage: zod.number(),
-  deliveryFood: zod.number(),
-  deliveryBeverage: zod.number(),
-  appSalesFood: zod.number(),
-  appSalesBeverage: zod.number(),
-  foodSales: zod.number(),
-  beverageSales: zod.number(),
-  totalSales: zod.number(),
+  cash: zod.number(),
+  card: zod.number(),
+  app1: zod.number(),
+  app2: zod.number(),
+  app3: zod.number(),
+  app4: zod.number(),
+  app5: zod.number(),
+  app6: zod.number(),
+  vatMode: zod.string(),
+  totalRevenue: zod.number(),
+  netSales: zod.number(),
   outputVat: zod.number(),
+  openingBalance: zod.number(),
+  cashExpenses: zod.number(),
+  pettyCash: zod.number(),
+  closingBalance: zod.number(),
+  expectedClosing: zod.number(),
+  cashDiscrepancy: zod.number(),
+  dailyNotes: zod.string(),
   createdAt: zod.string(),
 });
 export const ListSalesResponse = zod.array(ListSalesResponseItem);
@@ -56,14 +68,20 @@ export const ListSalesResponse = zod.array(ListSalesResponseItem);
  */
 export const CreateSaleBody = zod.object({
   date: zod.string(),
-  dineInFood: zod.number().optional(),
-  dineInBeverage: zod.number().optional(),
-  takeawayFood: zod.number().optional(),
-  takeawayBeverage: zod.number().optional(),
-  deliveryFood: zod.number().optional(),
-  deliveryBeverage: zod.number().optional(),
-  appSalesFood: zod.number().optional(),
-  appSalesBeverage: zod.number().optional(),
+  cash: zod.number().optional(),
+  card: zod.number().optional(),
+  app1: zod.number().optional(),
+  app2: zod.number().optional(),
+  app3: zod.number().optional(),
+  app4: zod.number().optional(),
+  app5: zod.number().optional(),
+  app6: zod.number().optional(),
+  vatMode: zod.string().optional(),
+  openingBalance: zod.number().optional(),
+  cashExpenses: zod.number().optional(),
+  pettyCash: zod.number().optional(),
+  closingBalance: zod.number().optional(),
+  dailyNotes: zod.string().optional(),
 });
 
 /**
@@ -75,31 +93,44 @@ export const UpdateSaleParams = zod.object({
 
 export const UpdateSaleBody = zod.object({
   date: zod.string(),
-  dineInFood: zod.number().optional(),
-  dineInBeverage: zod.number().optional(),
-  takeawayFood: zod.number().optional(),
-  takeawayBeverage: zod.number().optional(),
-  deliveryFood: zod.number().optional(),
-  deliveryBeverage: zod.number().optional(),
-  appSalesFood: zod.number().optional(),
-  appSalesBeverage: zod.number().optional(),
+  cash: zod.number().optional(),
+  card: zod.number().optional(),
+  app1: zod.number().optional(),
+  app2: zod.number().optional(),
+  app3: zod.number().optional(),
+  app4: zod.number().optional(),
+  app5: zod.number().optional(),
+  app6: zod.number().optional(),
+  vatMode: zod.string().optional(),
+  openingBalance: zod.number().optional(),
+  cashExpenses: zod.number().optional(),
+  pettyCash: zod.number().optional(),
+  closingBalance: zod.number().optional(),
+  dailyNotes: zod.string().optional(),
 });
 
 export const UpdateSaleResponse = zod.object({
   id: zod.number(),
   date: zod.string(),
-  dineInFood: zod.number(),
-  dineInBeverage: zod.number(),
-  takeawayFood: zod.number(),
-  takeawayBeverage: zod.number(),
-  deliveryFood: zod.number(),
-  deliveryBeverage: zod.number(),
-  appSalesFood: zod.number(),
-  appSalesBeverage: zod.number(),
-  foodSales: zod.number(),
-  beverageSales: zod.number(),
-  totalSales: zod.number(),
+  cash: zod.number(),
+  card: zod.number(),
+  app1: zod.number(),
+  app2: zod.number(),
+  app3: zod.number(),
+  app4: zod.number(),
+  app5: zod.number(),
+  app6: zod.number(),
+  vatMode: zod.string(),
+  totalRevenue: zod.number(),
+  netSales: zod.number(),
   outputVat: zod.number(),
+  openingBalance: zod.number(),
+  cashExpenses: zod.number(),
+  pettyCash: zod.number(),
+  closingBalance: zod.number(),
+  expectedClosing: zod.number(),
+  cashDiscrepancy: zod.number(),
+  dailyNotes: zod.string(),
   createdAt: zod.string(),
 });
 
@@ -115,14 +146,110 @@ export const DeleteSaleParams = zod.object({
  */
 export const GetMonthlySalesSummaryResponseItem = zod.object({
   month: zod.string(),
-  totalFoodSales: zod.number(),
-  totalBeverageSales: zod.number(),
-  totalSales: zod.number(),
+  cash: zod.number(),
+  card: zod.number(),
+  app1: zod.number().optional(),
+  app2: zod.number().optional(),
+  app3: zod.number().optional(),
+  app4: zod.number().optional(),
+  app5: zod.number().optional(),
+  app6: zod.number().optional(),
+  totalRevenue: zod.number(),
+  netSales: zod.number(),
   totalOutputVat: zod.number(),
+  totalCashDiscrepancy: zod.number().optional(),
 });
 export const GetMonthlySalesSummaryResponse = zod.array(
   GetMonthlySalesSummaryResponseItem,
 );
+
+/**
+ * @summary Get sales app configuration (app names, default VAT mode)
+ */
+export const GetSalesAppConfigResponse = zod.object({
+  id: zod.number().nullish(),
+  app1Name: zod.string(),
+  app2Name: zod.string(),
+  app3Name: zod.string(),
+  app4Name: zod.string(),
+  app5Name: zod.string(),
+  app6Name: zod.string(),
+  defaultVatMode: zod.string(),
+});
+
+/**
+ * @summary Update sales app configuration
+ */
+export const UpdateSalesAppConfigBody = zod.object({
+  id: zod.number().nullish(),
+  app1Name: zod.string(),
+  app2Name: zod.string(),
+  app3Name: zod.string(),
+  app4Name: zod.string(),
+  app5Name: zod.string(),
+  app6Name: zod.string(),
+  defaultVatMode: zod.string(),
+});
+
+export const UpdateSalesAppConfigResponse = zod.object({
+  id: zod.number().nullish(),
+  app1Name: zod.string(),
+  app2Name: zod.string(),
+  app3Name: zod.string(),
+  app4Name: zod.string(),
+  app5Name: zod.string(),
+  app6Name: zod.string(),
+  defaultVatMode: zod.string(),
+});
+
+/**
+ * @summary Get sales report with date range
+ */
+export const GetSalesReportQueryParams = zod.object({
+  from: zod.coerce.string().optional().describe("From date (YYYY-MM-DD)"),
+  to: zod.coerce.string().optional().describe("To date (YYYY-MM-DD)"),
+});
+
+export const GetSalesReportResponse = zod.object({
+  from: zod.string().nullish(),
+  to: zod.string().nullish(),
+  recordCount: zod.number(),
+  totals: zod.object({
+    cash: zod.number(),
+    card: zod.number(),
+    app1: zod.number().optional(),
+    app2: zod.number().optional(),
+    app3: zod.number().optional(),
+    app4: zod.number().optional(),
+    app5: zod.number().optional(),
+    app6: zod.number().optional(),
+    appsTotal: zod.number(),
+    totalRevenue: zod.number(),
+    netSales: zod.number(),
+    outputVat: zod.number(),
+    cashDiscrepancy: zod.number().optional(),
+  }),
+  daily: zod.array(
+    zod.object({
+      date: zod.string().optional(),
+      cash: zod.number().optional(),
+      card: zod.number().optional(),
+      app1: zod.number().optional(),
+      app2: zod.number().optional(),
+      app3: zod.number().optional(),
+      app4: zod.number().optional(),
+      app5: zod.number().optional(),
+      app6: zod.number().optional(),
+      appsTotal: zod.number().optional(),
+      totalRevenue: zod.number().optional(),
+      netSales: zod.number().optional(),
+      outputVat: zod.number().optional(),
+      vatMode: zod.string().optional(),
+      cashDiscrepancy: zod.number().optional(),
+      dailyNotes: zod.string().optional(),
+    }),
+  ),
+});
 
 /**
  * @summary List all purchases
@@ -154,6 +281,7 @@ export const ListPurchasesResponseItem = zod.object({
   amountBeforeVat: zod.number(),
   vatAmount: zod.number(),
   totalAmount: zod.number(),
+  paymentType: zod.enum(["cash", "card", "credit"]),
   notes: zod.string().nullish(),
   createdAt: zod.string(),
 });
@@ -179,6 +307,7 @@ export const CreatePurchaseBody = zod.object({
   quantity: zod.number(),
   price: zod.number(),
   priceIncludesVat: zod.boolean(),
+  paymentType: zod.enum(["cash", "card", "credit"]).optional(),
   notes: zod.string().nullish(),
 });
 
@@ -206,6 +335,7 @@ export const UpdatePurchaseBody = zod.object({
   quantity: zod.number(),
   price: zod.number(),
   priceIncludesVat: zod.boolean(),
+  paymentType: zod.enum(["cash", "card", "credit"]).optional(),
   notes: zod.string().nullish(),
 });
 
@@ -230,6 +360,7 @@ export const UpdatePurchaseResponse = zod.object({
   amountBeforeVat: zod.number(),
   vatAmount: zod.number(),
   totalAmount: zod.number(),
+  paymentType: zod.enum(["cash", "card", "credit"]),
   notes: zod.string().nullish(),
   createdAt: zod.string(),
 });
@@ -607,14 +738,16 @@ export const GetPLReportQueryParams = zod.object({
 
 export const GetPLReportResponse = zod.object({
   month: zod.string().optional(),
-  dineInFood: zod.number(),
-  dineInBeverage: zod.number(),
-  takeawayFood: zod.number(),
-  takeawayBeverage: zod.number(),
-  deliveryFood: zod.number(),
-  deliveryBeverage: zod.number(),
-  appSalesFood: zod.number(),
-  appSalesBeverage: zod.number(),
+  cashSales: zod.number(),
+  cardSales: zod.number(),
+  app1Sales: zod.number().optional(),
+  app2Sales: zod.number().optional(),
+  app3Sales: zod.number().optional(),
+  app4Sales: zod.number().optional(),
+  app5Sales: zod.number().optional(),
+  app6Sales: zod.number().optional(),
+  appSalesTotal: zod.number().optional(),
+  netSales: zod.number(),
   foodSales: zod.number(),
   beverageSales: zod.number(),
   totalRevenue: zod.number(),
