@@ -217,18 +217,39 @@ router.get("/purchases/monthly", async (req, res) => {
       .where(eq(purchasesTable.restaurantId, restaurantId))
       .orderBy(purchasesTable.date);
 
-    const monthMap: Record<string, { total: number; vat: number; net: number; count: number }> = {};
+    type MonthEntry = { total: number; vat: number; net: number; count: number; taxableNet: number; taxableTotal: number; nonTaxableTotal: number; taxCount: number; nonTaxCount: number };
+    const monthMap: Record<string, MonthEntry> = {};
     for (const r of records) {
       const month = r.date.substring(0, 7);
-      if (!monthMap[month]) monthMap[month] = { total: 0, vat: 0, net: 0, count: 0 };
+      if (!monthMap[month]) monthMap[month] = { total: 0, vat: 0, net: 0, count: 0, taxableNet: 0, taxableTotal: 0, nonTaxableTotal: 0, taxCount: 0, nonTaxCount: 0 };
+      const isNonTax = r.invoiceType === "non-tax";
       monthMap[month].total += toNum(r.totalAmount);
       monthMap[month].vat   += toNum(r.vatAmount);
       monthMap[month].net   += toNum(r.amountBeforeVat);
       monthMap[month].count += 1;
+      if (isNonTax) {
+        monthMap[month].nonTaxableTotal += toNum(r.totalAmount);
+        monthMap[month].nonTaxCount += 1;
+      } else {
+        monthMap[month].taxableNet   += toNum(r.amountBeforeVat);
+        monthMap[month].taxableTotal += toNum(r.totalAmount);
+        monthMap[month].taxCount     += 1;
+      }
     }
 
     const result = Object.entries(monthMap).sort(([a], [b]) => a.localeCompare(b))
-      .map(([month, d]) => ({ month, totalAmount: +d.total.toFixed(2), totalVat: +d.vat.toFixed(2), netAmount: +d.net.toFixed(2), count: d.count }));
+      .map(([month, d]) => ({
+        month,
+        totalAmount: +d.total.toFixed(2),
+        totalVat: +d.vat.toFixed(2),
+        netAmount: +d.net.toFixed(2),
+        count: d.count,
+        taxableNet: +d.taxableNet.toFixed(2),
+        taxableTotal: +d.taxableTotal.toFixed(2),
+        nonTaxableTotal: +d.nonTaxableTotal.toFixed(2),
+        taxCount: d.taxCount,
+        nonTaxCount: d.nonTaxCount,
+      }));
 
     res.json(result);
   } catch (err) {

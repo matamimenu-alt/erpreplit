@@ -36,8 +36,17 @@ const router: IRouter = Router();
 
 const VAT_RATE = 0.15;
 
-function calcPurchase(quantity: number, price: number, priceIncludesVat: boolean) {
+function calcPurchase(quantity: number, price: number, priceIncludesVat: boolean, invoiceType: string) {
   const gross = quantity * price;
+  if (invoiceType === "non-tax") {
+    // Non-tax invoice: no VAT at all
+    return {
+      amountBeforeVat: +gross.toFixed(2),
+      vatAmount: 0,
+      totalAmount: +gross.toFixed(2),
+    };
+  }
+  // Tax invoice
   if (priceIncludesVat) {
     const amountBeforeVat = gross / (1 + VAT_RATE);
     const vatAmount = gross - amountBeforeVat;
@@ -70,6 +79,7 @@ function toRecord(r: typeof purchasesTable.$inferSelect) {
     quantity: toNum(r.quantity),
     price: toNum(r.price),
     priceIncludesVat: r.priceIncludesVat,
+    invoiceType: (r.invoiceType ?? "tax") as "tax" | "non-tax",
     amountBeforeVat: toNum(r.amountBeforeVat),
     vatAmount: toNum(r.vatAmount),
     totalAmount: toNum(r.totalAmount),
@@ -113,11 +123,13 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const restaurantId = getRestaurantId(req);
-    const { date, supplierName, productName, category, quantity, price, priceIncludesVat, paymentType, notes } = req.body;
+    const { date, supplierName, productName, category, quantity, price, priceIncludesVat, invoiceType, paymentType, notes } = req.body;
+    const invType = invoiceType === "non-tax" ? "non-tax" : "tax";
     const { amountBeforeVat, vatAmount, totalAmount } = calcPurchase(
       Number(quantity),
       Number(price),
-      Boolean(priceIncludesVat)
+      Boolean(priceIncludesVat),
+      invType
     );
     const [record] = await db
       .insert(purchasesTable)
@@ -130,6 +142,7 @@ router.post("/", async (req, res) => {
         quantity: String(Number(quantity).toFixed(3)),
         price: String(Number(price).toFixed(2)),
         priceIncludesVat: Boolean(priceIncludesVat),
+        invoiceType: invType,
         amountBeforeVat: String(amountBeforeVat),
         vatAmount: String(vatAmount),
         totalAmount: String(totalAmount),
@@ -160,11 +173,13 @@ router.put("/:id", async (req, res) => {
   try {
     const restaurantId = getRestaurantId(req);
     const id = parseInt(req.params.id);
-    const { date, supplierName, productName, category, quantity, price, priceIncludesVat, paymentType, notes } = req.body;
+    const { date, supplierName, productName, category, quantity, price, priceIncludesVat, invoiceType, paymentType, notes } = req.body;
+    const invType = invoiceType === "non-tax" ? "non-tax" : "tax";
     const { amountBeforeVat, vatAmount, totalAmount } = calcPurchase(
       Number(quantity),
       Number(price),
-      Boolean(priceIncludesVat)
+      Boolean(priceIncludesVat),
+      invType
     );
     const [record] = await db
       .update(purchasesTable)
@@ -176,6 +191,7 @@ router.put("/:id", async (req, res) => {
         quantity: String(Number(quantity).toFixed(3)),
         price: String(Number(price).toFixed(2)),
         priceIncludesVat: Boolean(priceIncludesVat),
+        invoiceType: invType,
         amountBeforeVat: String(amountBeforeVat),
         vatAmount: String(vatAmount),
         totalAmount: String(totalAmount),

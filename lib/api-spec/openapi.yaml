@@ -1382,6 +1382,9 @@ components:
           type: number
         priceIncludesVat:
           type: boolean
+        invoiceType:
+          type: string
+          enum: [tax, non-tax]
         amountBeforeVat:
           type: number
         vatAmount:
@@ -1405,6 +1408,7 @@ components:
         - quantity
         - price
         - priceIncludesVat
+        - invoiceType
         - amountBeforeVat
         - vatAmount
         - totalAmount
@@ -1428,6 +1432,9 @@ components:
           type: number
         priceIncludesVat:
           type: boolean
+        invoiceType:
+          type: string
+          enum: [tax, non-tax]
         paymentType:
           type: string
           enum: [cash, card, credit]
@@ -1441,6 +1448,7 @@ components:
         - quantity
         - price
         - priceIncludesVat
+        - invoiceType
 
     Supplier:
       type: object
@@ -1910,12 +1918,27 @@ components:
           type: number
         count:
           type: integer
+        taxableNet:
+          type: number
+        taxableTotal:
+          type: number
+        nonTaxableTotal:
+          type: number
+        taxCount:
+          type: integer
+        nonTaxCount:
+          type: integer
       required:
         - month
         - totalAmount
         - totalVat
         - netAmount
         - count
+        - taxableNet
+        - taxableTotal
+        - nonTaxableTotal
+        - taxCount
+        - nonTaxCount
 
     CategoryExpenseReport:
       type: object

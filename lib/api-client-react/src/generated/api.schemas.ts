@@ -143,6 +143,14 @@ export const PurchaseCategory = {
   others: "others",
 } as const;
 
+export type PurchaseInvoiceType =
+  (typeof PurchaseInvoiceType)[keyof typeof PurchaseInvoiceType];
+
+export const PurchaseInvoiceType = {
+  tax: "tax",
+  "non-tax": "non-tax",
+} as const;
+
 export type PurchasePaymentType =
   (typeof PurchasePaymentType)[keyof typeof PurchasePaymentType];
 
@@ -161,6 +169,7 @@ export interface Purchase {
   quantity: number;
   price: number;
   priceIncludesVat: boolean;
+  invoiceType: PurchaseInvoiceType;
   amountBeforeVat: number;
   vatAmount: number;
   totalAmount: number;
@@ -168,6 +177,14 @@ export interface Purchase {
   notes?: string | null;
   createdAt: string;
 }
+
+export type CreatePurchaseInvoiceType =
+  (typeof CreatePurchaseInvoiceType)[keyof typeof CreatePurchaseInvoiceType];
+
+export const CreatePurchaseInvoiceType = {
+  tax: "tax",
+  "non-tax": "non-tax",
+} as const;
 
 export type CreatePurchasePaymentType =
   (typeof CreatePurchasePaymentType)[keyof typeof CreatePurchasePaymentType];
@@ -186,6 +203,7 @@ export interface CreatePurchase {
   quantity: number;
   price: number;
   priceIncludesVat: boolean;
+  invoiceType: CreatePurchaseInvoiceType;
   paymentType?: CreatePurchasePaymentType;
   notes?: string | null;
 }
@@ -384,6 +402,11 @@ export interface MonthlyPurchaseReport {
   totalVat: number;
   netAmount: number;
   count: number;
+  taxableNet: number;
+  taxableTotal: number;
+  nonTaxableTotal: number;
+  taxCount: number;
+  nonTaxCount: number;
 }
 
 export interface CategoryExpenseReport {

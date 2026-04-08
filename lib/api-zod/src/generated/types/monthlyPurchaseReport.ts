@@ -12,4 +12,9 @@ export interface MonthlyPurchaseReport {
   totalVat: number;
   netAmount: number;
   count: number;
+  taxableNet: number;
+  taxableTotal: number;
+  nonTaxableTotal: number;
+  taxCount: number;
+  nonTaxCount: number;
 }

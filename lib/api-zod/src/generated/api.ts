@@ -278,6 +278,7 @@ export const ListPurchasesResponseItem = zod.object({
   quantity: zod.number(),
   price: zod.number(),
   priceIncludesVat: zod.boolean(),
+  invoiceType: zod.enum(["tax", "non-tax"]),
   amountBeforeVat: zod.number(),
   vatAmount: zod.number(),
   totalAmount: zod.number(),
@@ -307,6 +308,7 @@ export const CreatePurchaseBody = zod.object({
   quantity: zod.number(),
   price: zod.number(),
   priceIncludesVat: zod.boolean(),
+  invoiceType: zod.enum(["tax", "non-tax"]),
   paymentType: zod.enum(["cash", "card", "credit"]).optional(),
   notes: zod.string().nullish(),
 });
@@ -335,6 +337,7 @@ export const UpdatePurchaseBody = zod.object({
   quantity: zod.number(),
   price: zod.number(),
   priceIncludesVat: zod.boolean(),
+  invoiceType: zod.enum(["tax", "non-tax"]),
   paymentType: zod.enum(["cash", "card", "credit"]).optional(),
   notes: zod.string().nullish(),
 });
@@ -357,6 +360,7 @@ export const UpdatePurchaseResponse = zod.object({
   quantity: zod.number(),
   price: zod.number(),
   priceIncludesVat: zod.boolean(),
+  invoiceType: zod.enum(["tax", "non-tax"]),
   amountBeforeVat: zod.number(),
   vatAmount: zod.number(),
   totalAmount: zod.number(),
@@ -795,6 +799,11 @@ export const GetMonthlyPurchaseReportResponseItem = zod.object({
   totalVat: zod.number(),
   netAmount: zod.number(),
   count: zod.number(),
+  taxableNet: zod.number(),
+  taxableTotal: zod.number(),
+  nonTaxableTotal: zod.number(),
+  taxCount: zod.number(),
+  nonTaxCount: zod.number(),
 });
 export const GetMonthlyPurchaseReportResponse = zod.array(
   GetMonthlyPurchaseReportResponseItem,

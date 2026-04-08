@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { PurchaseCategory } from "./purchaseCategory";
+import type { PurchaseInvoiceType } from "./purchaseInvoiceType";
 import type { PurchasePaymentType } from "./purchasePaymentType";
 
 export interface Purchase {
@@ -17,6 +18,7 @@ export interface Purchase {
   quantity: number;
   price: number;
   priceIncludesVat: boolean;
+  invoiceType: PurchaseInvoiceType;
   amountBeforeVat: number;
   vatAmount: number;
   totalAmount: number;

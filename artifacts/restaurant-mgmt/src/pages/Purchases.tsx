@@ -8,7 +8,7 @@ import { PURCHASE_CATEGORIES, PURCHASE_CATEGORY_GROUPS, getCategoryMeta } from "
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Trash2, Pencil, Search, X, FileSpreadsheet } from "lucide-react";
+import { Plus, Trash2, Pencil, Search, X, FileSpreadsheet, Receipt, Tag } from "lucide-react";
 
 const purchaseSchema = z.object({
   date: z.string().min(1, "Required"),
@@ -17,6 +17,7 @@ const purchaseSchema = z.object({
   category: z.string().min(1, "Required"),
   quantity: z.coerce.number().min(0.001, "Must be > 0"),
   price: z.coerce.number().min(0, "Must be ≥ 0"),
+  invoiceType: z.enum(["tax", "non-tax"]).default("tax"),
   priceIncludesVat: z.boolean(),
   paymentType: z.enum(["cash", "card", "credit"]).default("cash"),
   notes: z.string().optional(),
@@ -25,8 +26,11 @@ type PurchaseForm = z.infer<typeof purchaseSchema>;
 
 const VAT_RATE = 0.15;
 
-function calcTotals(quantity: number, price: number, priceIncludesVat: boolean) {
+function calcTotals(quantity: number, price: number, priceIncludesVat: boolean, invoiceType: string) {
   const gross = quantity * price;
+  if (invoiceType === "non-tax") {
+    return { net: +gross.toFixed(2), vat: 0, total: +gross.toFixed(2) };
+  }
   if (priceIncludesVat) {
     const net = gross / (1 + VAT_RATE);
     const vat = gross - net;
@@ -64,8 +68,10 @@ function PurchaseFormModal({
   const qty = useWatch({ control: form.control, name: "quantity" });
   const price = useWatch({ control: form.control, name: "price" });
   const vatIncluded = useWatch({ control: form.control, name: "priceIncludesVat" });
+  const invoiceType = useWatch({ control: form.control, name: "invoiceType" });
+  const isTax = invoiceType !== "non-tax";
 
-  const preview = calcTotals(Number(qty) || 0, Number(price) || 0, Boolean(vatIncluded));
+  const preview = calcTotals(Number(qty) || 0, Number(price) || 0, Boolean(vatIncluded), invoiceType);
 
   if (!open) return null;
 
@@ -82,6 +88,29 @@ function PurchaseFormModal({
           onSubmit={form.handleSubmit(onSubmit)}
           className="p-6 space-y-4 overflow-y-auto flex-1"
         >
+          {/* Invoice Type */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Invoice Type <span className="text-rose-500">*</span></label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${invoiceType === "tax" ? "border-primary bg-primary/5" : "border-slate-200 hover:border-slate-300"}`}>
+                <input type="radio" value="tax" {...form.register("invoiceType")} className="sr-only" />
+                <Receipt className={`w-5 h-5 flex-shrink-0 ${invoiceType === "tax" ? "text-primary" : "text-slate-400"}`} />
+                <div>
+                  <p className={`text-sm font-semibold ${invoiceType === "tax" ? "text-primary" : "text-slate-700"}`}>Tax Invoice</p>
+                  <p className="text-xs text-slate-500">VAT (15%) applies</p>
+                </div>
+              </label>
+              <label className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${invoiceType === "non-tax" ? "border-amber-500 bg-amber-50" : "border-slate-200 hover:border-slate-300"}`}>
+                <input type="radio" value="non-tax" {...form.register("invoiceType")} className="sr-only" />
+                <Tag className={`w-5 h-5 flex-shrink-0 ${invoiceType === "non-tax" ? "text-amber-600" : "text-slate-400"}`} />
+                <div>
+                  <p className={`text-sm font-semibold ${invoiceType === "non-tax" ? "text-amber-700" : "text-slate-700"}`}>Non-Tax Invoice</p>
+                  <p className="text-xs text-slate-500">No VAT applied</p>
+                </div>
+              </label>
+            </div>
+          </div>
+
           {/* Row 1: Date + Supplier */}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -131,29 +160,38 @@ function PurchaseFormModal({
             </div>
           </div>
 
-          {/* VAT toggle */}
-          <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" {...form.register("priceIncludesVat")} className="sr-only peer" />
-              <div className="w-11 h-6 bg-slate-300 rounded-full peer peer-checked:bg-primary after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
-            </label>
-            <span className="text-sm font-medium text-slate-700">Price includes 15% VAT</span>
-          </div>
+          {/* VAT toggle — only for tax invoices */}
+          {isTax && (
+            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" {...form.register("priceIncludesVat")} className="sr-only peer" />
+                <div className="w-11 h-6 bg-slate-300 rounded-full peer peer-checked:bg-primary after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
+              </label>
+              <span className="text-sm font-medium text-slate-700">Price already includes 15% VAT</span>
+            </div>
+          )}
 
           {/* Auto-calculated total */}
-          <div className="grid grid-cols-3 gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-sm">
+          <div className={`grid gap-3 p-4 rounded-xl text-sm border ${isTax ? "grid-cols-3 bg-emerald-50 border-emerald-200" : "grid-cols-2 bg-amber-50 border-amber-200"}`}>
             <div className="text-center">
               <p className="text-xs text-slate-500 font-medium">Net Amount</p>
               <p className="font-bold text-slate-800">{formatSAR(preview.net)}</p>
             </div>
-            <div className="text-center border-x border-emerald-200">
-              <p className="text-xs text-slate-500 font-medium">VAT (15%)</p>
-              <p className="font-bold text-emerald-700">{formatSAR(preview.vat)}</p>
-            </div>
+            {isTax && (
+              <div className="text-center border-x border-emerald-200">
+                <p className="text-xs text-slate-500 font-medium">VAT (15%)</p>
+                <p className="font-bold text-emerald-700">{formatSAR(preview.vat)}</p>
+              </div>
+            )}
             <div className="text-center">
               <p className="text-xs text-slate-500 font-medium">Total Price</p>
-              <p className="font-bold text-slate-900 text-base">{formatSAR(preview.total)}</p>
+              <p className={`font-bold text-base ${isTax ? "text-slate-900" : "text-amber-800"}`}>{formatSAR(preview.total)}</p>
             </div>
+            {!isTax && (
+              <div className="col-span-2 text-center mt-1">
+                <span className="text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">No VAT — Non-Tax Invoice</span>
+              </div>
+            )}
           </div>
 
           {/* Payment Type */}
@@ -190,6 +228,7 @@ export default function Purchases() {
   const [month, setMonth] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [invoiceFilter, setInvoiceFilter] = useState<"" | "tax" | "non-tax">("");
   const [addOpen, setAddOpen] = useState(false);
   const [editRecord, setEditRecord] = useState<{ id: number; data: PurchaseForm } | null>(null);
 
@@ -198,17 +237,23 @@ export default function Purchases() {
   );
   const { create, update, remove } = usePurchasesMutations();
 
-  // Client-side filtering (category + search)
+  // Client-side filtering
   const filtered = (purchases ?? []).filter((p) => {
     if (categoryFilter && p.category !== categoryFilter) return false;
     if (searchQuery && !p.productName.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if (invoiceFilter && p.invoiceType !== invoiceFilter) return false;
     return true;
   });
 
-  // Summary stats
-  const totalNet = filtered.reduce((s, p) => s + p.amountBeforeVat, 0);
-  const totalVat = filtered.reduce((s, p) => s + p.vatAmount, 0);
-  const totalGross = filtered.reduce((s, p) => s + p.totalAmount, 0);
+  // Summary stats — split by invoice type
+  const taxable    = filtered.filter(p => p.invoiceType !== "non-tax");
+  const nonTaxable = filtered.filter(p => p.invoiceType === "non-tax");
+
+  const totalTaxableNet  = taxable.reduce((s, p) => s + p.amountBeforeVat, 0);
+  const totalInputVat    = taxable.reduce((s, p) => s + p.vatAmount, 0);
+  const totalTaxableGross = taxable.reduce((s, p) => s + p.totalAmount, 0);
+  const totalNonTaxable  = nonTaxable.reduce((s, p) => s + p.totalAmount, 0);
+  const grandTotal       = filtered.reduce((s, p) => s + p.totalAmount, 0);
 
   const defaultForm: PurchaseForm = {
     date: new Date().toISOString().split("T")[0],
@@ -217,6 +262,7 @@ export default function Purchases() {
     category: "cost-food",
     quantity: 1,
     price: 0,
+    invoiceType: "tax",
     priceIncludesVat: false,
     paymentType: "cash",
     notes: "",
@@ -247,6 +293,7 @@ export default function Purchases() {
         category: p.category,
         quantity: p.quantity,
         price: p.price,
+        invoiceType: (p.invoiceType as "tax" | "non-tax") ?? "tax",
         priceIncludesVat: p.priceIncludesVat,
         paymentType: (p.paymentType as "cash" | "card" | "credit") ?? "cash",
         notes: p.notes ?? "",
@@ -257,6 +304,7 @@ export default function Purchases() {
   function handleExport() {
     const rows = filtered.map((p) => ({
       Date: p.date,
+      "Invoice Type": p.invoiceType === "non-tax" ? "Non-Tax Invoice" : "Tax Invoice",
       Product: p.productName,
       Category: getCategoryMeta(p.category).label,
       Supplier: p.supplierName || "",
@@ -265,11 +313,14 @@ export default function Purchases() {
       "Net Amount (SAR)": p.amountBeforeVat,
       "VAT (SAR)": p.vatAmount,
       "Total (SAR)": p.totalAmount,
-      "VAT Included": p.priceIncludesVat ? "Yes" : "No",
+      "VAT Included in Price": p.invoiceType === "non-tax" ? "N/A" : p.priceIncludesVat ? "Yes" : "No",
+      Payment: p.paymentType,
       Notes: p.notes || "",
     }));
     exportToExcel(rows, `purchases-${month || "all"}`);
   }
+
+  const hasActiveFilters = !!(categoryFilter || searchQuery || month || invoiceFilter);
 
   return (
     <div>
@@ -334,9 +385,18 @@ export default function Purchases() {
             ))}
           </optgroup>
         </select>
-        {(categoryFilter || searchQuery || month) && (
+        <select
+          value={invoiceFilter}
+          onChange={(e) => setInvoiceFilter(e.target.value as "" | "tax" | "non-tax")}
+          className="px-4 py-2 border rounded-xl shadow-sm focus:ring-primary/20 outline-none text-sm bg-white"
+        >
+          <option value="">All Invoice Types</option>
+          <option value="tax">🧾 Tax Invoice</option>
+          <option value="non-tax">🏷️ Non-Tax Invoice</option>
+        </select>
+        {hasActiveFilters && (
           <button
-            onClick={() => { setCategoryFilter(""); setSearchQuery(""); setMonth(""); }}
+            onClick={() => { setCategoryFilter(""); setSearchQuery(""); setMonth(""); setInvoiceFilter(""); }}
             className="px-3 py-2 text-sm text-slate-500 hover:text-slate-800 border rounded-xl"
           >
             Clear filters
@@ -346,18 +406,31 @@ export default function Purchases() {
 
       {/* Summary Bar */}
       {filtered.length > 0 && (
-        <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
           <div className="bg-slate-50 border rounded-xl px-4 py-3 text-center">
-            <p className="text-xs text-slate-500 mb-0.5">Net Amount</p>
-            <p className="font-bold text-slate-800">{formatSAR(totalNet)}</p>
+            <p className="text-xs text-slate-500 mb-0.5">Taxable Net</p>
+            <p className="font-bold text-slate-800 text-sm">{formatSAR(totalTaxableNet)}</p>
+            <p className="text-[10px] text-slate-400">{taxable.length} tax invoices</p>
           </div>
           <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-center">
-            <p className="text-xs text-slate-500 mb-0.5">VAT (Input)</p>
-            <p className="font-bold text-emerald-700">{formatSAR(totalVat)}</p>
+            <p className="text-xs text-slate-500 mb-0.5">Input VAT</p>
+            <p className="font-bold text-emerald-700 text-sm">{formatSAR(totalInputVat)}</p>
+            <p className="text-[10px] text-slate-400">Reclaimable</p>
+          </div>
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-center">
+            <p className="text-xs text-slate-500 mb-0.5">Taxable Total</p>
+            <p className="font-bold text-emerald-800 text-sm">{formatSAR(totalTaxableGross)}</p>
+            <p className="text-[10px] text-slate-400">incl. VAT</p>
+          </div>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-center">
+            <p className="text-xs text-slate-500 mb-0.5">Non-Taxable</p>
+            <p className="font-bold text-amber-700 text-sm">{formatSAR(totalNonTaxable)}</p>
+            <p className="text-[10px] text-slate-400">{nonTaxable.length} non-tax invoices</p>
           </div>
           <div className="bg-slate-900 rounded-xl px-4 py-3 text-center">
-            <p className="text-xs text-slate-400 mb-0.5">Total Amount</p>
-            <p className="font-bold text-white">{formatSAR(totalGross)}</p>
+            <p className="text-xs text-slate-400 mb-0.5">Grand Total</p>
+            <p className="font-bold text-white text-sm">{formatSAR(grandTotal)}</p>
+            <p className="text-[10px] text-slate-400">{filtered.length} records</p>
           </div>
         </div>
       )}
@@ -369,6 +442,7 @@ export default function Purchases() {
             <thead className="bg-slate-50 text-slate-600 font-medium border-b">
               <tr>
                 <th className="px-4 py-3">Date</th>
+                <th className="px-4 py-3">Invoice</th>
                 <th className="px-4 py-3">Product</th>
                 <th className="px-4 py-3">Category</th>
                 <th className="px-4 py-3">Supplier</th>
@@ -383,19 +457,31 @@ export default function Purchases() {
             </thead>
             <tbody className="divide-y text-slate-700">
               {isLoading ? (
-                <tr><td colSpan={11} className="text-center py-12 text-slate-400">Loading...</td></tr>
+                <tr><td colSpan={12} className="text-center py-12 text-slate-400">Loading...</td></tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="text-center py-12 text-slate-400">
-                    {(searchQuery || categoryFilter) ? "No records match your filters" : `No purchases found for ${formatMonth(month)}`}
+                  <td colSpan={12} className="text-center py-12 text-slate-400">
+                    {hasActiveFilters ? "No records match your filters" : `No purchases found for ${formatMonth(month)}`}
                   </td>
                 </tr>
               ) : (
                 filtered.map((p) => {
                   const meta = getCategoryMeta(p.category);
+                  const isNonTax = p.invoiceType === "non-tax";
                   return (
                     <tr key={p.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-3 whitespace-nowrap">{formatDate(p.date)}</td>
+                      <td className="px-4 py-3">
+                        {isNonTax ? (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 whitespace-nowrap">
+                            🏷️ No VAT
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 whitespace-nowrap">
+                            🧾 Tax
+                          </span>
+                        )}
+                      </td>
                       <td className="px-4 py-3">
                         <div className="font-medium">{p.productName}</div>
                         {p.notes && <div className="text-xs text-slate-400 truncate max-w-32">{p.notes}</div>}
@@ -418,10 +504,16 @@ export default function Purchases() {
                       <td className="px-4 py-3 text-right">{p.quantity}</td>
                       <td className="px-4 py-3 text-right">
                         {formatSAR(p.price)}
-                        {p.priceIncludesVat && <span className="text-[10px] text-slate-400 block">inc. VAT</span>}
+                        {!isNonTax && p.priceIncludesVat && <span className="text-[10px] text-slate-400 block">inc. VAT</span>}
                       </td>
                       <td className="px-4 py-3 text-right">{formatSAR(p.amountBeforeVat)}</td>
-                      <td className="px-4 py-3 text-right text-emerald-600">{formatSAR(p.vatAmount)}</td>
+                      <td className="px-4 py-3 text-right">
+                        {isNonTax ? (
+                          <span className="text-slate-400 text-xs">—</span>
+                        ) : (
+                          <span className="text-emerald-600">{formatSAR(p.vatAmount)}</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-right font-bold">{formatSAR(p.totalAmount)}</td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex gap-1 justify-end">
@@ -449,12 +541,12 @@ export default function Purchases() {
             {filtered.length > 0 && (
               <tfoot className="bg-slate-50 border-t font-semibold text-slate-800">
                 <tr>
-                  <td colSpan={6} className="px-4 py-3 text-right text-slate-500">
+                  <td colSpan={8} className="px-4 py-3 text-right text-slate-500">
                     {filtered.length} records
                   </td>
-                  <td className="px-4 py-3 text-right">{formatSAR(totalNet)}</td>
-                  <td className="px-4 py-3 text-right text-emerald-600">{formatSAR(totalVat)}</td>
-                  <td className="px-4 py-3 text-right">{formatSAR(totalGross)}</td>
+                  <td className="px-4 py-3 text-right">{formatSAR(totalTaxableNet + totalNonTaxable)}</td>
+                  <td className="px-4 py-3 text-right text-emerald-600">{formatSAR(totalInputVat)}</td>
+                  <td className="px-4 py-3 text-right">{formatSAR(grandTotal)}</td>
                   <td />
                 </tr>
               </tfoot>

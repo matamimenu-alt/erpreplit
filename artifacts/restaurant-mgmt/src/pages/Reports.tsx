@@ -340,44 +340,96 @@ export default function Reports() {
 
       {/* ─── MONTHLY PURCHASES TAB ─── */}
       {tab === "monthly" && (
-        <div className="bg-card rounded-2xl shadow-sm border overflow-hidden">
-          {monthlyLoading ? (
-            <div className="py-16 text-center text-slate-400">Loading...</div>
-          ) : !monthly?.length ? (
-            <div className="py-16 text-center text-slate-400">No purchase data available</div>
-          ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b">
-                <tr>
-                  <th className="px-6 py-4 text-left text-slate-600 font-semibold">Month</th>
-                  <th className="px-6 py-4 text-right text-slate-600 font-semibold">Records</th>
-                  <th className="px-6 py-4 text-right text-slate-600 font-semibold">Net Amount</th>
-                  <th className="px-6 py-4 text-right text-slate-600 font-semibold">VAT (Input)</th>
-                  <th className="px-6 py-4 text-right text-slate-600 font-semibold">Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y text-slate-700">
-                {monthly.map((m) => (
-                  <tr key={m.month} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 font-medium">{formatMonth(m.month)}</td>
-                    <td className="px-6 py-4 text-right text-slate-500">{m.count}</td>
-                    <td className="px-6 py-4 text-right">{formatSAR(m.netAmount)}</td>
-                    <td className="px-6 py-4 text-right text-emerald-600">{formatSAR(m.totalVat)}</td>
-                    <td className="px-6 py-4 text-right font-bold">{formatSAR(m.totalAmount)}</td>
+        <div className="space-y-4">
+          {/* Summary KPIs */}
+          {monthly && monthly.length > 0 && (() => {
+            const totTaxNet  = monthly.reduce((s, m) => s + (m.taxableNet ?? 0), 0);
+            const totTaxGross = monthly.reduce((s, m) => s + (m.taxableTotal ?? 0), 0);
+            const totNonTax  = monthly.reduce((s, m) => s + (m.nonTaxableTotal ?? 0), 0);
+            const totVat     = monthly.reduce((s, m) => s + m.totalVat, 0);
+            const grandTot   = monthly.reduce((s, m) => s + m.totalAmount, 0);
+            return (
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-center">
+                  <p className="text-xs text-slate-500 mb-0.5">Tax Invoice Net</p>
+                  <p className="font-bold text-blue-800">{formatSAR(totTaxNet)}</p>
+                  <p className="text-[10px] text-blue-600">Before VAT</p>
+                </div>
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-center">
+                  <p className="text-xs text-slate-500 mb-0.5">Input VAT</p>
+                  <p className="font-bold text-emerald-700">{formatSAR(totVat)}</p>
+                  <p className="text-[10px] text-emerald-600">Reclaimable</p>
+                </div>
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-center">
+                  <p className="text-xs text-slate-500 mb-0.5">Tax Invoice Total</p>
+                  <p className="font-bold text-emerald-800">{formatSAR(totTaxGross)}</p>
+                  <p className="text-[10px] text-emerald-600">incl. VAT</p>
+                </div>
+                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-center">
+                  <p className="text-xs text-slate-500 mb-0.5">Non-Tax Total</p>
+                  <p className="font-bold text-amber-700">{formatSAR(totNonTax)}</p>
+                  <p className="text-[10px] text-amber-600">No VAT</p>
+                </div>
+                <div className="bg-slate-900 rounded-xl px-4 py-3 text-center">
+                  <p className="text-xs text-slate-400 mb-0.5">Grand Total</p>
+                  <p className="font-bold text-white">{formatSAR(grandTot)}</p>
+                  <p className="text-[10px] text-slate-400">All purchases</p>
+                </div>
+              </div>
+            );
+          })()}
+
+          <div className="bg-card rounded-2xl shadow-sm border overflow-hidden">
+            {monthlyLoading ? (
+              <div className="py-16 text-center text-slate-400">Loading...</div>
+            ) : !monthly?.length ? (
+              <div className="py-16 text-center text-slate-400">No purchase data available</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 border-b">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-slate-600 font-semibold">Month</th>
+                    <th className="px-4 py-3 text-right text-slate-600 font-semibold text-xs">Records</th>
+                    <th className="px-4 py-3 text-right text-blue-600 font-semibold text-xs">🧾 Tax Net</th>
+                    <th className="px-4 py-3 text-right text-emerald-600 font-semibold text-xs">Input VAT</th>
+                    <th className="px-4 py-3 text-right text-emerald-700 font-semibold text-xs">Tax Total</th>
+                    <th className="px-4 py-3 text-right text-amber-600 font-semibold text-xs">🏷️ Non-Tax</th>
+                    <th className="px-4 py-3 text-right text-slate-700 font-semibold text-xs">Grand Total</th>
                   </tr>
-                ))}
-              </tbody>
-              <tfoot className="bg-slate-50 border-t font-bold text-slate-800">
-                <tr>
-                  <td className="px-6 py-4">Total</td>
-                  <td className="px-6 py-4 text-right text-slate-500">{monthly.reduce((s, m) => s + m.count, 0)}</td>
-                  <td className="px-6 py-4 text-right">{formatSAR(monthly.reduce((s, m) => s + m.netAmount, 0))}</td>
-                  <td className="px-6 py-4 text-right text-emerald-600">{formatSAR(monthly.reduce((s, m) => s + m.totalVat, 0))}</td>
-                  <td className="px-6 py-4 text-right">{formatSAR(monthly.reduce((s, m) => s + m.totalAmount, 0))}</td>
-                </tr>
-              </tfoot>
-            </table>
-          )}
+                </thead>
+                <tbody className="divide-y text-slate-700">
+                  {monthly.map((m) => (
+                    <tr key={m.month} className="hover:bg-slate-50">
+                      <td className="px-4 py-3 font-medium">{formatMonth(m.month)}</td>
+                      <td className="px-4 py-3 text-right text-slate-500">
+                        <span className="text-xs">
+                          {m.taxCount ?? 0}🧾 + {m.nonTaxCount ?? 0}🏷️
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right text-blue-700">{formatSAR(m.taxableNet ?? 0)}</td>
+                      <td className="px-4 py-3 text-right text-emerald-600">{formatSAR(m.totalVat)}</td>
+                      <td className="px-4 py-3 text-right text-emerald-800">{formatSAR(m.taxableTotal ?? 0)}</td>
+                      <td className="px-4 py-3 text-right text-amber-700">{formatSAR(m.nonTaxableTotal ?? 0)}</td>
+                      <td className="px-4 py-3 text-right font-bold">{formatSAR(m.totalAmount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-slate-50 border-t font-bold text-slate-800">
+                  <tr>
+                    <td className="px-4 py-3">Total</td>
+                    <td className="px-4 py-3 text-right text-slate-500 text-xs">
+                      {(monthly.reduce((s, m) => s + (m.taxCount ?? 0), 0))}🧾 + {(monthly.reduce((s, m) => s + (m.nonTaxCount ?? 0), 0))}🏷️
+                    </td>
+                    <td className="px-4 py-3 text-right text-blue-700">{formatSAR(monthly.reduce((s, m) => s + (m.taxableNet ?? 0), 0))}</td>
+                    <td className="px-4 py-3 text-right text-emerald-600">{formatSAR(monthly.reduce((s, m) => s + m.totalVat, 0))}</td>
+                    <td className="px-4 py-3 text-right text-emerald-800">{formatSAR(monthly.reduce((s, m) => s + (m.taxableTotal ?? 0), 0))}</td>
+                    <td className="px-4 py-3 text-right text-amber-700">{formatSAR(monthly.reduce((s, m) => s + (m.nonTaxableTotal ?? 0), 0))}</td>
+                    <td className="px-4 py-3 text-right">{formatSAR(monthly.reduce((s, m) => s + m.totalAmount, 0))}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            )}
+          </div>
         </div>
       )}
 
