@@ -12,41 +12,126 @@ function pct(part: number, total: number): number {
   return +((part / total) * 100).toFixed(2);
 }
 
-function isFoodCost(cat: string) {
-  return cat.startsWith("food-") || cat === "cost-food" || cat === "food";
-}
-function isBeverageCost(cat: string) {
-  return cat.startsWith("bev-") || cat === "cost-beverage" || cat === "beverage";
-}
-function isGeneralCogs(cat: string) {
-  return cat.startsWith("gen-") || cat === "cost-general" || cat === "other";
+const LEGACY_MAP: Record<string, string> = {
+  "cost-food":          "food-poultry",
+  "food":               "food-poultry",
+  "food-meat":          "food-poultry",
+  "food-seafood":       "food-supplies",
+  "food-other":         "food-supplies",
+  "cost-beverage":      "bev-juices",
+  "beverage":           "bev-juices",
+  "bev-coffee":         "bev-juices",
+  "bev-spices":         "bev-juices",
+  "bev-cold":           "bev-soft",
+  "bev-hot-materials":  "bev-juices",
+  "bev-cold-materials": "bev-soft",
+  "cost-general":       "gen-kitchen",
+  "other":              "gen-kitchen",
+  "gen-consumables":    "gen-cashier",
+  "gen-delivery":       "gen-packaging",
+  "fuel-energy":        "fuel-gas",
+  "maintenance":        "maint-services",
+  "it-communication":   "it-internet",
+  "marketing":          "mkt-campaigns",
+  "others":             "others-misc",
+};
+
+function resolveCat(cat: string): string {
+  return LEGACY_MAP[cat] ?? cat;
 }
 
+function isFoodCost(cat: string)      { const r = resolveCat(cat); return r.startsWith("food-"); }
+function isBeverageCost(cat: string)  { const r = resolveCat(cat); return r.startsWith("bev-"); }
+function isGeneralCogs(cat: string)   { const r = resolveCat(cat); return r.startsWith("gen-"); }
+function isFuelCost(cat: string)      { const r = resolveCat(cat); return r.startsWith("fuel-"); }
+function isMaintenanceCost(cat: string){ const r = resolveCat(cat); return r.startsWith("maint-"); }
+function isItCost(cat: string)        { const r = resolveCat(cat); return r.startsWith("it-"); }
+function isMarketingCost(cat: string) { const r = resolveCat(cat); return r.startsWith("mkt-"); }
+function isOthersCost(cat: string)    { const r = resolveCat(cat); return r.startsWith("others-") || r === "others"; }
+
 const CATEGORY_LABELS: Record<string, string> = {
-  "food-vegetables":    "Vegetables, Tomatoes & Onions",
-  "food-meat":          "Meat, Poultry & Eggs",
-  "food-seafood":       "Fish & Seafood",
-  "food-spices":        "Spices & Seasonings",
-  "food-dairy":         "Dairy Products",
-  "food-other":         "Other Food Items",
-  "bev-coffee":         "Fresh Coffee",
-  "bev-spices":         "Beverage Spices & Syrups",
-  "bev-cold":           "Cold Beverages",
-  "bev-hot-materials":  "Hot Beverage Materials",
-  "bev-cold-materials": "Cold Beverage Materials",
-  "gen-consumables":    "Operational Consumables",
-  "gen-kitchen":        "Kitchen Supplies",
-  "gen-cleaning":       "Cleaning Tools & Supplies",
-  "gen-delivery":       "Delivery Needs",
-  "fuel-energy":        "Fuel & Energy",
-  "maintenance":        "Maintenance and Repair",
-  "it-communication":   "IT & Communication",
-  "marketing":          "Marketing and Advertising",
-  "others":             "Others Expenses",
-  "cost-food":          "Cost of Sale – Food",
-  "cost-beverage":      "Cost of Sale – Beverage",
-  "cost-general":       "Cost of Sale – General",
+  // Food subcategories
+  "food-poultry":    "Poultry & Meat",
+  "food-vegetables": "Vegetables & Fruits",
+  "food-dairy":      "Milk & Dairy",
+  "food-spices":     "Spices & Seasoning",
+  "food-products":   "Food Products & Desserts",
+  "food-supplies":   "Food Supplies & Oils",
+  // Beverage subcategories
+  "bev-juices": "Juices",
+  "bev-water":  "Mineral Water",
+  "bev-soft":   "Soft Drinks",
+  // General subcategories
+  "gen-cashier":   "Cashier Supplies",
+  "gen-kitchen":   "Kitchen Supplies",
+  "gen-cleaning":  "Cleaning Supplies",
+  "gen-packaging": "Packaging & Paper",
+  // Fuel subcategories
+  "fuel-vehicle":   "Vehicle Fuel",
+  "fuel-charcoal":  "Charcoal",
+  "fuel-gas":       "Gas",
+  "fuel-utilities": "Electricity & Water",
+  // Maintenance subcategories
+  "maint-services":  "Maintenance Services",
+  "maint-materials": "Maintenance Materials",
+  // IT subcategories
+  "it-internet": "Internet",
+  "it-phones":   "Telephones",
+  // Marketing subcategories
+  "mkt-campaigns": "Advertising Campaigns",
+  "mkt-promo":     "Promotion / Distribution",
+  // Others
+  "others-misc": "Miscellaneous",
 };
+
+const CATEGORY_LABELS_AR: Record<string, string> = {
+  "food-poultry":    "الدواجن واللحوم",
+  "food-vegetables": "الخضروات والفواكه",
+  "food-dairy":      "الحليب والألبان",
+  "food-spices":     "بهارات وتوابل",
+  "food-products":   "منتجات غذائية وحلويات",
+  "food-supplies":   "مواد غذائية وزيوت",
+  "bev-juices": "عصائر",
+  "bev-water":  "مياه معدنية",
+  "bev-soft":   "مشروبات غازية",
+  "gen-cashier":   "مستلزمات الكاشير",
+  "gen-kitchen":   "مستلزمات المطبخ",
+  "gen-cleaning":  "مستلزمات التنظيف",
+  "gen-packaging": "التغليف والورقيات",
+  "fuel-vehicle":   "محروقات سيارات",
+  "fuel-charcoal":  "الفحم",
+  "fuel-gas":       "الغاز",
+  "fuel-utilities": "الكهرباء والماء",
+  "maint-services":  "خدمات صيانة",
+  "maint-materials": "مواد صيانة",
+  "it-internet": "الإنترنت",
+  "it-phones":   "الاتصالات / تلفونات",
+  "mkt-campaigns": "حملات إعلانية",
+  "mkt-promo":     "ترويج وتوزيع",
+  "others-misc": "متفرقات",
+};
+
+const GROUP_LABELS: Record<string, { label: string; labelAr: string }> = {
+  "food":        { label: "Cost of Sale – Food",      labelAr: "تكلفة المبيعات – أغذية" },
+  "beverage":    { label: "Cost of Sale – Beverage",  labelAr: "تكلفة المبيعات – مشروبات" },
+  "general":     { label: "Cost of Sale – General",   labelAr: "تكلفة المبيعات – عام" },
+  "fuel":        { label: "Fuel & Energy",             labelAr: "الوقود والطاقة" },
+  "maintenance": { label: "Maintenance & Repair",      labelAr: "الصيانة والإصلاح" },
+  "it":          { label: "IT & Communication",        labelAr: "تقنية المعلومات والاتصالات" },
+  "marketing":   { label: "Marketing & Advertising",   labelAr: "التسويق والإعلانات" },
+  "others":      { label: "Other Expenses",            labelAr: "مصاريف أخرى" },
+};
+
+function getCatGroup(resolvedCat: string): string {
+  if (resolvedCat.startsWith("food-"))  return "food";
+  if (resolvedCat.startsWith("bev-"))   return "beverage";
+  if (resolvedCat.startsWith("gen-"))   return "general";
+  if (resolvedCat.startsWith("fuel-"))  return "fuel";
+  if (resolvedCat.startsWith("maint-")) return "maintenance";
+  if (resolvedCat.startsWith("it-"))    return "it";
+  if (resolvedCat.startsWith("mkt-"))   return "marketing";
+  return "others";
+}
 
 // GET /api/reports/pl
 router.get("/pl", async (req, res) => {
@@ -127,11 +212,11 @@ router.get("/pl", async (req, res) => {
     const grossProfit = totalRevenue - adjustedCOGS;
 
     // Purchase Operating Expenses
-    const fuelEnergyCost    = purchaseRecords.filter(r => r.category === "fuel-energy").reduce((s, r) => s + toNum(r.amountBeforeVat), 0);
-    const maintenanceCost   = purchaseRecords.filter(r => r.category === "maintenance").reduce((s, r) => s + toNum(r.amountBeforeVat), 0);
-    const itCommunicationCost = purchaseRecords.filter(r => r.category === "it-communication").reduce((s, r) => s + toNum(r.amountBeforeVat), 0);
-    const marketingCost     = purchaseRecords.filter(r => r.category === "marketing").reduce((s, r) => s + toNum(r.amountBeforeVat), 0);
-    const othersPurchaseCost = purchaseRecords.filter(r => r.category === "others").reduce((s, r) => s + toNum(r.amountBeforeVat), 0);
+    const fuelEnergyCost    = purchaseRecords.filter(r => isFuelCost(r.category)).reduce((s, r) => s + toNum(r.amountBeforeVat), 0);
+    const maintenanceCost   = purchaseRecords.filter(r => isMaintenanceCost(r.category)).reduce((s, r) => s + toNum(r.amountBeforeVat), 0);
+    const itCommunicationCost = purchaseRecords.filter(r => isItCost(r.category)).reduce((s, r) => s + toNum(r.amountBeforeVat), 0);
+    const marketingCost     = purchaseRecords.filter(r => isMarketingCost(r.category)).reduce((s, r) => s + toNum(r.amountBeforeVat), 0);
+    const othersPurchaseCost = purchaseRecords.filter(r => isOthersCost(r.category)).reduce((s, r) => s + toNum(r.amountBeforeVat), 0);
     const totalPurchaseOpex = fuelEnergyCost + maintenanceCost + itCommunicationCost + marketingCost + othersPurchaseCost;
 
     // Labour Cost
@@ -270,25 +355,36 @@ router.get("/purchases/by-category", async (req, res) => {
 
     if (month) records = records.filter((r) => r.date.startsWith(month));
 
-    const catMap: Record<string, { total: number; vat: number; net: number; count: number }> = {};
+    type CatEntry = { total: number; vat: number; net: number; count: number; resolved: string };
+    const catMap: Record<string, CatEntry> = {};
     for (const r of records) {
-      const cat = r.category || "others";
-      if (!catMap[cat]) catMap[cat] = { total: 0, vat: 0, net: 0, count: 0 };
-      catMap[cat].total += toNum(r.totalAmount);
-      catMap[cat].vat   += toNum(r.vatAmount);
-      catMap[cat].net   += toNum(r.amountBeforeVat);
-      catMap[cat].count += 1;
+      const raw = r.category || "others";
+      const resolved = resolveCat(raw);
+      const key = resolved;
+      if (!catMap[key]) catMap[key] = { total: 0, vat: 0, net: 0, count: 0, resolved };
+      catMap[key].total += toNum(r.totalAmount);
+      catMap[key].vat   += toNum(r.vatAmount);
+      catMap[key].net   += toNum(r.amountBeforeVat);
+      catMap[key].count += 1;
     }
 
     const result = Object.entries(catMap).sort(([a], [b]) => a.localeCompare(b))
-      .map(([cat, d]) => ({
-        category: cat,
-        label: CATEGORY_LABELS[cat] ?? cat,
-        totalAmount: +d.total.toFixed(2),
-        totalVat: +d.vat.toFixed(2),
-        netAmount: +d.net.toFixed(2),
-        count: d.count,
-      }));
+      .map(([, d]) => {
+        const groupKey = getCatGroup(d.resolved);
+        const grp = GROUP_LABELS[groupKey] ?? { label: groupKey, labelAr: groupKey };
+        return {
+          category: d.resolved,
+          label: CATEGORY_LABELS[d.resolved] ?? d.resolved,
+          labelAr: CATEGORY_LABELS_AR[d.resolved] ?? d.resolved,
+          groupKey,
+          groupLabel: grp.label,
+          groupLabelAr: grp.labelAr,
+          totalAmount: +d.total.toFixed(2),
+          totalVat: +d.vat.toFixed(2),
+          netAmount: +d.net.toFixed(2),
+          count: d.count,
+        };
+      });
 
     res.json(result);
   } catch (err) {

@@ -4,7 +4,7 @@ import { usePurchasesMutations } from "@/hooks/use-purchases";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { formatSAR, formatDate, formatMonth } from "@/lib/format";
 import { exportToExcel } from "@/lib/export-excel";
-import { PURCHASE_CATEGORIES, PURCHASE_CATEGORY_GROUPS, getCategoryMeta } from "@/lib/categories";
+import { PURCHASE_CATEGORIES, PURCHASE_CATEGORY_GROUPS, getCategoryMeta, getGroupForCategory } from "@/lib/categories";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -61,9 +61,27 @@ function PurchaseFormModal({
     defaultValues,
   });
 
+  const currentCategory = useWatch({ control: form.control, name: "category" });
+  const [selectedGroupKey, setSelectedGroupKey] = useState<string>(() => {
+    return getGroupForCategory(defaultValues.category)?.key ?? PURCHASE_CATEGORY_GROUPS[0].key;
+  });
+
   useEffect(() => {
-    if (open) form.reset(defaultValues);
+    if (open) {
+      form.reset(defaultValues);
+      setSelectedGroupKey(getGroupForCategory(defaultValues.category)?.key ?? PURCHASE_CATEGORY_GROUPS[0].key);
+    }
   }, [open]);
+
+  const activeGroup = PURCHASE_CATEGORY_GROUPS.find(g => g.key === selectedGroupKey) ?? PURCHASE_CATEGORY_GROUPS[0];
+
+  function handleGroupChange(key: string) {
+    setSelectedGroupKey(key);
+    const group = PURCHASE_CATEGORY_GROUPS.find(g => g.key === key);
+    if (group && group.subcategories.length > 0) {
+      form.setValue("category", group.subcategories[0].value, { shouldValidate: true });
+    }
+  }
 
   const qty = useWatch({ control: form.control, name: "quantity" });
   const price = useWatch({ control: form.control, name: "price" });
@@ -131,19 +149,56 @@ function PurchaseFormModal({
             {form.formState.errors.productName && <p className="text-xs text-rose-500 mt-1">{form.formState.errors.productName.message}</p>}
           </div>
 
-          {/* Category */}
+          {/* Category — Step 1: Main Group */}
           <div>
-            <label className="block text-sm font-medium mb-1">Category <span className="text-rose-500">*</span></label>
-            <select {...form.register("category")} className="w-full px-3 py-2 border rounded-xl outline-none focus:border-primary bg-white text-sm">
+            <label className="block text-sm font-medium mb-2">
+              Main Category <span className="text-rose-500">*</span>
+              <span className="font-normal text-slate-400 text-xs mr-2"> / التصنيف الرئيسي</span>
+            </label>
+            <div className="grid grid-cols-2 gap-1.5">
               {PURCHASE_CATEGORY_GROUPS.map(g => (
-                <optgroup key={g.groupLabel} label={g.groupLabel}>
-                  {g.categories.map(c => (
-                    <option key={c.value} value={c.value}>{c.label} — {c.labelAr}</option>
-                  ))}
-                </optgroup>
+                <button
+                  key={g.key}
+                  type="button"
+                  onClick={() => handleGroupChange(g.key)}
+                  className={`text-left px-3 py-2 rounded-xl border-2 text-xs transition-all ${
+                    selectedGroupKey === g.key
+                      ? "border-primary bg-primary/5 font-semibold"
+                      : "border-slate-200 hover:border-slate-300 text-slate-600"
+                  }`}
+                >
+                  <span className="block font-medium leading-tight">{g.label}</span>
+                  <span className="block text-slate-400 text-[10px] leading-tight mt-0.5" dir="rtl">{g.labelAr}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Category — Step 2: Subcategory */}
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Subcategory <span className="text-rose-500">*</span>
+              <span className="font-normal text-slate-400 text-xs mr-2"> / التصنيف الفرعي</span>
+            </label>
+            <select
+              {...form.register("category")}
+              value={currentCategory}
+              className="w-full px-3 py-2 border rounded-xl outline-none focus:border-primary bg-white text-sm"
+            >
+              {activeGroup.subcategories.map(s => (
+                <option key={s.value} value={s.value}>
+                  {s.label} — {s.labelAr}
+                </option>
               ))}
             </select>
-            <p className="text-xs text-slate-400 mt-1">Cost of Sale categories reduce Gross Profit; Operating Expenses reduce Operating Profit in P&L</p>
+            {form.formState.errors.category && (
+              <p className="text-xs text-rose-500 mt-1">{form.formState.errors.category.message}</p>
+            )}
+            <p className="text-xs text-slate-400 mt-1">
+              {activeGroup.section === "opex"
+                ? "Operating Expense → reduces Operating Profit in P&L"
+                : "Cost of Sale → reduces Gross Profit in P&L"}
+            </p>
           </div>
 
           {/* Qty + Unit Price */}
@@ -259,7 +314,7 @@ export default function Purchases() {
     date: new Date().toISOString().split("T")[0],
     supplierName: "",
     productName: "",
-    category: "cost-food",
+    category: "food-poultry",
     quantity: 1,
     price: 0,
     invoiceType: "tax",
@@ -374,16 +429,13 @@ export default function Purchases() {
           className="px-4 py-2 border rounded-xl shadow-sm focus:ring-primary/20 outline-none text-sm bg-white"
         >
           <option value="">All Categories</option>
-          <optgroup label="Cost of Sales (COGS)">
-            {PURCHASE_CATEGORIES.filter(c => c.section === "cogs").map(c => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </optgroup>
-          <optgroup label="Operating Expenses">
-            {PURCHASE_CATEGORIES.filter(c => c.section === "opex").map(c => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </optgroup>
+          {PURCHASE_CATEGORY_GROUPS.map(g => (
+            <optgroup key={g.key} label={`${g.label} — ${g.labelAr}`}>
+              {g.subcategories.map(s => (
+                <option key={s.value} value={s.value}>{s.label} — {s.labelAr}</option>
+              ))}
+            </optgroup>
+          ))}
         </select>
         <select
           value={invoiceFilter}

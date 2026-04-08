@@ -1947,6 +1947,14 @@ components:
           type: string
         label:
           type: string
+        labelAr:
+          type: string
+        groupKey:
+          type: string
+        groupLabel:
+          type: string
+        groupLabelAr:
+          type: string
         totalAmount:
           type: number
         totalVat:
@@ -1958,6 +1966,10 @@ components:
       required:
         - category
         - label
+        - labelAr
+        - groupKey
+        - groupLabel
+        - groupLabelAr
         - totalAmount
         - totalVat
         - netAmount

@@ -1,93 +1,217 @@
-export const PURCHASE_CATEGORY_GROUPS = [
+export type CategorySection = "cogs-food" | "cogs-bev" | "cogs-gen" | "opex";
+
+export interface SubCategory {
+  value: string;
+  label: string;
+  labelAr: string;
+}
+
+export interface CategoryGroup {
+  key: string;
+  label: string;
+  labelAr: string;
+  section: CategorySection;
+  color: string;
+  badge: string;
+  subcategories: SubCategory[];
+}
+
+export const PURCHASE_CATEGORY_GROUPS: CategoryGroup[] = [
   {
-    groupLabel: "Cost of Sale – Food",
-    section: "cogs" as const,
+    key: "food",
+    label: "Cost of Sale – Food",
+    labelAr: "تكلفة المبيعات – أغذية",
+    section: "cogs-food",
     color: "orange",
     badge: "bg-orange-100 text-orange-800",
-    categories: [
-      { value: "food-vegetables",    label: "Vegetables, Tomatoes & Onions",  labelAr: "خضار وطماطم وبصل" },
-      { value: "food-meat",          label: "Meat, Poultry & Eggs",           labelAr: "لحوم وطيور وبيض" },
-      { value: "food-seafood",       label: "Fish & Seafood",                 labelAr: "أسماك وبحريات" },
-      { value: "food-spices",        label: "Spices & Seasonings",            labelAr: "بهارات وتوابل" },
-      { value: "food-dairy",         label: "Dairy Products",                 labelAr: "منتجات الألبان" },
-      { value: "food-other",         label: "Other Food Items",               labelAr: "مواد غذائية أخرى" },
+    subcategories: [
+      { value: "food-poultry",    label: "Poultry & Meat",              labelAr: "الدواجن واللحوم" },
+      { value: "food-vegetables", label: "Vegetables & Fruits",         labelAr: "الخضروات والفواكه" },
+      { value: "food-dairy",      label: "Milk & Dairy",                labelAr: "الحليب والألبان" },
+      { value: "food-spices",     label: "Spices & Seasoning",          labelAr: "بهارات وتوابل" },
+      { value: "food-products",   label: "Food Products & Desserts",    labelAr: "منتجات غذائية وحلويات" },
+      { value: "food-supplies",   label: "Food Supplies & Oils",        labelAr: "مواد غذائية وزيوت" },
     ],
   },
   {
-    groupLabel: "Cost of Sale – Beverage",
-    section: "cogs" as const,
+    key: "beverage",
+    label: "Cost of Sale – Beverage",
+    labelAr: "تكلفة المبيعات – مشروبات",
+    section: "cogs-bev",
     color: "blue",
     badge: "bg-blue-100 text-blue-800",
-    categories: [
-      { value: "bev-coffee",         label: "Fresh Coffee",                   labelAr: "القهوة الطازجة" },
-      { value: "bev-spices",         label: "Beverage Spices & Syrups",       labelAr: "التوابل والبهارات" },
-      { value: "bev-cold",           label: "Cold Beverages",                 labelAr: "المشروبات الباردة" },
-      { value: "bev-hot-materials",  label: "Hot Beverage Materials",         labelAr: "خامات المشروبات الساخنة" },
-      { value: "bev-cold-materials", label: "Cold Beverage Materials",        labelAr: "خامات المشروبات الباردة" },
+    subcategories: [
+      { value: "bev-juices", label: "Juices",         labelAr: "عصائر" },
+      { value: "bev-water",  label: "Mineral Water",  labelAr: "مياه معدنية" },
+      { value: "bev-soft",   label: "Soft Drinks",    labelAr: "مشروبات غازية" },
     ],
   },
   {
-    groupLabel: "Cost of Sale – General",
-    section: "cogs" as const,
+    key: "general",
+    label: "Cost of Sale – General",
+    labelAr: "تكلفة المبيعات – عام",
+    section: "cogs-gen",
     color: "amber",
     badge: "bg-amber-100 text-amber-800",
-    categories: [
-      { value: "gen-consumables",    label: "Operational Consumables",        labelAr: "المستهلكات التشغيلية" },
-      { value: "gen-kitchen",        label: "Kitchen Supplies",               labelAr: "مستلزمات المطبخ" },
-      { value: "gen-cleaning",       label: "Cleaning Tools & Supplies",      labelAr: "أدوات التنظيف" },
-      { value: "gen-delivery",       label: "Delivery Needs",                 labelAr: "حاجيات التسليم" },
+    subcategories: [
+      { value: "gen-cashier",   label: "Cashier Supplies",    labelAr: "مستلزمات الكاشير" },
+      { value: "gen-kitchen",   label: "Kitchen Supplies",    labelAr: "مستلزمات المطبخ" },
+      { value: "gen-cleaning",  label: "Cleaning Supplies",   labelAr: "مستلزمات التنظيف" },
+      { value: "gen-packaging", label: "Packaging & Paper",   labelAr: "التغليف والورقيات" },
     ],
   },
   {
-    groupLabel: "Operating Expenses",
-    section: "opex" as const,
+    key: "fuel",
+    label: "Fuel & Energy",
+    labelAr: "الوقود والطاقة",
+    section: "opex",
+    color: "red",
+    badge: "bg-red-100 text-red-800",
+    subcategories: [
+      { value: "fuel-vehicle",   label: "Vehicle Fuel",        labelAr: "محروقات سيارات" },
+      { value: "fuel-charcoal",  label: "Charcoal",            labelAr: "الفحم" },
+      { value: "fuel-gas",       label: "Gas",                 labelAr: "الغاز" },
+      { value: "fuel-utilities", label: "Electricity & Water", labelAr: "الكهرباء والماء" },
+    ],
+  },
+  {
+    key: "maintenance",
+    label: "Maintenance & Repair",
+    labelAr: "الصيانة والإصلاح",
+    section: "opex",
+    color: "violet",
+    badge: "bg-violet-100 text-violet-800",
+    subcategories: [
+      { value: "maint-services",  label: "Maintenance Services",  labelAr: "خدمات صيانة" },
+      { value: "maint-materials", label: "Maintenance Materials", labelAr: "مواد صيانة" },
+    ],
+  },
+  {
+    key: "it",
+    label: "IT & Communication",
+    labelAr: "تقنية المعلومات والاتصالات",
+    section: "opex",
+    color: "cyan",
+    badge: "bg-cyan-100 text-cyan-800",
+    subcategories: [
+      { value: "it-internet", label: "Internet",    labelAr: "الإنترنت" },
+      { value: "it-phones",   label: "Telephones",  labelAr: "الاتصالات / تلفونات" },
+    ],
+  },
+  {
+    key: "marketing",
+    label: "Marketing & Advertising",
+    labelAr: "التسويق والإعلانات",
+    section: "opex",
+    color: "pink",
+    badge: "bg-pink-100 text-pink-800",
+    subcategories: [
+      { value: "mkt-campaigns", label: "Advertising Campaigns",    labelAr: "حملات إعلانية" },
+      { value: "mkt-promo",     label: "Promotion / Distribution", labelAr: "ترويج وتوزيع" },
+    ],
+  },
+  {
+    key: "others",
+    label: "Other Expenses",
+    labelAr: "مصاريف أخرى",
+    section: "opex",
     color: "slate",
     badge: "bg-slate-100 text-slate-700",
-    categories: [
-      { value: "fuel-energy",        label: "Fuel & Energy",                  labelAr: "الوقود والطاقة" },
-      { value: "maintenance",        label: "Maintenance and Repair",         labelAr: "الصيانة والإصلاح" },
-      { value: "it-communication",   label: "IT & Communication",             labelAr: "تقنية المعلومات والاتصالات" },
-      { value: "marketing",          label: "Marketing and Advertising",      labelAr: "التسويق والإعلان" },
-      { value: "others",             label: "Others Expenses",                labelAr: "مصاريف أخرى" },
+    subcategories: [
+      { value: "others-misc", label: "Miscellaneous", labelAr: "متفرقات" },
     ],
   },
 ];
 
 export const PURCHASE_CATEGORIES = PURCHASE_CATEGORY_GROUPS.flatMap(g =>
-  g.categories.map(c => ({
-    value: c.value,
-    label: c.label,
-    labelAr: c.labelAr,
-    groupLabel: g.groupLabel,
+  g.subcategories.map(s => ({
+    value: s.value,
+    label: s.label,
+    labelAr: s.labelAr,
+    groupKey: g.key,
+    groupLabel: g.label,
+    groupLabelAr: g.labelAr,
     section: g.section,
     badge: g.badge,
+    color: g.color,
   }))
 );
 
-export type PurchaseCategoryValue = string;
+const LEGACY_MAP: Record<string, string> = {
+  "cost-food":          "food-poultry",
+  "food":               "food-poultry",
+  "food-meat":          "food-poultry",
+  "food-seafood":       "food-supplies",
+  "food-other":         "food-supplies",
+  "cost-beverage":      "bev-juices",
+  "beverage":           "bev-juices",
+  "bev-coffee":         "bev-juices",
+  "bev-spices":         "bev-juices",
+  "bev-cold":           "bev-soft",
+  "bev-hot-materials":  "bev-juices",
+  "bev-cold-materials": "bev-soft",
+  "cost-general":       "gen-kitchen",
+  "other":              "gen-kitchen",
+  "gen-consumables":    "gen-cashier",
+  "gen-delivery":       "gen-packaging",
+  "fuel-energy":        "fuel-gas",
+  "maintenance":        "maint-services",
+  "it-communication":   "it-internet",
+  "marketing":          "mkt-campaigns",
+  "others":             "others-misc",
+};
 
 export function getCategoryMeta(value: string) {
-  const legacyMap: Record<string, string> = {
-    "cost-food": "food-other", "food": "food-other",
-    "cost-beverage": "bev-cold", "beverage": "bev-cold",
-    "cost-general": "gen-consumables", "other": "gen-consumables",
-  };
-  const v = legacyMap[value] ?? value;
-  return PURCHASE_CATEGORIES.find(c => c.value === v) ?? {
-    value, label: value, labelAr: value,
-    groupLabel: "Other", section: "opex" as const,
+  const resolved = LEGACY_MAP[value] ?? value;
+  return PURCHASE_CATEGORIES.find(c => c.value === resolved) ?? {
+    value: resolved,
+    label: value,
+    labelAr: value,
+    groupKey: "others",
+    groupLabel: "Other",
+    groupLabelAr: "أخرى",
+    section: "opex" as CategorySection,
     badge: "bg-slate-100 text-slate-700",
+    color: "slate",
   };
+}
+
+export function getGroupForCategory(value: string): CategoryGroup | undefined {
+  const resolved = LEGACY_MAP[value] ?? value;
+  return PURCHASE_CATEGORY_GROUPS.find(g => g.subcategories.some(s => s.value === resolved));
 }
 
 export function isFoodCost(cat: string) {
-  return cat.startsWith("food-") || cat === "cost-food" || cat === "food";
+  const r = LEGACY_MAP[cat] ?? cat;
+  return r.startsWith("food-");
 }
 export function isBeverageCost(cat: string) {
-  return cat.startsWith("bev-") || cat === "cost-beverage" || cat === "beverage";
+  const r = LEGACY_MAP[cat] ?? cat;
+  return r.startsWith("bev-");
 }
 export function isGeneralCogs(cat: string) {
-  return cat.startsWith("gen-") || cat === "cost-general" || cat === "other";
+  const r = LEGACY_MAP[cat] ?? cat;
+  return r.startsWith("gen-");
+}
+export function isFuelCost(cat: string) {
+  const r = LEGACY_MAP[cat] ?? cat;
+  return r.startsWith("fuel-");
+}
+export function isMaintenanceCost(cat: string) {
+  const r = LEGACY_MAP[cat] ?? cat;
+  return r.startsWith("maint-");
+}
+export function isItCost(cat: string) {
+  const r = LEGACY_MAP[cat] ?? cat;
+  return r.startsWith("it-");
+}
+export function isMarketingCost(cat: string) {
+  const r = LEGACY_MAP[cat] ?? cat;
+  return r.startsWith("mkt-");
+}
+export function isOthersCost(cat: string) {
+  const r = LEGACY_MAP[cat] ?? cat;
+  return r.startsWith("others-") || r === "others";
 }
 
 export const CATEGORY_LABELS: Record<string, string> = Object.fromEntries(

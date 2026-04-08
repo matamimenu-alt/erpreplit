@@ -819,6 +819,10 @@ export const GetCategoryExpenseReportQueryParams = zod.object({
 export const GetCategoryExpenseReportResponseItem = zod.object({
   category: zod.string(),
   label: zod.string(),
+  labelAr: zod.string(),
+  groupKey: zod.string(),
+  groupLabel: zod.string(),
+  groupLabelAr: zod.string(),
   totalAmount: zod.number(),
   totalVat: zod.number(),
   netAmount: zod.number(),

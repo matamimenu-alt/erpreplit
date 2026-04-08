@@ -5,6 +5,9 @@
 Multi-restaurant Management & Accounting System for Saudi Arabia. Manages 3 restaurants: **Asad Al-Hamra**, **Sabah Al-El**, **Chicken Bar**. Full-stack pnpm monorepo using TypeScript, React, and Express.
 
 ## Latest Changes (Session)
+- **Purchase Category Hierarchy Restructured**: Replaced flat category list with 8 bilingual main categories + subcategories. Two-step selector in "Add Purchase" modal: main group buttons → subcategory dropdown. Filter dropdown shows full hierarchy. Category Expenses report shows grouped bilingual view. Legacy category values auto-mapped via `LEGACY_MAP`. All new category values use consistent prefix patterns (`food-*`, `bev-*`, `gen-*`, `fuel-*`, `maint-*`, `it-*`, `mkt-*`, `others-*`) for P&L classification.
+- **8 Main Categories**: Cost of Sale–Food (الأغذية), Cost of Sale–Beverage (المشروبات), Cost of Sale–General (عام), Fuel & Energy (الوقود), Maintenance & Repair (الصيانة), IT & Communication (تقنية المعلومات), Marketing & Advertising (التسويق), Other Expenses (مصاريف أخرى). Each with 2–6 subcategories.
+- **Monthly Purchases Report Enhanced**: Added 5-card KPI summary (Tax Invoice Net, Input VAT, Tax Total, Non-Tax Total, Grand Total) and expanded table with 7 columns showing taxable/non-taxable split per month.
 - **Sales Module Completely Rewritten**: New `sales` DB table with `cash`, `card`, `app1-6`, `vatMode`, `totalRevenue`, `netSales`, `outputVat`, `openingBalance`, `cashExpenses`, `pettyCash`, `closingBalance`, `expectedClosing`, `cashDiscrepancy`, `dailyNotes`. Old food/beverage/channel structure dropped.
 - **Sales App Config Table**: `sales_app_config` for per-restaurant delivery app names (6 slots) and default VAT mode.
 - **New Sales UI**: 4-tab layout: *Daily Records* (table with all new fields), *Reports* (date-range filter + channel breakdown), *Cash Management* (discrepancy analysis per day), *Settings* (app names + VAT mode config).

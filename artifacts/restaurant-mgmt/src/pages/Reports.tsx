@@ -440,49 +440,92 @@ export default function Reports() {
             <div className="py-16 text-center text-slate-400">Loading...</div>
           ) : !catReport?.length ? (
             <div className="py-16 text-center text-slate-400">No purchase data for {formatMonth(month)}</div>
-          ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b">
-                <tr>
-                  <th className="px-6 py-4 text-left text-slate-600 font-semibold">Category</th>
-                  <th className="px-6 py-4 text-left text-slate-600 font-semibold">P&L Section</th>
-                  <th className="px-6 py-4 text-right text-slate-600 font-semibold">Records</th>
-                  <th className="px-6 py-4 text-right text-slate-600 font-semibold">Net Amount</th>
-                  <th className="px-6 py-4 text-right text-slate-600 font-semibold">VAT</th>
-                  <th className="px-6 py-4 text-right text-slate-600 font-semibold">Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y text-slate-700">
-                {catReport.map((c) => {
-                  const meta = getCategoryMeta(c.category);
-                  return (
-                    <tr key={c.category} className="hover:bg-slate-50">
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${meta.badge}`}>
-                          {c.label}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-slate-500 text-xs">
-                        {meta.section === "cogs" ? "Cost of Goods Sold" : "Operating Expenses"}
-                      </td>
-                      <td className="px-6 py-4 text-right text-slate-500">{c.count}</td>
-                      <td className="px-6 py-4 text-right">{formatSAR(c.netAmount)}</td>
-                      <td className="px-6 py-4 text-right text-emerald-600">{formatSAR(c.totalVat)}</td>
-                      <td className="px-6 py-4 text-right font-bold">{formatSAR(c.totalAmount)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-              <tfoot className="bg-slate-50 border-t font-bold text-slate-800">
-                <tr>
-                  <td colSpan={3} className="px-6 py-4">Total</td>
-                  <td className="px-6 py-4 text-right">{formatSAR(catReport.reduce((s, c) => s + c.netAmount, 0))}</td>
-                  <td className="px-6 py-4 text-right text-emerald-600">{formatSAR(catReport.reduce((s, c) => s + c.totalVat, 0))}</td>
-                  <td className="px-6 py-4 text-right">{formatSAR(catReport.reduce((s, c) => s + c.totalAmount, 0))}</td>
-                </tr>
-              </tfoot>
-            </table>
-          )}
+          ) : (() => {
+            const grouped = catReport.reduce<Record<string, typeof catReport>>((acc, c) => {
+              const key = c.groupKey ?? "others";
+              if (!acc[key]) acc[key] = [];
+              acc[key].push(c);
+              return acc;
+            }, {});
+
+            const groupOrder = ["food", "beverage", "general", "fuel", "maintenance", "it", "marketing", "others"];
+            const sortedGroups = groupOrder.filter(k => grouped[k]).map(k => ({ key: k, items: grouped[k] }));
+
+            const groupBadge: Record<string, string> = {
+              food: "bg-orange-100 text-orange-800",
+              beverage: "bg-blue-100 text-blue-800",
+              general: "bg-amber-100 text-amber-800",
+              fuel: "bg-red-100 text-red-800",
+              maintenance: "bg-violet-100 text-violet-800",
+              it: "bg-cyan-100 text-cyan-800",
+              marketing: "bg-pink-100 text-pink-800",
+              others: "bg-slate-100 text-slate-700",
+            };
+
+            return (
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 border-b">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-slate-600 font-semibold">Subcategory</th>
+                    <th className="px-4 py-3 text-left text-slate-500 font-semibold text-xs">Arabic / عربي</th>
+                    <th className="px-4 py-3 text-right text-slate-600 font-semibold text-xs">Records</th>
+                    <th className="px-4 py-3 text-right text-slate-600 font-semibold text-xs">Net Amount</th>
+                    <th className="px-4 py-3 text-right text-emerald-600 font-semibold text-xs">VAT</th>
+                    <th className="px-4 py-3 text-right text-slate-600 font-semibold text-xs">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y text-slate-700">
+                  {sortedGroups.map(({ key, items }) => {
+                    const first = items[0];
+                    const groupNet   = items.reduce((s, c) => s + c.netAmount, 0);
+                    const groupVat   = items.reduce((s, c) => s + c.totalVat, 0);
+                    const groupTotal = items.reduce((s, c) => s + c.totalAmount, 0);
+                    const groupCount = items.reduce((s, c) => s + c.count, 0);
+                    return (
+                      <>
+                        {/* Group header row */}
+                        <tr key={`grp-${key}`} className="bg-slate-50">
+                          <td colSpan={2} className="px-4 py-2">
+                            <div className="flex items-center gap-2">
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${groupBadge[key] ?? "bg-slate-100 text-slate-700"}`}>
+                                {first?.groupLabel ?? key}
+                              </span>
+                              <span className="text-xs text-slate-400" dir="rtl">{first?.groupLabelAr}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-2 text-right text-slate-500 text-xs">{groupCount}</td>
+                          <td className="px-4 py-2 text-right font-semibold text-slate-700">{formatSAR(groupNet)}</td>
+                          <td className="px-4 py-2 text-right font-semibold text-emerald-600">{formatSAR(groupVat)}</td>
+                          <td className="px-4 py-2 text-right font-bold text-slate-900">{formatSAR(groupTotal)}</td>
+                        </tr>
+                        {/* Subcategory rows */}
+                        {items.map((c) => (
+                          <tr key={c.category} className="hover:bg-slate-50/60">
+                            <td className="px-4 py-2.5 pl-8 text-slate-700">
+                              <span className="text-xs">↳ {c.label}</span>
+                            </td>
+                            <td className="px-4 py-2.5 text-slate-400 text-xs" dir="rtl">{c.labelAr}</td>
+                            <td className="px-4 py-2.5 text-right text-slate-400 text-xs">{c.count}</td>
+                            <td className="px-4 py-2.5 text-right text-slate-600 text-xs">{formatSAR(c.netAmount)}</td>
+                            <td className="px-4 py-2.5 text-right text-emerald-500 text-xs">{formatSAR(c.totalVat)}</td>
+                            <td className="px-4 py-2.5 text-right font-medium text-slate-700 text-xs">{formatSAR(c.totalAmount)}</td>
+                          </tr>
+                        ))}
+                      </>
+                    );
+                  })}
+                </tbody>
+                <tfoot className="bg-slate-900 border-t font-bold text-white">
+                  <tr>
+                    <td colSpan={3} className="px-4 py-3">Grand Total — الإجمالي الكلي</td>
+                    <td className="px-4 py-3 text-right">{formatSAR(catReport.reduce((s, c) => s + c.netAmount, 0))}</td>
+                    <td className="px-4 py-3 text-right text-emerald-300">{formatSAR(catReport.reduce((s, c) => s + c.totalVat, 0))}</td>
+                    <td className="px-4 py-3 text-right">{formatSAR(catReport.reduce((s, c) => s + c.totalAmount, 0))}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            );
+          })()}
         </div>
       )}
     </div>

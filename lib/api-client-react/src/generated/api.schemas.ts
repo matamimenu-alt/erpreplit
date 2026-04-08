@@ -412,6 +412,10 @@ export interface MonthlyPurchaseReport {
 export interface CategoryExpenseReport {
   category: string;
   label: string;
+  labelAr: string;
+  groupKey: string;
+  groupLabel: string;
+  groupLabelAr: string;
   totalAmount: number;
   totalVat: number;
   netAmount: number;
