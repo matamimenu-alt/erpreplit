@@ -26,6 +26,8 @@ import type {
   CreateExpense,
   CreateInventory,
   CreatePurchase,
+  CreatePurchaseBatch,
+  CreatePurchaseBatch201,
   CreateSale,
   CreateStockMovement,
   CreateSupplier,
@@ -1088,6 +1090,92 @@ export const useCreatePurchase = <
   TContext
 > => {
   return useMutation(getCreatePurchaseMutationOptions(options));
+};
+
+/**
+ * @summary Create multiple purchase items under one invoice
+ */
+export const getCreatePurchaseBatchUrl = () => {
+  return `/api/purchases/batch`;
+};
+
+export const createPurchaseBatch = async (
+  createPurchaseBatch: CreatePurchaseBatch,
+  options?: RequestInit,
+): Promise<CreatePurchaseBatch201> => {
+  return customFetch<CreatePurchaseBatch201>(getCreatePurchaseBatchUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createPurchaseBatch),
+  });
+};
+
+export const getCreatePurchaseBatchMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPurchaseBatch>>,
+    TError,
+    { data: BodyType<CreatePurchaseBatch> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createPurchaseBatch>>,
+  TError,
+  { data: BodyType<CreatePurchaseBatch> },
+  TContext
+> => {
+  const mutationKey = ["createPurchaseBatch"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createPurchaseBatch>>,
+    { data: BodyType<CreatePurchaseBatch> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createPurchaseBatch(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreatePurchaseBatchMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createPurchaseBatch>>
+>;
+export type CreatePurchaseBatchMutationBody = BodyType<CreatePurchaseBatch>;
+export type CreatePurchaseBatchMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create multiple purchase items under one invoice
+ */
+export const useCreatePurchaseBatch = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPurchaseBatch>>,
+    TError,
+    { data: BodyType<CreatePurchaseBatch> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createPurchaseBatch>>,
+  TError,
+  { data: BodyType<CreatePurchaseBatch> },
+  TContext
+> => {
+  return useMutation(getCreatePurchaseBatchMutationOptions(options));
 };
 
 /**

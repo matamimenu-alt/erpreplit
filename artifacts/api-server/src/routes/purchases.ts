@@ -80,6 +80,7 @@ function toRecord(r: typeof purchasesTable.$inferSelect) {
     price: toNum(r.price),
     priceIncludesVat: r.priceIncludesVat,
     invoiceType: (r.invoiceType ?? "tax") as "tax" | "non-tax",
+    invoiceId: r.invoiceId ?? undefined,
     amountBeforeVat: toNum(r.amountBeforeVat),
     vatAmount: toNum(r.vatAmount),
     totalAmount: toNum(r.totalAmount),
@@ -88,6 +89,55 @@ function toRecord(r: typeof purchasesTable.$inferSelect) {
     createdAt: r.createdAt.toISOString(),
   };
 }
+
+// POST /api/purchases/batch — creates multiple items under one invoice
+router.post("/batch", async (req, res) => {
+  try {
+    const restaurantId = getRestaurantId(req);
+    const { invoiceId, date, supplierName, invoiceType, priceIncludesVat, paymentType, notes, items } = req.body;
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: "items array is required and must not be empty" });
+    }
+    const invType: "tax" | "non-tax" = invoiceType === "non-tax" ? "non-tax" : "tax";
+    const batchInvoiceId: string = invoiceId || crypto.randomUUID();
+    const created = [];
+    for (const item of items) {
+      const { amountBeforeVat, vatAmount, totalAmount } = calcPurchase(
+        Number(item.quantity), Number(item.price), Boolean(priceIncludesVat), invType
+      );
+      const [record] = await db.insert(purchasesTable).values({
+        restaurantId,
+        date,
+        supplierName: supplierName || "",
+        productName: item.productName,
+        category: item.category || "others",
+        quantity: String(Number(item.quantity).toFixed(3)),
+        price: String(Number(item.price).toFixed(2)),
+        priceIncludesVat: Boolean(priceIncludesVat),
+        invoiceType: invType,
+        invoiceId: batchInvoiceId,
+        amountBeforeVat: String(amountBeforeVat),
+        vatAmount: String(vatAmount),
+        totalAmount: String(totalAmount),
+        paymentType: paymentType || "cash",
+        notes: item.notes || notes || null,
+      }).returning();
+      await upsertStockMovementForPurchase(restaurantId, record.id, {
+        date,
+        productName: item.productName,
+        category: item.category || "others",
+        quantity: Number(item.quantity),
+        price: Number(item.price),
+        amountBeforeVat,
+      });
+      created.push(toRecord(record));
+    }
+    res.status(201).json({ invoiceId: batchInvoiceId, items: created });
+  } catch (err) {
+    req.log.error({ err }, "Error creating batch purchase");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 // GET /api/purchases
 router.get("/", async (req, res) => {

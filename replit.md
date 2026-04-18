@@ -5,6 +5,18 @@
 Multi-restaurant Management & Accounting System for Saudi Arabia. Manages 3 restaurants: **Asad Al-Hamra**, **Sabah Al-El**, **Chicken Bar**. Full-stack pnpm monorepo using TypeScript, React, and Express.
 
 ## Latest Changes (Session)
+- **Multi-Item Invoice System**: Completely rebuilt the "Add Purchase" flow into a full multi-item invoice modal (فاتورة متعددة الأصناف). Key features:
+  - Invoice-level fields: Invoice Type (tax/non-tax toggle), Date, Supplier, Payment Type, VAT inclusion checkbox
+  - Items table with add/edit/delete — each item has its own Product Name, Category (2-level), Qty, Unit Price
+  - Live preview shows Net, VAT, Total as you type each item's qty/price
+  - Add Item with keyboard (Enter key support), inline edit mode, delete
+  - Invoice totals footer: Subtotal, VAT (15%), Grand Total across all items
+  - On save: calls `POST /api/purchases/batch` to save all items under shared `invoiceId` (UUID)
+  - Each row in the purchases table shows the truncated `invoiceId` for traceability
+  - Edit individual rows: separate single-item edit modal (unchanged workflow)
+- **DB Schema**: Added `invoice_id` (text, nullable) column to `purchases` table
+- **Backend batch endpoint**: `POST /api/purchases/batch` — accepts invoice-level fields + items array, saves each item as separate DB row with shared `invoiceId`, auto-creates stock movements per item
+- **OpenAPI + Codegen**: Added `CreatePurchaseBatch`, `BatchInvoiceItem` schemas; added `/purchases/batch` POST endpoint; updated `PurchaseCategory` enum to include all 24 new subcategory values (plus legacy values for backward compatibility); updated `Purchase` schema with `invoiceId`
 - **Purchase Category Hierarchy Restructured**: Replaced flat category list with 8 bilingual main categories + subcategories. Two-step selector in "Add Purchase" modal: main group buttons → subcategory dropdown. Filter dropdown shows full hierarchy. Category Expenses report shows grouped bilingual view. Legacy category values auto-mapped via `LEGACY_MAP`. All new category values use consistent prefix patterns (`food-*`, `bev-*`, `gen-*`, `fuel-*`, `maint-*`, `it-*`, `mkt-*`, `others-*`) for P&L classification.
 - **8 Main Categories**: Cost of Sale–Food (الأغذية), Cost of Sale–Beverage (المشروبات), Cost of Sale–General (عام), Fuel & Energy (الوقود), Maintenance & Repair (الصيانة), IT & Communication (تقنية المعلومات), Marketing & Advertising (التسويق), Other Expenses (مصاريف أخرى). Each with 2–6 subcategories.
 - **Monthly Purchases Report Enhanced**: Added 5-card KPI summary (Tax Invoice Net, Input VAT, Tax Total, Non-Tax Total, Grand Total) and expanded table with 7 columns showing taxable/non-taxable split per month.

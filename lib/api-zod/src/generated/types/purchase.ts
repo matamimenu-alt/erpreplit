@@ -23,6 +23,7 @@ export interface Purchase {
   vatAmount: number;
   totalAmount: number;
   paymentType: PurchasePaymentType;
+  invoiceId?: string | null;
   notes?: string | null;
   createdAt: string;
 }

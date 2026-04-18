@@ -133,6 +133,30 @@ export type PurchaseCategory =
   (typeof PurchaseCategory)[keyof typeof PurchaseCategory];
 
 export const PurchaseCategory = {
+  "food-poultry": "food-poultry",
+  "food-vegetables": "food-vegetables",
+  "food-dairy": "food-dairy",
+  "food-spices": "food-spices",
+  "food-products": "food-products",
+  "food-supplies": "food-supplies",
+  "bev-juices": "bev-juices",
+  "bev-water": "bev-water",
+  "bev-soft": "bev-soft",
+  "gen-cashier": "gen-cashier",
+  "gen-kitchen": "gen-kitchen",
+  "gen-cleaning": "gen-cleaning",
+  "gen-packaging": "gen-packaging",
+  "fuel-vehicle": "fuel-vehicle",
+  "fuel-charcoal": "fuel-charcoal",
+  "fuel-gas": "fuel-gas",
+  "fuel-utilities": "fuel-utilities",
+  "maint-services": "maint-services",
+  "maint-materials": "maint-materials",
+  "it-internet": "it-internet",
+  "it-phones": "it-phones",
+  "mkt-campaigns": "mkt-campaigns",
+  "mkt-promo": "mkt-promo",
+  "others-misc": "others-misc",
   "cost-food": "cost-food",
   "cost-beverage": "cost-beverage",
   "cost-general": "cost-general",
@@ -174,6 +198,7 @@ export interface Purchase {
   vatAmount: number;
   totalAmount: number;
   paymentType: PurchasePaymentType;
+  invoiceId?: string | null;
   notes?: string | null;
   createdAt: string;
 }
@@ -206,6 +231,42 @@ export interface CreatePurchase {
   invoiceType: CreatePurchaseInvoiceType;
   paymentType?: CreatePurchasePaymentType;
   notes?: string | null;
+}
+
+export interface BatchInvoiceItem {
+  productName: string;
+  category: PurchaseCategory;
+  quantity: number;
+  price: number;
+  notes?: string | null;
+}
+
+export type CreatePurchaseBatchInvoiceType =
+  (typeof CreatePurchaseBatchInvoiceType)[keyof typeof CreatePurchaseBatchInvoiceType];
+
+export const CreatePurchaseBatchInvoiceType = {
+  tax: "tax",
+  "non-tax": "non-tax",
+} as const;
+
+export type CreatePurchaseBatchPaymentType =
+  (typeof CreatePurchaseBatchPaymentType)[keyof typeof CreatePurchaseBatchPaymentType];
+
+export const CreatePurchaseBatchPaymentType = {
+  cash: "cash",
+  card: "card",
+  credit: "credit",
+} as const;
+
+export interface CreatePurchaseBatch {
+  invoiceId?: string | null;
+  date: string;
+  supplierName?: string;
+  invoiceType: CreatePurchaseBatchInvoiceType;
+  priceIncludesVat: boolean;
+  paymentType?: CreatePurchaseBatchPaymentType;
+  notes?: string | null;
+  items: BatchInvoiceItem[];
 }
 
 export interface Supplier {
@@ -682,6 +743,11 @@ export type ListPurchasesParams = {
    * Search by product name
    */
   search?: string;
+};
+
+export type CreatePurchaseBatch201 = {
+  invoiceId: string;
+  items: Purchase[];
 };
 
 export type GetInventoryParams = {
