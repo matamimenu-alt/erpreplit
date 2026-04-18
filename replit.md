@@ -5,6 +5,7 @@
 Multi-restaurant Management & Accounting System for Saudi Arabia. Manages 3 restaurants: **Asad Al-Hamra**, **Sabah Al-El**, **Chicken Bar**. Full-stack pnpm monorepo using TypeScript, React, and Express.
 
 ## Latest Changes (Session)
+- **Product Autocomplete (Smart Suggestions)**: The Product Name field in the invoice modal now has intelligent autocomplete. Backend: `GET /api/purchases/products` (operationId `getPurchaseProductSuggestions`) — returns distinct products (by name) with last-used category + price using `DISTINCT ON (lower(product_name))`. Frontend: `ProductCombobox` component with real-time filtering, ↑↓ keyboard navigation, Enter to select, Escape to close, category badge + price shown in each row, "Add new item" option for unknown products, exact-match duplicate warning + partial-match hint when the product is already in the current invoice. On selection: auto-fills product name, main group key, subcategory, and unit price from the last purchase.
 - **Multi-Item Invoice System**: Completely rebuilt the "Add Purchase" flow into a full multi-item invoice modal (فاتورة متعددة الأصناف). Key features:
   - Invoice-level fields: Invoice Type (tax/non-tax toggle), Date, Supplier, Payment Type, VAT inclusion checkbox
   - Items table with add/edit/delete — each item has its own Product Name, Category (2-level), Qty, Unit Price

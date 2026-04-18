@@ -233,6 +233,12 @@ export interface CreatePurchase {
   notes?: string | null;
 }
 
+export interface PurchaseProductSuggestion {
+  productName: string;
+  category: PurchaseCategory;
+  lastPrice: number;
+}
+
 export interface BatchInvoiceItem {
   productName: string;
   category: PurchaseCategory;

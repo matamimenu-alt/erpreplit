@@ -58,6 +58,7 @@ import type {
   PriceComparison,
   PricingConfig,
   Purchase,
+  PurchaseProductSuggestion,
   Restaurant,
   Sale,
   SalesAppConfig,
@@ -1091,6 +1092,86 @@ export const useCreatePurchase = <
 > => {
   return useMutation(getCreatePurchaseMutationOptions(options));
 };
+
+/**
+ * @summary List distinct products with last category and price
+ */
+export const getGetPurchaseProductSuggestionsUrl = () => {
+  return `/api/purchases/products`;
+};
+
+export const getPurchaseProductSuggestions = async (
+  options?: RequestInit,
+): Promise<PurchaseProductSuggestion[]> => {
+  return customFetch<PurchaseProductSuggestion[]>(
+    getGetPurchaseProductSuggestionsUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetPurchaseProductSuggestionsQueryKey = () => {
+  return [`/api/purchases/products`] as const;
+};
+
+export const getGetPurchaseProductSuggestionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPurchaseProductSuggestions>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getPurchaseProductSuggestions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetPurchaseProductSuggestionsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getPurchaseProductSuggestions>>
+  > = ({ signal }) =>
+    getPurchaseProductSuggestions({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPurchaseProductSuggestions>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetPurchaseProductSuggestionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPurchaseProductSuggestions>>
+>;
+export type GetPurchaseProductSuggestionsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List distinct products with last category and price
+ */
+
+export function useGetPurchaseProductSuggestions<
+  TData = Awaited<ReturnType<typeof getPurchaseProductSuggestions>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getPurchaseProductSuggestions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPurchaseProductSuggestionsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Create multiple purchase items under one invoice

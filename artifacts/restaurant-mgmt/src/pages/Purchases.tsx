@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useCallback } from "react";
-import { useListPurchases, useCreatePurchaseBatch } from "@workspace/api-client-react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useListPurchases, useCreatePurchaseBatch, useGetPurchaseProductSuggestions } from "@workspace/api-client-react";
 import { usePurchasesMutations } from "@/hooks/use-purchases";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { formatSAR, formatDate, formatMonth } from "@/lib/format";
@@ -50,6 +50,209 @@ function calcItem(qty: number, price: number, priceIncludesVat: boolean, invoice
 
 function newLocalId() {
   return Math.random().toString(36).slice(2, 9);
+}
+
+// ─── Product Autocomplete Combobox ───────────────────────────────────────────
+
+interface ProductSuggestion {
+  productName: string;
+  category: string;
+  lastPrice: number;
+}
+
+function ProductCombobox({
+  value,
+  onChange,
+  onSelect,
+  onEnter,
+  placeholder,
+  inputRef: externalRef,
+  currentItems = [],
+  editingLocalId,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  onSelect: (s: ProductSuggestion) => void;
+  onEnter?: () => void;
+  placeholder?: string;
+  inputRef?: React.RefObject<HTMLInputElement>;
+  currentItems?: { productName: string; localId: string }[];
+  editingLocalId?: string | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const [highlightIdx, setHighlightIdx] = useState(-1);
+  const internalRef = useRef<HTMLInputElement>(null);
+  const ref = (externalRef ?? internalRef) as React.RefObject<HTMLInputElement>;
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const { data: allProducts } = useGetPurchaseProductSuggestions();
+
+  const safeProducts = useMemo(
+    () => (allProducts ?? []).filter(p => !!p.productName),
+    [allProducts]
+  );
+
+  const filtered = useMemo(() => {
+    const q = value.trim().toLowerCase();
+    if (!q) return safeProducts.slice(0, 12);
+    return safeProducts
+      .filter(p => p.productName.toLowerCase().includes(q))
+      .slice(0, 15);
+  }, [value, safeProducts]);
+
+  const exactMatch = filtered.find(p => p.productName.toLowerCase() === value.trim().toLowerCase());
+  const showAddNew = value.trim().length > 1 && !exactMatch;
+  const totalOptions = filtered.length + (showAddNew ? 1 : 0);
+
+  // Duplicate check — same product already in this invoice (not the item being edited)
+  // Matches if the typed value equals OR is a substring of an existing item name (case-insensitive)
+  const duplicateItem = value.trim().length > 1 ? currentItems.find(
+    i => i.localId !== editingLocalId &&
+         i.productName.toLowerCase() === value.trim().toLowerCase()
+  ) : undefined;
+  // Also warn when the typed partial matches a name already in the invoice
+  const partialDuplicate = value.trim().length > 2 ? currentItems.find(
+    i => i.localId !== editingLocalId &&
+         i.productName.toLowerCase().includes(value.trim().toLowerCase()) &&
+         i.productName.toLowerCase() !== value.trim().toLowerCase()
+  ) : undefined;
+
+  useEffect(() => { setHighlightIdx(-1); }, [value]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        dropdownRef.current && !dropdownRef.current.contains(e.target as Node) &&
+        ref.current && !ref.current.contains(e.target as Node)
+      ) { setOpen(false); }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  function selectSuggestion(s: ProductSuggestion) {
+    onSelect(s);
+    setOpen(false);
+    setHighlightIdx(-1);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!open) {
+      if (e.key === "ArrowDown") { setOpen(true); setHighlightIdx(0); e.preventDefault(); return; }
+      if (e.key === "Enter") { e.preventDefault(); onEnter?.(); return; }
+      return;
+    }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightIdx(i => Math.min(i + 1, totalOptions - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightIdx(i => Math.max(i - 1, 0));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (highlightIdx >= 0 && highlightIdx < filtered.length) {
+        selectSuggestion(filtered[highlightIdx]);
+      } else if (highlightIdx === filtered.length && showAddNew) {
+        setOpen(false); // keep typed value as-is
+      } else {
+        setOpen(false);
+        onEnter?.(); // no highlighted item — act like submit
+      }
+    } else if (e.key === "Escape") {
+      setOpen(false);
+    }
+  }
+
+  // Scroll highlighted item into view
+  useEffect(() => {
+    if (highlightIdx >= 0 && dropdownRef.current) {
+      const el = dropdownRef.current.children[highlightIdx] as HTMLElement;
+      el?.scrollIntoView({ block: "nearest" });
+    }
+  }, [highlightIdx]);
+
+  return (
+    <div className="relative">
+      <input
+        ref={ref}
+        type="text"
+        value={value}
+        onChange={e => { onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        autoComplete="off"
+        className="w-full px-3 py-2 border rounded-xl outline-none focus:border-primary text-sm bg-white"
+      />
+
+      {/* Duplicate warning — exact match */}
+      {duplicateItem && (
+        <p className="text-xs text-amber-600 mt-1">
+          ⚠️ <strong>{duplicateItem.productName}</strong> is already on line {currentItems.findIndex(i => i.localId === duplicateItem.localId) + 1} of this invoice. Consider editing that line instead.
+        </p>
+      )}
+      {/* Partial duplicate hint — possible match */}
+      {!duplicateItem && partialDuplicate && (
+        <p className="text-xs text-amber-500 mt-1">
+          💡 Similar to <strong>"{partialDuplicate.productName}"</strong> already on line {currentItems.findIndex(i => i.localId === partialDuplicate.localId) + 1}. Did you mean that?
+        </p>
+      )}
+
+      {/* Dropdown */}
+      {open && totalOptions > 0 && (
+        <div
+          ref={dropdownRef}
+          className="absolute top-full left-0 right-0 z-[100] bg-white border border-slate-200 rounded-xl shadow-xl mt-1 max-h-60 overflow-y-auto"
+        >
+          {filtered.map((p, idx) => {
+            const isExact = p.productName.toLowerCase() === value.trim().toLowerCase();
+            const meta = getCategoryMeta(p.category);
+            return (
+              <button
+                key={p.productName}
+                type="button"
+                onMouseDown={() => selectSuggestion(p)}
+                onMouseEnter={() => setHighlightIdx(idx)}
+                className={`w-full text-left px-3 py-2.5 flex items-center justify-between gap-2 text-sm transition-colors border-b border-slate-50 last:border-0
+                  ${highlightIdx === idx ? "bg-primary/10" : "hover:bg-slate-50"}
+                  ${isExact ? "bg-green-50" : ""}`}
+              >
+                <span className="flex items-center gap-2 min-w-0">
+                  {isExact ? (
+                    <span className="text-green-600 text-xs shrink-0">✓</span>
+                  ) : (
+                    <span className="text-slate-300 text-xs shrink-0">↩</span>
+                  )}
+                  <span className="font-medium truncate">{p.productName}</span>
+                </span>
+                <span className="flex items-center gap-2 shrink-0">
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${meta.badge}`}>
+                    {meta.label}
+                  </span>
+                  <span className="text-slate-500 text-xs font-mono">{formatSAR(p.lastPrice)}</span>
+                </span>
+              </button>
+            );
+          })}
+
+          {showAddNew && (
+            <button
+              type="button"
+              onMouseDown={() => setOpen(false)}
+              onMouseEnter={() => setHighlightIdx(filtered.length)}
+              className={`w-full text-left px-3 py-2.5 flex items-center gap-2 text-sm border-t border-slate-100
+                ${highlightIdx === filtered.length ? "bg-primary/10" : "hover:bg-slate-50"}`}
+            >
+              <Plus className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span className="text-primary font-medium">
+                Add <span className="font-bold">"{value.trim()}"</span> as new item
+              </span>
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ─── Multi-Item Invoice Modal ─────────────────────────────────────────────────
@@ -160,6 +363,18 @@ function PurchaseInvoiceModal({
   function handleCancelEdit() {
     setEditingLocalId(null);
     setAddForm({ ...defaultAddForm });
+    setAddError("");
+  }
+
+  function handleProductSelect(s: ProductSuggestion) {
+    const grp = getGroupForCategory(s.category);
+    setAddForm(f => ({
+      ...f,
+      productName: s.productName,
+      mainGroupKey: grp?.key ?? PURCHASE_CATEGORY_GROUPS[0].key,
+      category: s.category,
+      price: s.lastPrice,
+    }));
     setAddError("");
   }
 
@@ -380,16 +595,21 @@ function PurchaseInvoiceModal({
                 )}
               </div>
 
-              {/* Row 1: Product Name */}
+              {/* Row 1: Product Name — Smart Autocomplete */}
               <div className="mb-2">
-                <input
-                  ref={productNameRef}
-                  type="text"
+                <label className="block text-xs text-slate-500 mb-1">
+                  Product / Item Name — اسم المنتج *
+                  <span className="ml-2 text-slate-400 font-normal">(type to search, ↑↓ to navigate, Enter to select)</span>
+                </label>
+                <ProductCombobox
                   value={addForm.productName}
-                  onChange={e => setAddForm(f => ({ ...f, productName: e.target.value }))}
-                  placeholder="Product / Item Name — اسم المنتج *"
-                  className="w-full px-3 py-2 border rounded-xl outline-none focus:border-primary text-sm bg-white"
-                  onKeyDown={e => e.key === "Enter" && handleAddItem()}
+                  onChange={val => setAddForm(f => ({ ...f, productName: val }))}
+                  onSelect={handleProductSelect}
+                  onEnter={handleAddItem}
+                  placeholder="e.g. Chicken Breast, Mineral Water... — ابحث أو أدخل اسم الصنف"
+                  inputRef={productNameRef}
+                  currentItems={items}
+                  editingLocalId={editingLocalId}
                 />
               </div>
 

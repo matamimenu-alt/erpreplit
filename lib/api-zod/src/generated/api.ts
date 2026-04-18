@@ -363,6 +363,51 @@ export const CreatePurchaseBody = zod.object({
 });
 
 /**
+ * @summary List distinct products with last category and price
+ */
+export const GetPurchaseProductSuggestionsResponseItem = zod.object({
+  productName: zod.string(),
+  category: zod.enum([
+    "food-poultry",
+    "food-vegetables",
+    "food-dairy",
+    "food-spices",
+    "food-products",
+    "food-supplies",
+    "bev-juices",
+    "bev-water",
+    "bev-soft",
+    "gen-cashier",
+    "gen-kitchen",
+    "gen-cleaning",
+    "gen-packaging",
+    "fuel-vehicle",
+    "fuel-charcoal",
+    "fuel-gas",
+    "fuel-utilities",
+    "maint-services",
+    "maint-materials",
+    "it-internet",
+    "it-phones",
+    "mkt-campaigns",
+    "mkt-promo",
+    "others-misc",
+    "cost-food",
+    "cost-beverage",
+    "cost-general",
+    "fuel-energy",
+    "maintenance",
+    "it-communication",
+    "marketing",
+    "others",
+  ]),
+  lastPrice: zod.number(),
+});
+export const GetPurchaseProductSuggestionsResponse = zod.array(
+  GetPurchaseProductSuggestionsResponseItem,
+);
+
+/**
  * @summary Create multiple purchase items under one invoice
  */
 export const CreatePurchaseBatchBody = zod.object({

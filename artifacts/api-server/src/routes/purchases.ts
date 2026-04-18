@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { purchasesTable, stockMovementsTable } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { getRestaurantId } from "../lib/restaurant";
 
 async function upsertStockMovementForPurchase(
@@ -89,6 +89,28 @@ function toRecord(r: typeof purchasesTable.$inferSelect) {
     createdAt: r.createdAt.toISOString(),
   };
 }
+
+// GET /api/purchases/products — distinct products with latest category & price
+router.get("/products", async (req, res) => {
+  try {
+    const restaurantId = getRestaurantId(req);
+    const result = await db.execute(sql`
+      SELECT DISTINCT ON (lower(product_name))
+        product_name        AS "productName",
+        category,
+        price::float        AS "lastPrice"
+      FROM purchases
+      WHERE restaurant_id = ${restaurantId}
+        AND product_name IS NOT NULL
+        AND product_name <> ''
+      ORDER BY lower(product_name), created_at DESC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    req.log.error({ err }, "Error listing products");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 // POST /api/purchases/batch — creates multiple items under one invoice
 router.post("/batch", async (req, res) => {

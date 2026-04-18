@@ -62,6 +62,7 @@ export * from "./purchase";
 export * from "./purchaseCategory";
 export * from "./purchaseInvoiceType";
 export * from "./purchasePaymentType";
+export * from "./purchaseProductSuggestion";
 export * from "./restaurant";
 export * from "./sale";
 export * from "./salesAppConfig";
