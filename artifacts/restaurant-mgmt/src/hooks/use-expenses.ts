@@ -4,7 +4,9 @@ import {
   useUpdateExpense, 
   useDeleteExpense,
   getListExpensesQueryKey,
-  getGetDashboardSummaryQueryKey
+  getGetDashboardSummaryQueryKey,
+  getGetPLReportQueryKey,
+  getGetCategoryExpenseReportQueryKey,
 } from "@workspace/api-client-react";
 
 export function useExpenseMutations() {
@@ -13,6 +15,9 @@ export function useExpenseMutations() {
   const invalidateQueries = () => {
     queryClient.invalidateQueries({ queryKey: getListExpensesQueryKey() });
     queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
+    // Invalidate P&L for all months (partial match covers month-filtered queries too)
+    queryClient.invalidateQueries({ queryKey: getGetPLReportQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetCategoryExpenseReportQueryKey() });
   };
 
   const create = useCreateExpense({ mutation: { onSuccess: invalidateQueries } });

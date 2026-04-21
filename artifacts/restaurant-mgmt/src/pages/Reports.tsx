@@ -1,14 +1,20 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import {
   useGetPLReport,
   useGetMonthlyPurchaseReport,
   useGetCategoryExpenseReport,
 } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  getGetPLReportQueryKey,
+  getGetMonthlyPurchaseReportQueryKey,
+  getGetCategoryExpenseReportQueryKey,
+} from "@workspace/api-client-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { formatSAR, formatMonth } from "@/lib/format";
 import { exportToExcel } from "@/lib/export-excel";
 import { getCategoryMeta } from "@/lib/categories";
-import { Printer, TrendingUp, TrendingDown, FileSpreadsheet } from "lucide-react";
+import { Printer, TrendingUp, TrendingDown, FileSpreadsheet, RefreshCw } from "lucide-react";
 
 // ─────────────────────────────────────── P&L helpers ──────────────────────────
 function Row({
@@ -56,10 +62,26 @@ export default function Reports() {
   const [tab, setTab] = useState<Tab>("pl");
   const [month, setMonth] = useState("");
   const printRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
 
-  const { data: pl, isLoading: plLoading } = useGetPLReport(month ? { month } : undefined);
-  const { data: monthly, isLoading: monthlyLoading } = useGetMonthlyPurchaseReport();
-  const { data: catReport, isLoading: catLoading } = useGetCategoryExpenseReport(month ? { month } : undefined);
+  // Force always-fresh data when this page is visited
+  const { data: pl, isLoading: plLoading, isFetching: plFetching } = useGetPLReport(
+    month ? { month } : undefined,
+    { query: { refetchOnMount: "always" } }
+  );
+  const { data: monthly, isLoading: monthlyLoading } = useGetMonthlyPurchaseReport(
+    { query: { refetchOnMount: "always" } }
+  );
+  const { data: catReport, isLoading: catLoading } = useGetCategoryExpenseReport(
+    month ? { month } : undefined,
+    { query: { refetchOnMount: "always" } }
+  );
+
+  const handleRefreshAll = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: getGetPLReportQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetMonthlyPurchaseReportQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetCategoryExpenseReportQueryKey() });
+  }, [queryClient]);
 
   const totalRevenue = pl?.totalRevenue ?? 0;
 
@@ -158,6 +180,15 @@ export default function Reports() {
         description="Profit & Loss, Purchase Analysis, and Category Breakdown"
         action={
           <div className="flex gap-2 items-center flex-wrap">
+            <button
+              onClick={handleRefreshAll}
+              disabled={plFetching}
+              title="Refresh all report data"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm disabled:opacity-60"
+            >
+              <RefreshCw className={`w-4 h-4 ${plFetching ? "animate-spin" : ""}`} />
+              Refresh
+            </button>
             <input
               type="month"
               value={month}
