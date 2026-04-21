@@ -339,19 +339,10 @@ export interface Employee {
   joiningDate?: string | null;
   numberOfMonths: number;
   salary: number;
-  socialSecurity: number;
-  laborFees: number;
-  iqamaRenewalYearly: number;
-  medicalInsurance: number;
-  airTicketCost: number;
-  foodMeal: number;
-  monthlyIqamaRenewal: number;
-  monthlyMedical: number;
-  monthlyAirTicket: number;
-  monthlyIndemnity: number;
-  monthlyVacation: number;
-  totalPayrollTaxes: number;
-  totalEmployeesBenefits: number;
+  overtime: number;
+  deductions: number;
+  absences: number;
+  netSalary: number;
   totalMonthlyCost: number;
   iqamaExpiryDate?: string | null;
   iqamaRenewalDate?: string | null;
@@ -365,12 +356,9 @@ export interface CreateEmployee {
   nationality?: string;
   joiningDate?: string | null;
   salary: number;
-  socialSecurity?: number;
-  laborFees?: number;
-  iqamaRenewalYearly?: number;
-  medicalInsurance?: number;
-  airTicketCost?: number;
-  foodMeal?: number;
+  overtime?: number;
+  deductions?: number;
+  absences?: number;
   iqamaExpiryDate?: string | null;
   iqamaRenewalDate?: string | null;
 }
@@ -453,6 +441,7 @@ export interface PLReport {
   totalPurchaseOpex: number;
   totalLaborCost: number;
   totalFixedExpenses: number;
+  totalStaffExpenses: number;
   totalAppCommissions: number;
   totalOperatingExpenses: number;
   operatingProfit: number;

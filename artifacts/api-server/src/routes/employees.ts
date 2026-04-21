@@ -19,58 +19,22 @@ function calcMonths(joiningDate: string | null | undefined): number {
   return Math.max(0, months);
 }
 
-/** All payroll computations from raw inputs */
-function calcPayroll(data: {
+/** Simplified payroll: net = basic + overtime - deductions - absences */
+function calcNetSalary(data: {
   salary: number;
-  socialSecurity: number;
-  laborFees: number;
-  iqamaRenewalYearly: number;
-  medicalInsurance: number;  // yearly
-  airTicketCost: number;     // yearly
-  foodMeal: number;          // monthly
-}) {
-  const { salary, socialSecurity, laborFees, iqamaRenewalYearly, medicalInsurance, airTicketCost, foodMeal } = data;
-
-  // Monthly equivalents
-  const monthlyIqamaRenewal = +(iqamaRenewalYearly / 3).toFixed(2);   // renewed every 3 months
-  const monthlyMedical = +(medicalInsurance / 12).toFixed(2);
-  const monthlyAirTicket = +(airTicketCost / 24).toFixed(2);           // every 24 months
-  const monthlyIndemnity = +(salary / 12).toFixed(2);               // End-of-service provision
-  const monthlyVacation = +((salary / 30 * 21) / 12).toFixed(2);   // Annual leave provision
-
-  // Total Payroll Taxes = GOSI/Social Security + Labor Fees + Monthly Iqama
-  const totalPayrollTaxes = +(socialSecurity + laborFees + monthlyIqamaRenewal).toFixed(2);
-
-  // Total Employee Benefits = Medical + Indemnity + Air Ticket + Annual Vacation + Food Meal (all monthly)
-  const totalEmployeesBenefits = +(monthlyMedical + monthlyIndemnity + monthlyAirTicket + monthlyVacation + foodMeal).toFixed(2);
-
-  // Total Labor Cost = Basic Salary + Total Payroll Taxes + Total Employee Benefits
-  const totalMonthlyCost = +(salary + totalPayrollTaxes + totalEmployeesBenefits).toFixed(2);
-
-  return {
-    monthlyIqamaRenewal,
-    monthlyMedical,
-    monthlyAirTicket,
-    monthlyIndemnity,
-    monthlyVacation,
-    totalPayrollTaxes,
-    totalEmployeesBenefits,
-    totalMonthlyCost,
-  };
+  overtime: number;
+  deductions: number;
+  absences: number;
+}): number {
+  return +(data.salary + data.overtime - data.deductions - data.absences).toFixed(2);
 }
 
 function toRecord(r: typeof employeesTable.$inferSelect) {
   const salary = toNum(r.salary);
-  const socialSecurity = toNum(r.socialSecurity);
-  const laborFees = toNum(r.laborFees);
-  const iqamaRenewalYearly = toNum(r.iqamaRenewalYearly);
-  const medicalInsurance = toNum(r.medicalInsurance);
-  const airTicketCost = toNum(r.airTicketCost);
-  const foodMeal = toNum(r.foodMeal);
-
-  const computed = calcPayroll({
-    salary, socialSecurity, laborFees, iqamaRenewalYearly, medicalInsurance, airTicketCost, foodMeal,
-  });
+  const overtime = toNum(r.overtime);
+  const deductions = toNum(r.deductions);
+  const absences = toNum(r.absences);
+  const netSalary = calcNetSalary({ salary, overtime, deductions, absences });
 
   return {
     id: r.id,
@@ -81,13 +45,11 @@ function toRecord(r: typeof employeesTable.$inferSelect) {
     joiningDate: r.joiningDate ?? undefined,
     numberOfMonths: calcMonths(r.joiningDate),
     salary,
-    socialSecurity,
-    laborFees,
-    iqamaRenewalYearly,
-    medicalInsurance,
-    airTicketCost,
-    foodMeal,
-    ...computed,
+    overtime,
+    deductions,
+    absences,
+    netSalary,
+    totalMonthlyCost: netSalary,
     iqamaExpiryDate: r.iqamaExpiryDate ?? undefined,
     iqamaRenewalDate: r.iqamaRenewalDate ?? undefined,
     createdAt: r.createdAt.toISOString(),
@@ -114,19 +76,15 @@ router.post("/", async (req, res) => {
     const restaurantId = getRestaurantId(req);
     const {
       name, designation, fullTime, nationality, joiningDate,
-      salary, socialSecurity, laborFees, iqamaRenewalYearly,
-      medicalInsurance, airTicketCost, foodMeal,
+      salary, overtime, deductions, absences,
       iqamaExpiryDate, iqamaRenewalDate,
     } = req.body;
 
-    const computed = calcPayroll({
+    const net = calcNetSalary({
       salary: Number(salary) || 0,
-      socialSecurity: Number(socialSecurity) || 0,
-      laborFees: Number(laborFees) || 0,
-      iqamaRenewalYearly: Number(iqamaRenewalYearly) || 0,
-      medicalInsurance: Number(medicalInsurance) || 0,
-      airTicketCost: Number(airTicketCost) || 0,
-      foodMeal: Number(foodMeal) || 0,
+      overtime: Number(overtime) || 0,
+      deductions: Number(deductions) || 0,
+      absences: Number(absences) || 0,
     });
 
     const [record] = await db
@@ -140,15 +98,12 @@ router.post("/", async (req, res) => {
         nationality: nationality || "",
         joiningDate: joiningDate || null,
         salary: String(Number(salary || 0).toFixed(2)),
-        socialSecurity: String(Number(socialSecurity || 0).toFixed(2)),
-        laborFees: String(Number(laborFees || 0).toFixed(2)),
-        iqamaRenewalYearly: String(Number(iqamaRenewalYearly || 0).toFixed(2)),
-        medicalInsurance: String(Number(medicalInsurance || 0).toFixed(2)),
-        airTicketCost: String(Number(airTicketCost || 0).toFixed(2)),
-        foodMeal: String(Number(foodMeal || 0).toFixed(2)),
+        overtime: String(Number(overtime || 0).toFixed(2)),
+        deductions: String(Number(deductions || 0).toFixed(2)),
+        absences: String(Number(absences || 0).toFixed(2)),
         iqamaExpiryDate: iqamaExpiryDate || null,
         iqamaRenewalDate: iqamaRenewalDate || null,
-        totalMonthlyCost: String(computed.totalMonthlyCost),
+        totalMonthlyCost: String(net),
       })
       .returning();
     res.status(201).json(toRecord(record));
@@ -165,19 +120,15 @@ router.put("/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     const {
       name, designation, fullTime, nationality, joiningDate,
-      salary, socialSecurity, laborFees, iqamaRenewalYearly,
-      medicalInsurance, airTicketCost, foodMeal,
+      salary, overtime, deductions, absences,
       iqamaExpiryDate, iqamaRenewalDate,
     } = req.body;
 
-    const computed = calcPayroll({
+    const net = calcNetSalary({
       salary: Number(salary) || 0,
-      socialSecurity: Number(socialSecurity) || 0,
-      laborFees: Number(laborFees) || 0,
-      iqamaRenewalYearly: Number(iqamaRenewalYearly) || 0,
-      medicalInsurance: Number(medicalInsurance) || 0,
-      airTicketCost: Number(airTicketCost) || 0,
-      foodMeal: Number(foodMeal) || 0,
+      overtime: Number(overtime) || 0,
+      deductions: Number(deductions) || 0,
+      absences: Number(absences) || 0,
     });
 
     const [record] = await db
@@ -190,15 +141,12 @@ router.put("/:id", async (req, res) => {
         nationality: nationality || "",
         joiningDate: joiningDate || null,
         salary: String(Number(salary || 0).toFixed(2)),
-        socialSecurity: String(Number(socialSecurity || 0).toFixed(2)),
-        laborFees: String(Number(laborFees || 0).toFixed(2)),
-        iqamaRenewalYearly: String(Number(iqamaRenewalYearly || 0).toFixed(2)),
-        medicalInsurance: String(Number(medicalInsurance || 0).toFixed(2)),
-        airTicketCost: String(Number(airTicketCost) || 0).toFixed(2),
-        foodMeal: String(Number(foodMeal || 0).toFixed(2)),
+        overtime: String(Number(overtime || 0).toFixed(2)),
+        deductions: String(Number(deductions || 0).toFixed(2)),
+        absences: String(Number(absences || 0).toFixed(2)),
         iqamaExpiryDate: iqamaExpiryDate || null,
         iqamaRenewalDate: iqamaRenewalDate || null,
-        totalMonthlyCost: String(computed.totalMonthlyCost),
+        totalMonthlyCost: String(net),
       })
       .where(and(eq(employeesTable.id, id), eq(employeesTable.restaurantId, restaurantId)))
       .returning();

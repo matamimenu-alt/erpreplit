@@ -223,12 +223,13 @@ router.get("/pl", async (req, res) => {
     const employees = await db.select().from(employeesTable).where(eq(employeesTable.restaurantId, restaurantId));
     const totalLaborCost = employees.reduce((s, e) => s + toNum(e.totalMonthlyCost), 0);
 
-    // Fixed Expenses & App Commissions
+    // Fixed Expenses, Staff Expenses & App Commissions
     const expenses = await db.select().from(expensesTable).where(eq(expensesTable.restaurantId, restaurantId));
     const totalFixedExpenses  = expenses.filter(e => (e.category ?? "fixed") === "fixed").reduce((s, e) => s + toNum(e.monthlyCost), 0);
+    const totalStaffExpenses  = expenses.filter(e => e.category === "staff-expenses").reduce((s, e) => s + toNum(e.monthlyCost), 0);
     const totalAppCommissions = expenses.filter(e => e.category === "app-commission").reduce((s, e) => s + toNum(e.monthlyCost), 0);
 
-    const totalOperatingExpenses = totalLaborCost + totalPurchaseOpex + totalFixedExpenses + totalAppCommissions;
+    const totalOperatingExpenses = totalLaborCost + totalPurchaseOpex + totalFixedExpenses + totalStaffExpenses + totalAppCommissions;
     const operatingProfit = grossProfit - totalOperatingExpenses;
     const vatPayable = outputVat - inputVat;
     const netProfit  = operatingProfit - vatPayable;
@@ -279,6 +280,7 @@ router.get("/pl", async (req, res) => {
       totalPurchaseOpex: +totalPurchaseOpex.toFixed(2),
       totalLaborCost: +totalLaborCost.toFixed(2),
       totalFixedExpenses: +totalFixedExpenses.toFixed(2),
+      totalStaffExpenses: +totalStaffExpenses.toFixed(2),
       totalAppCommissions: +totalAppCommissions.toFixed(2),
       totalOperatingExpenses: +totalOperatingExpenses.toFixed(2),
       operatingProfit: +operatingProfit.toFixed(2),

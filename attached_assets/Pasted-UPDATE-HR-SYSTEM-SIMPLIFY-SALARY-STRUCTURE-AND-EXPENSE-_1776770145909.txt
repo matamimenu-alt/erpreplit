@@ -1,0 +1,104 @@
+UPDATE HR SYSTEM – SIMPLIFY SALARY STRUCTURE AND EXPENSE HANDLING
+
+GOAL:
+Simplify payroll system and separate employee-related expenses from salaries.
+
+--------------------------------------------------
+
+1. REMOVE ALL EXTRA SALARY COMPONENTS
+
+Delete or disable ALL additional components including:
+- Allowances (Housing, Transport, etc.)
+- Bonuses
+- Incentives
+- Any custom additions
+
+--------------------------------------------------
+
+2. KEEP ONLY THESE FIELDS IN PAYROLL
+
+- basic_salary
+- deductions
+- absences
+- overtime
+
+--------------------------------------------------
+
+3. SALARY CALCULATION LOGIC
+
+net_salary = basic_salary + overtime - deductions - absences
+
+--------------------------------------------------
+
+4. UPDATE DATABASE STRUCTURE
+
+Ensure payroll table includes ONLY:
+
+employees:
+- id
+- name
+- position
+
+payroll:
+- employee_id
+- basic_salary
+- overtime
+- deductions
+- absences
+- net_salary
+
+--------------------------------------------------
+
+5. REMOVE UNUSED FIELDS FROM UI
+
+- Hide or delete all removed components from:
+  - Add Employee Form
+  - Payroll Page
+  - Reports
+
+--------------------------------------------------
+
+6. CREATE NEW EXPENSE CATEGORY
+
+Add new expense category:
+
+Name: "Staff Expenses"
+
+--------------------------------------------------
+
+7. MOVE EMPLOYEE-RELATED COSTS TO EXPENSES
+
+DO NOT include the following inside payroll:
+
+- iqama costs
+- visa costs
+- travel tickets
+- medical insurance
+- government fees
+
+These must be recorded under:
+
+Expenses → "Staff Expenses"
+
+--------------------------------------------------
+
+8. UPDATE REPORTS
+
+- Payroll report = ONLY salaries (clean data)
+- Expense report = includes staff expenses separately
+
+--------------------------------------------------
+
+9. FINAL RESULT
+
+- Clean payroll system
+- Clear financial reporting
+- Better profit tracking
+
+--------------------------------------------------
+
+APPLY CHANGES IMMEDIATELY ACROSS:
+- Backend logic
+- Database
+- Frontend UI
+- Reports

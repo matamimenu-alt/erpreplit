@@ -1716,31 +1716,13 @@ components:
           type: number
         salary:
           type: number
-        socialSecurity:
+        overtime:
           type: number
-        laborFees:
+        deductions:
           type: number
-        iqamaRenewalYearly:
+        absences:
           type: number
-        medicalInsurance:
-          type: number
-        airTicketCost:
-          type: number
-        foodMeal:
-          type: number
-        monthlyIqamaRenewal:
-          type: number
-        monthlyMedical:
-          type: number
-        monthlyAirTicket:
-          type: number
-        monthlyIndemnity:
-          type: number
-        monthlyVacation:
-          type: number
-        totalPayrollTaxes:
-          type: number
-        totalEmployeesBenefits:
+        netSalary:
           type: number
         totalMonthlyCost:
           type: number
@@ -1759,19 +1741,10 @@ components:
         - fullTime
         - nationality
         - salary
-        - socialSecurity
-        - laborFees
-        - iqamaRenewalYearly
-        - medicalInsurance
-        - airTicketCost
-        - foodMeal
-        - monthlyIqamaRenewal
-        - monthlyMedical
-        - monthlyAirTicket
-        - monthlyIndemnity
-        - monthlyVacation
-        - totalPayrollTaxes
-        - totalEmployeesBenefits
+        - overtime
+        - deductions
+        - absences
+        - netSalary
         - totalMonthlyCost
         - numberOfMonths
         - createdAt
@@ -1792,17 +1765,11 @@ components:
           nullable: true
         salary:
           type: number
-        socialSecurity:
+        overtime:
           type: number
-        laborFees:
+        deductions:
           type: number
-        iqamaRenewalYearly:
-          type: number
-        medicalInsurance:
-          type: number
-        airTicketCost:
-          type: number
-        foodMeal:
+        absences:
           type: number
         iqamaExpiryDate:
           type: string
@@ -1985,6 +1952,8 @@ components:
           type: number
         totalFixedExpenses:
           type: number
+        totalStaffExpenses:
+          type: number
         totalAppCommissions:
           type: number
         totalOperatingExpenses:
@@ -2032,6 +2001,7 @@ components:
         - totalPurchaseOpex
         - totalLaborCost
         - totalFixedExpenses
+        - totalStaffExpenses
         - totalAppCommissions
         - totalOperatingExpenses
         - operatingProfit

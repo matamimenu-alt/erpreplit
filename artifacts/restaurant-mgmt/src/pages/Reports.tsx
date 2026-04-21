@@ -126,7 +126,8 @@ export default function Reports() {
       { Section: "INVENTORY", Item: "Total Inventory Adjustment (−)", "Amount (SAR)": -(pl.totalInventoryAdjustment ?? 0) },
       { Section: "ADJUSTED COGS", Item: "Adjusted COGS (After Inventory)", "Amount (SAR)": pl.adjustedCOGS ?? pl.totalCOGS },
       { Section: "GROSS PROFIT", Item: "Gross Profit", "Amount (SAR)": pl.grossProfit },
-      { Section: "OPEX", Item: "Labour Cost (TLC)", "Amount (SAR)": pl.totalLaborCost },
+      { Section: "OPEX", Item: "Net Salaries (Payroll)", "Amount (SAR)": pl.totalLaborCost },
+      { Section: "OPEX", Item: "Staff Expenses (Iqama, Visa, Insurance, Tickets)", "Amount (SAR)": (pl as Record<string, number>).totalStaffExpenses ?? 0 },
       { Section: "OPEX", Item: "Fuel & Energy", "Amount (SAR)": pl.fuelEnergyCost },
       { Section: "OPEX", Item: "Maintenance & Repair", "Amount (SAR)": pl.maintenanceCost },
       { Section: "OPEX", Item: "IT & Communication", "Amount (SAR)": pl.itCommunicationCost },
@@ -293,7 +294,8 @@ export default function Reports() {
 
                     {/* OPERATING EXPENSES */}
                     <SH title="Operating Expenses" />
-                    <Row label="Total Labour Cost (TLC) — Salaries + Benefits" value={pl?.totalLaborCost ?? 0} indent percent={totalRevenue ? ((pl?.totalLaborCost ?? 0) / totalRevenue * 100) : 0} />
+                    <Row label="Net Salaries (Payroll)" value={pl?.totalLaborCost ?? 0} indent percent={totalRevenue ? ((pl?.totalLaborCost ?? 0) / totalRevenue * 100) : 0} />
+                    <Row label="Staff Expenses (Iqama, Visa, Insurance, Tickets)" value={(pl as unknown as Record<string, number>)?.totalStaffExpenses ?? 0} indent percent={totalRevenue ? (((pl as unknown as Record<string, number>)?.totalStaffExpenses ?? 0) / totalRevenue * 100) : 0} />
                     {/* Purchase OpEx breakdown */}
                     <Row label="Fuel & Energy" value={pl?.fuelEnergyCost ?? 0} indent percent={totalRevenue ? ((pl?.fuelEnergyCost ?? 0) / totalRevenue * 100) : 0} />
                     <Row label="Maintenance and Repair" value={pl?.maintenanceCost ?? 0} indent percent={totalRevenue ? ((pl?.maintenanceCost ?? 0) / totalRevenue * 100) : 0} />

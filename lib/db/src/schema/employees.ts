@@ -14,15 +14,16 @@ export const employeesTable = pgTable("employees", {
   nationality: text("nationality").notNull().default(""),
   joiningDate: text("joining_date"),
 
-  // Salary
+  // Salary & payroll components
   salary: numeric("salary", { precision: 12, scale: 2 }).notNull().default("0"),
+  overtime: numeric("overtime", { precision: 12, scale: 2 }).notNull().default("0"),
+  deductions: numeric("deductions", { precision: 12, scale: 2 }).notNull().default("0"),
+  absences: numeric("absences", { precision: 12, scale: 2 }).notNull().default("0"),
 
-  // Monthly Payroll Taxes
+  // Legacy fields — retained for data history, not used in UI
   socialSecurity: numeric("social_security", { precision: 12, scale: 2 }).notNull().default("0"),
   laborFees: numeric("labor_fees", { precision: 12, scale: 2 }).notNull().default("0"),
   iqamaRenewalYearly: numeric("iqama_renewal_yearly", { precision: 12, scale: 2 }).notNull().default("0"),
-
-  // Benefits (Medical and Air Ticket are stored as YEARLY amounts, divided by 12 for monthly)
   medicalInsurance: numeric("medical_insurance", { precision: 12, scale: 2 }).notNull().default("0"),
   airTicketCost: numeric("air_ticket_cost", { precision: 12, scale: 2 }).notNull().default("0"),
   foodMeal: numeric("food_meal", { precision: 12, scale: 2 }).notNull().default("0"),

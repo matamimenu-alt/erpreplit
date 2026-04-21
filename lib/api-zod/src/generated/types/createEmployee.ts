@@ -13,12 +13,9 @@ export interface CreateEmployee {
   nationality?: string;
   joiningDate?: string | null;
   salary: number;
-  socialSecurity?: number;
-  laborFees?: number;
-  iqamaRenewalYearly?: number;
-  medicalInsurance?: number;
-  airTicketCost?: number;
-  foodMeal?: number;
+  overtime?: number;
+  deductions?: number;
+  absences?: number;
   iqamaExpiryDate?: string | null;
   iqamaRenewalDate?: string | null;
 }
