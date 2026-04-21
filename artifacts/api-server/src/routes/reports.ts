@@ -219,9 +219,13 @@ router.get("/pl", async (req, res) => {
     const othersPurchaseCost = purchaseRecords.filter(r => isOthersCost(r.category)).reduce((s, r) => s + toNum(r.amountBeforeVat), 0);
     const totalPurchaseOpex = fuelEnergyCost + maintenanceCost + itCommunicationCost + marketingCost + othersPurchaseCost;
 
-    // Labour Cost
+    // Labour Cost — calculate dynamically from components (salary + overtime - deductions - absences)
+    // This ensures the P&L always reflects the latest payroll values, regardless of any cached totals
     const employees = await db.select().from(employeesTable).where(eq(employeesTable.restaurantId, restaurantId));
-    const totalLaborCost = employees.reduce((s, e) => s + toNum(e.totalMonthlyCost), 0);
+    const totalLaborCost = employees.reduce((s, e) => {
+      const net = toNum(e.salary) + toNum(e.overtime) - toNum(e.deductions) - toNum(e.absences);
+      return s + net;
+    }, 0);
 
     // Fixed Expenses, Staff Expenses & App Commissions
     const expenses = await db.select().from(expensesTable).where(eq(expensesTable.restaurantId, restaurantId));
