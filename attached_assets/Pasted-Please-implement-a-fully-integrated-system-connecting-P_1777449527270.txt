@@ -1,0 +1,130 @@
+Please implement a fully integrated system connecting **Purchases, Inventory, and P&L (Cost of Sales)** with automated calculations and real-time updates.
+
+---
+
+### 1. DATA STRUCTURE
+
+Create unified product master data:
+
+* Item ID (auto-generated)
+* Item Name
+* Category
+* Unit of Measure (kg, pcs, etc.)
+
+---
+
+### 2. PURCHASES MODULE (SOURCE OF TRUTH)
+
+* All items must be created/added ONLY through Purchases
+* Each purchase entry includes:
+
+  * Item ID / Name
+  * Quantity purchased
+  * Total cost
+  * Unit cost (auto-calculated = Total ÷ Quantity)
+* If the same item is purchased multiple times:
+
+  * Apply **Weighted Average Cost (WAC)**:
+
+    New Avg Cost = (Old Qty × Old Cost + New Qty × New Cost) ÷ Total Qty
+
+---
+
+### 3. INVENTORY MODULE (AUTO-SYNC)
+
+* Inventory should automatically:
+
+  * Pull item names from Purchases
+  * Pull latest calculated **average unit cost**
+* User ONLY inputs:
+
+  * Opening stock (first time only)
+  * Adjustments (if needed)
+* System auto-calculates:
+
+  * Current stock quantity
+  * Inventory value = Quantity × Avg Cost
+
+---
+
+### 4. STOCK MOVEMENT LOGIC
+
+Track all movements:
+
+* Purchases → Increase stock
+* Sales / Consumption → Decrease stock
+* Adjustments → Manual correction (with reason log)
+
+---
+
+### 5. COST OF SALES (COGS) – AUTO CALCULATION
+
+Implement real-time COGS calculation:
+
+COGS = Opening Inventory + Purchases - Closing Inventory
+
+OR (preferred for accuracy):
+
+COGS = Sum of (Consumed Quantity × Avg Cost)
+
+* Every sale or recipe consumption should deduct from inventory
+* Automatically calculate cost per transaction
+
+---
+
+### 6. P&L INTEGRATION
+
+* Link COGS directly to P&L under:
+  → Cost of Goods Sold
+* Revenue comes from sales module
+* System calculates:
+  → Gross Profit = Revenue - COGS
+
+---
+
+### 7. REAL-TIME SYNC RULES
+
+* Any update in Purchases must instantly reflect in:
+
+  * Inventory valuation
+  * Average cost
+* Any stock change updates:
+
+  * Inventory balance
+  * COGS
+  * P&L
+
+---
+
+### 8. REPORTS REQUIRED
+
+* Inventory Report:
+
+  * Item / Qty / Avg Cost / Total Value
+* Stock Movement Report (audit log)
+* COGS Report (daily, weekly, monthly)
+* P&L Report (auto-updated)
+
+---
+
+### 9. VALIDATION RULES
+
+* No negative stock allowed
+* No manual price entry in Inventory
+* All pricing must come from Purchases only
+
+---
+
+### 10. OPTIONAL (ADVANCED – IF POSSIBLE)
+
+* Recipe / BOM system:
+
+  * Each menu item deducts ingredients automatically
+* Alerts:
+
+  * Low stock notification
+* Multi-location support (future-ready)
+
+---
+
+Goal: Fully automated system with zero manual duplication, accurate costing, and real-time financial reporting.

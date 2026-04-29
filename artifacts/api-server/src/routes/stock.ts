@@ -30,89 +30,133 @@ function toMovementRecord(r: typeof stockMovementsTable.$inferSelect) {
   };
 }
 
-// Aggregate stock items from movements
+/** Compute Weighted Average Cost (WAC) for a sequence of movements sorted by date */
+function computeWAC(movements: (typeof stockMovementsTable.$inferSelect)[]) {
+  // movements must be sorted oldest→newest
+  let qty = 0;
+  let avgCost = 0;
+
+  for (const m of movements) {
+    const mQty = toNum(m.quantity);
+    const mPrice = toNum(m.unitPrice);
+
+    switch (m.movementType) {
+      case "opening":
+        if (mPrice > 0) {
+          // Weighted blend with existing stock
+          const newTotal = qty * avgCost + mQty * mPrice;
+          qty += mQty;
+          avgCost = qty > 0 ? newTotal / qty : mPrice;
+        } else {
+          qty += mQty;
+        }
+        break;
+      case "purchase":
+      case "transfer-in": {
+        const inPrice = mPrice > 0 ? mPrice : avgCost;
+        const newTotal = qty * avgCost + mQty * inPrice;
+        qty += mQty;
+        avgCost = qty > 0 ? newTotal / qty : inPrice;
+        break;
+      }
+      case "consumption":
+      case "transfer-out":
+        qty = Math.max(0, qty - mQty);
+        // avgCost stays the same on outflow
+        break;
+      case "adjustment":
+        if (mQty > 0) {
+          // Treat positive adjustments at current avg cost (or given price)
+          const aPrice = mPrice > 0 ? mPrice : avgCost;
+          const newTotal = qty * avgCost + mQty * aPrice;
+          qty += mQty;
+          avgCost = qty > 0 ? newTotal / qty : aPrice;
+        } else {
+          qty = Math.max(0, qty + mQty); // mQty is negative
+        }
+        break;
+    }
+  }
+
+  return { qty: +qty.toFixed(3), avgCost: +avgCost.toFixed(4) };
+}
+
+// Aggregate stock items from movements — uses WAC for valuation
 async function aggregateStockItems(restaurantId: number, dateFrom?: string, dateTo?: string) {
   let movements = await db.select()
     .from(stockMovementsTable)
     .where(eq(stockMovementsTable.restaurantId, restaurantId));
 
-  if (dateFrom) movements = movements.filter(m => m.movementDate >= dateFrom);
-  if (dateTo) movements = movements.filter(m => m.movementDate <= dateTo);
+  // Apply optional date filters AFTER fetching (WAC needs all history before dateFrom for opening stock)
+  const allMovements = [...movements].sort((a, b) => a.movementDate.localeCompare(b.movementDate));
 
   // Group by itemName+category
-  const itemMap = new Map<string, {
-    itemName: string; category: string; subCategory?: string; unit: string;
-    openingQuantity: number; purchasesQuantity: number; consumptionQuantity: number;
-    transferInQuantity: number; transferOutQuantity: number; adjustmentQuantity: number;
-    currentQuantity: number; lastPurchasePrice: number; currentValue: number;
-    lastMovementDate: string;
-  }>();
+  const itemKeys = [...new Set(allMovements.map(m => `${m.itemName}:::${m.category}`))];
 
-  // Sort by date to get correct last price
-  movements.sort((a, b) => a.movementDate.localeCompare(b.movementDate));
+  const result = [];
 
-  for (const m of movements) {
-    const key = `${m.itemName}:::${m.category}`;
-    if (!itemMap.has(key)) {
-      itemMap.set(key, {
-        itemName: m.itemName,
-        category: m.category,
-        subCategory: m.subCategory ?? undefined,
-        unit: m.unit,
-        openingQuantity: 0,
-        purchasesQuantity: 0,
-        consumptionQuantity: 0,
-        transferInQuantity: 0,
-        transferOutQuantity: 0,
-        adjustmentQuantity: 0,
-        currentQuantity: 0,
-        lastPurchasePrice: 0,
-        currentValue: 0,
-        lastMovementDate: m.movementDate,
-      });
+  for (const key of itemKeys) {
+    const [itemName, category] = key.split(":::");
+    const itemMovements = allMovements.filter(m => m.itemName === itemName && m.category === category);
+    const latest = itemMovements[itemMovements.length - 1];
+    const unit = latest?.unit ?? "unit";
+    const subCategory = latest?.subCategory ?? undefined;
+
+    // WAC up to dateFrom (for opening balance when filtering)
+    let openingQty = 0;
+    let openingAvgCost = 0;
+    if (dateFrom) {
+      const before = itemMovements.filter(m => m.movementDate < dateFrom);
+      const w = computeWAC(before);
+      openingQty = w.qty;
+      openingAvgCost = w.avgCost;
     }
-    const item = itemMap.get(key)!;
-    const qty = toNum(m.quantity);
-    const price = toNum(m.unitPrice);
 
-    switch (m.movementType) {
-      case "opening":
-        item.openingQuantity += qty;
-        break;
-      case "purchase":
-        item.purchasesQuantity += qty;
-        item.lastPurchasePrice = price;
-        break;
-      case "consumption":
-        item.consumptionQuantity += Math.abs(qty);
-        break;
-      case "transfer-in":
-        item.transferInQuantity += Math.abs(qty);
-        if (price > 0) item.lastPurchasePrice = price;
-        break;
-      case "transfer-out":
-        item.transferOutQuantity += Math.abs(qty);
-        break;
-      case "adjustment":
-        item.adjustmentQuantity += qty;
-        break;
+    // Filter to date range for the period metrics
+    const rangeMovements = itemMovements.filter(m =>
+      (!dateFrom || m.movementDate >= dateFrom) &&
+      (!dateTo || m.movementDate <= dateTo)
+    );
+
+    // Running WAC through full history (no date filter) gives current state
+    const fullWAC = computeWAC(itemMovements);
+
+    // Period metrics
+    let purchasesQuantity = 0, consumptionQuantity = 0;
+    let transferInQuantity = 0, transferOutQuantity = 0, adjustmentQuantity = 0;
+    let lastMovementDate = itemMovements[0]?.movementDate ?? "";
+
+    for (const m of rangeMovements) {
+      const qty = toNum(m.quantity);
+      switch (m.movementType) {
+        case "purchase": purchasesQuantity += qty; break;
+        case "consumption": consumptionQuantity += qty; break;
+        case "transfer-in": transferInQuantity += qty; break;
+        case "transfer-out": transferOutQuantity += qty; break;
+        case "adjustment": adjustmentQuantity += qty; break;
+      }
+      if (m.movementDate > lastMovementDate) lastMovementDate = m.movementDate;
     }
-    if (m.movementDate > item.lastMovementDate) item.lastMovementDate = m.movementDate;
+
+    result.push({
+      itemName,
+      category,
+      subCategory,
+      unit,
+      openingQuantity: dateFrom ? openingQty : 0,
+      purchasesQuantity: +purchasesQuantity.toFixed(3),
+      consumptionQuantity: +consumptionQuantity.toFixed(3),
+      transferInQuantity: +transferInQuantity.toFixed(3),
+      transferOutQuantity: +transferOutQuantity.toFixed(3),
+      adjustmentQuantity: +adjustmentQuantity.toFixed(3),
+      currentQuantity: fullWAC.qty,
+      avgCost: fullWAC.avgCost,
+      currentValue: +(fullWAC.qty * fullWAC.avgCost).toFixed(2),
+      lastMovementDate,
+    });
   }
 
-  // Calculate current quantity and value
-  for (const item of itemMap.values()) {
-    item.currentQuantity =
-      item.openingQuantity +
-      item.purchasesQuantity +
-      item.transferInQuantity -
-      item.consumptionQuantity -
-      item.transferOutQuantity +
-      item.adjustmentQuantity;
-    item.currentValue = item.currentQuantity * item.lastPurchasePrice;
-  }
-
-  return Array.from(itemMap.values()).sort((a, b) => a.itemName.localeCompare(b.itemName));
+  return result.sort((a, b) => a.itemName.localeCompare(b.itemName));
 }
 
 // GET /api/stock/items
@@ -382,75 +426,96 @@ router.get("/report", async (req, res) => {
     // Group by item
     const itemKeys = [...new Set(allMovements.map(m => `${m.itemName}:::${m.category}`))];
 
+    // Sort all movements by date for WAC calculation
+    allMovements.sort((a, b) => a.movementDate.localeCompare(b.movementDate));
+
     const reportItems = itemKeys.map(key => {
       const [itemName, category] = key.split(":::");
       const itemMovements = allMovements.filter(m => m.itemName === itemName && m.category === category);
 
-      let subCategory: string | undefined;
-      let unit = "unit";
-      let lastPrice = 0;
+      const latest = itemMovements[itemMovements.length - 1];
+      const unit = latest?.unit ?? "unit";
+      const subCategory = latest?.subCategory ?? undefined;
 
-      // Split into before-month and in-month
+      // WAC up to start of month = opening balance with WAC-based price
       const beforeMonth = itemMovements.filter(m => m.movementDate < monthStart);
+      const openingWAC = computeWAC(beforeMonth);
+      const openingQty = openingWAC.qty;
+      const openingAvgCost = openingWAC.avgCost;
+
+      // WAC through end of month = closing balance with WAC-based price
+      const closingWAC = computeWAC(itemMovements);
+      const closingQty = closingWAC.qty;
+      const closingAvgCost = closingWAC.avgCost;
+
+      // Period metrics (in-month movements)
       const inMonth = itemMovements.filter(m => m.movementDate >= monthStart && m.movementDate <= monthEnd);
-
-      // Opening balance = closing stock of previous month
-      let openingQty = 0;
-      for (const m of beforeMonth) {
-        unit = m.unit;
-        subCategory = m.subCategory ?? undefined;
-        const qty = toNum(m.quantity);
-        if (m.movementType === "purchase" || m.movementType === "opening" || m.movementType === "transfer-in") {
-          openingQty += qty;
-          if (m.movementType === "purchase") lastPrice = toNum(m.unitPrice);
-        } else if (m.movementType === "consumption" || m.movementType === "transfer-out") {
-          openingQty -= qty;
-        } else if (m.movementType === "adjustment") {
-          openingQty += qty;
-        }
-      }
-
       let purchasesQty = 0, purchasesValue = 0;
       let consumptionQty = 0, consumptionValue = 0;
       let transferInQty = 0, transferOutQty = 0;
       let adjustmentQty = 0;
 
+      // Running WAC for consumption valuation during the period
+      let runQty = openingQty;
+      let runAvg = openingAvgCost;
+
       for (const m of inMonth) {
-        unit = m.unit;
-        subCategory = m.subCategory ?? undefined;
         const qty = toNum(m.quantity);
         const price = toNum(m.unitPrice);
         const val = toNum(m.totalValue);
 
         switch (m.movementType) {
-          case "purchase":
+          case "purchase": {
             purchasesQty += qty;
             purchasesValue += val || qty * price;
-            lastPrice = price || lastPrice;
+            const inPrice = price > 0 ? price : runAvg;
+            const newTotal = runQty * runAvg + qty * inPrice;
+            runQty += qty;
+            runAvg = runQty > 0 ? newTotal / runQty : inPrice;
             break;
+          }
+          case "transfer-in": {
+            transferInQty += qty;
+            const inPrice = price > 0 ? price : runAvg;
+            const newTotal = runQty * runAvg + qty * inPrice;
+            runQty += qty;
+            runAvg = runQty > 0 ? newTotal / runQty : inPrice;
+            break;
+          }
           case "consumption":
             consumptionQty += qty;
-            consumptionValue += val || qty * (lastPrice || price);
-            break;
-          case "transfer-in":
-            transferInQty += qty;
-            if (price > 0) lastPrice = price;
+            consumptionValue += val || qty * runAvg;
+            runQty = Math.max(0, runQty - qty);
             break;
           case "transfer-out":
             transferOutQty += qty;
+            runQty = Math.max(0, runQty - qty);
             break;
           case "adjustment":
             adjustmentQty += qty;
+            if (qty > 0) {
+              const aPrice = price > 0 ? price : runAvg;
+              const newTotal = runQty * runAvg + qty * aPrice;
+              runQty += qty;
+              runAvg = runQty > 0 ? newTotal / runQty : aPrice;
+            } else {
+              runQty = Math.max(0, runQty + qty);
+            }
             break;
           case "opening":
-            openingQty += qty;
+            if (price > 0) {
+              const newTotal = runQty * runAvg + qty * price;
+              runQty += qty;
+              runAvg = runQty > 0 ? newTotal / runQty : price;
+            } else {
+              runQty += qty;
+            }
             break;
         }
       }
 
-      const closingQty = openingQty + purchasesQty + transferInQty - consumptionQty - transferOutQty + adjustmentQty;
-      const openingValue = openingQty * lastPrice;
-      const closingValue = closingQty * lastPrice;
+      const openingValue = openingQty * openingAvgCost;
+      const closingValue = closingQty * closingAvgCost;
 
       return {
         itemName,
@@ -468,7 +533,7 @@ router.get("/report", async (req, res) => {
         adjustmentQty: +adjustmentQty.toFixed(3),
         closingQty: +closingQty.toFixed(3),
         closingValue: +closingValue.toFixed(2),
-        lastPrice: +lastPrice.toFixed(2),
+        avgCost: +closingAvgCost.toFixed(4),
       };
     }).sort((a, b) => a.itemName.localeCompare(b.itemName));
 

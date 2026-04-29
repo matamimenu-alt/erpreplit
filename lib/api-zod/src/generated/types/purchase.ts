@@ -15,6 +15,7 @@ export interface Purchase {
   supplierName: string;
   productName: string;
   category: PurchaseCategory;
+  unit: string;
   quantity: number;
   price: number;
   priceIncludesVat: boolean;

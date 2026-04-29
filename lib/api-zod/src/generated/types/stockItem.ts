@@ -18,7 +18,7 @@ export interface StockItem {
   transferOutQuantity: number;
   adjustmentQuantity: number;
   currentQuantity: number;
-  lastPurchasePrice: number;
+  avgCost: number;
   currentValue: number;
   lastMovementDate?: string;
 }

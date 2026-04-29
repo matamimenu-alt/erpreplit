@@ -21,11 +21,14 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+const UNITS = ["unit", "kg", "g", "liter", "ml", "piece", "box", "carton", "bottle", "can", "pack", "sack", "bag"];
+
 interface InvoiceItem {
   localId: string;
   productName: string;
   mainGroupKey: string;
   category: string;
+  unit: string;
   quantity: number;
   price: number;
 }
@@ -284,6 +287,7 @@ function PurchaseInvoiceModal({
     productName: "",
     mainGroupKey: PURCHASE_CATEGORY_GROUPS[0].key,
     category: PURCHASE_CATEGORY_GROUPS[0].subcategories[0].value,
+    unit: "unit" as string,
     quantity: "" as number | "",
     price: "" as number | "",
   };
@@ -335,6 +339,7 @@ function PurchaseInvoiceModal({
       productName: addForm.productName.trim(),
       mainGroupKey: addForm.mainGroupKey,
       category: addForm.category,
+      unit: addForm.unit || "unit",
       quantity: Number(addForm.quantity),
       price: Number(addForm.price),
     };
@@ -353,6 +358,7 @@ function PurchaseInvoiceModal({
       productName: item.productName,
       mainGroupKey: item.mainGroupKey,
       category: item.category,
+      unit: item.unit || "unit",
       quantity: item.quantity,
       price: item.price,
     });
@@ -373,6 +379,7 @@ function PurchaseInvoiceModal({
       productName: s.productName,
       mainGroupKey: grp?.key ?? PURCHASE_CATEGORY_GROUPS[0].key,
       category: s.category,
+      unit: (s as { unit?: string }).unit || f.unit || "unit",
       price: s.lastPrice,
     }));
     setAddError("");
@@ -517,6 +524,7 @@ function PurchaseInvoiceModal({
                       <th className="px-3 py-2 text-left">#</th>
                       <th className="px-3 py-2 text-left">Product / المنتج</th>
                       <th className="px-3 py-2 text-left">Category / الفئة</th>
+                      <th className="px-3 py-2 text-center">Unit</th>
                       <th className="px-3 py-2 text-right">Qty</th>
                       <th className="px-3 py-2 text-right">Unit Price</th>
                       <th className="px-3 py-2 text-right">Net</th>
@@ -542,6 +550,7 @@ function PurchaseInvoiceModal({
                               {meta.label}
                             </span>
                           </td>
+                          <td className="px-3 py-2.5 text-center text-slate-500 text-xs">{item.unit || "unit"}</td>
                           <td className="px-3 py-2.5 text-right text-slate-600">{item.quantity}</td>
                           <td className="px-3 py-2.5 text-right text-slate-600">{formatSAR(item.price)}</td>
                           <td className="px-3 py-2.5 text-right">{formatSAR(calc.net)}</td>
@@ -641,9 +650,9 @@ function PurchaseInvoiceModal({
                 </div>
               </div>
 
-              {/* Row 3: Qty + Price + Preview + Add button */}
+              {/* Row 3: Qty + Unit + Price + Preview + Add button */}
               <div className="flex items-end gap-2">
-                <div className="w-28">
+                <div className="w-24">
                   <label className="block text-xs text-slate-500 mb-1">Qty / الكمية</label>
                   <input
                     type="number"
@@ -655,7 +664,17 @@ function PurchaseInvoiceModal({
                     className="w-full px-3 py-2 border rounded-xl outline-none focus:border-primary text-sm bg-white"
                   />
                 </div>
-                <div className="w-36">
+                <div className="w-28">
+                  <label className="block text-xs text-slate-500 mb-1">Unit / الوحدة</label>
+                  <select
+                    value={addForm.unit}
+                    onChange={e => setAddForm(f => ({ ...f, unit: e.target.value }))}
+                    className="w-full px-3 py-2 border rounded-xl outline-none focus:border-primary text-sm bg-white"
+                  >
+                    {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                  </select>
+                </div>
+                <div className="w-32">
                   <label className="block text-xs text-slate-500 mb-1">Unit Price (SAR)</label>
                   <input
                     type="number"
@@ -762,6 +781,7 @@ const editSchema = z.object({
   supplierName: z.string().optional(),
   productName: z.string().min(1, "Required"),
   category: z.string().min(1, "Required"),
+  unit: z.string().default("unit"),
   quantity: z.coerce.number().min(0.001),
   price: z.coerce.number().min(0),
   invoiceType: z.enum(["tax", "non-tax"]).default("tax"),
@@ -869,10 +889,16 @@ function PurchaseEditModal({
               </select>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">Quantity *</label>
               <input type="number" step="0.001" min="0" {...form.register("quantity")} className="w-full px-3 py-2 border rounded-xl outline-none focus:border-primary text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Unit / الوحدة</label>
+              <select {...form.register("unit")} className="w-full px-3 py-2 border rounded-xl outline-none focus:border-primary bg-white text-sm">
+                {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+              </select>
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">Unit Price (SAR) *</label>
@@ -972,6 +998,7 @@ export default function Purchases() {
           items: items.map(i => ({
             productName: i.productName,
             category: i.category as Parameters<typeof batchCreate.mutate>[0]["data"]["items"][0]["category"],
+            unit: i.unit || "unit",
             quantity: i.quantity,
             price: i.price,
           })),
@@ -1002,6 +1029,7 @@ export default function Purchases() {
         supplierName: p.supplierName ?? "",
         productName: p.productName,
         category: p.category,
+        unit: (p as { unit?: string }).unit || "unit",
         quantity: p.quantity,
         price: p.price,
         invoiceType: (p.invoiceType as "tax" | "non-tax") ?? "tax",
@@ -1020,6 +1048,7 @@ export default function Purchases() {
       Product: p.productName,
       Category: getCategoryMeta(p.category).label,
       Supplier: p.supplierName || "",
+      Unit: (p as { unit?: string }).unit || "unit",
       Quantity: p.quantity,
       "Unit Price (SAR)": p.price,
       "Net Amount (SAR)": p.amountBeforeVat,

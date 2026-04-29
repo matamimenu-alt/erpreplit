@@ -190,6 +190,7 @@ export interface Purchase {
   supplierName: string;
   productName: string;
   category: PurchaseCategory;
+  unit: string;
   quantity: number;
   price: number;
   priceIncludesVat: boolean;
@@ -225,6 +226,7 @@ export interface CreatePurchase {
   supplierName?: string;
   productName: string;
   category: PurchaseCategory;
+  unit?: string;
   quantity: number;
   price: number;
   priceIncludesVat: boolean;
@@ -236,12 +238,14 @@ export interface CreatePurchase {
 export interface PurchaseProductSuggestion {
   productName: string;
   category: PurchaseCategory;
+  unit: string;
   lastPrice: number;
 }
 
 export interface BatchInvoiceItem {
   productName: string;
   category: PurchaseCategory;
+  unit?: string;
   quantity: number;
   price: number;
   notes?: string | null;
@@ -513,7 +517,7 @@ export interface StockItem {
   transferOutQuantity: number;
   adjustmentQuantity: number;
   currentQuantity: number;
-  lastPurchasePrice: number;
+  avgCost: number;
   currentValue: number;
   lastMovementDate?: string;
 }

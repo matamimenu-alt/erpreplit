@@ -10,5 +10,6 @@ import type { PurchaseCategory } from "./purchaseCategory";
 export interface PurchaseProductSuggestion {
   productName: string;
   category: PurchaseCategory;
+  unit: string;
   lastPrice: number;
 }

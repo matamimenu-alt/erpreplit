@@ -1444,6 +1444,8 @@ components:
           type: string
         category:
           $ref: "#/components/schemas/PurchaseCategory"
+        unit:
+          type: string
         quantity:
           type: number
         price:
@@ -1476,6 +1478,7 @@ components:
         - supplierName
         - productName
         - category
+        - unit
         - quantity
         - price
         - priceIncludesVat
@@ -1497,6 +1500,8 @@ components:
           type: string
         category:
           $ref: "#/components/schemas/PurchaseCategory"
+        unit:
+          type: string
         quantity:
           type: number
         price:
@@ -1528,11 +1533,14 @@ components:
           type: string
         category:
           $ref: "#/components/schemas/PurchaseCategory"
+        unit:
+          type: string
         lastPrice:
           type: number
       required:
         - productName
         - category
+        - unit
         - lastPrice
 
     BatchInvoiceItem:
@@ -1542,6 +1550,8 @@ components:
           type: string
         category:
           $ref: "#/components/schemas/PurchaseCategory"
+        unit:
+          type: string
         quantity:
           type: number
         price:
@@ -2165,7 +2175,7 @@ components:
           type: number
         currentQuantity:
           type: number
-        lastPurchasePrice:
+        avgCost:
           type: number
         currentValue:
           type: number
@@ -2177,7 +2187,7 @@ components:
         - unit
         - currentQuantity
         - currentValue
-        - lastPurchasePrice
+        - avgCost
         - openingQuantity
         - purchasesQuantity
         - consumptionQuantity

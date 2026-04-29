@@ -7,7 +7,7 @@ import { getRestaurantId } from "../lib/restaurant";
 async function upsertStockMovementForPurchase(
   restaurantId: number,
   purchaseId: number,
-  data: { date: string; productName: string; category: string; quantity: number; price: number; amountBeforeVat: number }
+  data: { date: string; productName: string; category: string; unit: string; quantity: number; price: number; amountBeforeVat: number }
 ) {
   // Delete existing movement for this purchase (handles update scenario)
   await db.delete(stockMovementsTable).where(
@@ -19,7 +19,7 @@ async function upsertStockMovementForPurchase(
       restaurantId,
       itemName: data.productName,
       category: data.category || "others",
-      unit: "unit",
+      unit: data.unit || "unit",
       movementType: "purchase",
       quantity: String(data.quantity.toFixed(3)),
       unitPrice: String(data.price.toFixed(2)),
@@ -76,6 +76,7 @@ function toRecord(r: typeof purchasesTable.$inferSelect) {
     supplierName: r.supplierName ?? "",
     productName: r.productName,
     category: r.category || "others",
+    unit: r.unit || "unit",
     quantity: toNum(r.quantity),
     price: toNum(r.price),
     priceIncludesVat: r.priceIncludesVat,
@@ -90,7 +91,7 @@ function toRecord(r: typeof purchasesTable.$inferSelect) {
   };
 }
 
-// GET /api/purchases/products — distinct products with latest category & price
+// GET /api/purchases/products — distinct products with latest category, unit & price
 router.get("/products", async (req, res) => {
   try {
     const restaurantId = getRestaurantId(req);
@@ -98,6 +99,7 @@ router.get("/products", async (req, res) => {
       SELECT DISTINCT ON (lower(product_name))
         product_name        AS "productName",
         category,
+        unit,
         price::float        AS "lastPrice"
       FROM purchases
       WHERE restaurant_id = ${restaurantId}
@@ -133,6 +135,7 @@ router.post("/batch", async (req, res) => {
         supplierName: supplierName || "",
         productName: item.productName,
         category: item.category || "others",
+        unit: item.unit || "unit",
         quantity: String(Number(item.quantity).toFixed(3)),
         price: String(Number(item.price).toFixed(2)),
         priceIncludesVat: Boolean(priceIncludesVat),
@@ -148,6 +151,7 @@ router.post("/batch", async (req, res) => {
         date,
         productName: item.productName,
         category: item.category || "others",
+        unit: item.unit || "unit",
         quantity: Number(item.quantity),
         price: Number(item.price),
         amountBeforeVat,
@@ -195,7 +199,7 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const restaurantId = getRestaurantId(req);
-    const { date, supplierName, productName, category, quantity, price, priceIncludesVat, invoiceType, paymentType, notes } = req.body;
+    const { date, supplierName, productName, category, unit, quantity, price, priceIncludesVat, invoiceType, paymentType, notes } = req.body;
     const invType = invoiceType === "non-tax" ? "non-tax" : "tax";
     const { amountBeforeVat, vatAmount, totalAmount } = calcPurchase(
       Number(quantity),
@@ -211,6 +215,7 @@ router.post("/", async (req, res) => {
         supplierName: supplierName || "",
         productName,
         category: category || "others",
+        unit: unit || "unit",
         quantity: String(Number(quantity).toFixed(3)),
         price: String(Number(price).toFixed(2)),
         priceIncludesVat: Boolean(priceIncludesVat),
@@ -228,6 +233,7 @@ router.post("/", async (req, res) => {
       date,
       productName,
       category: category || "others",
+      unit: unit || "unit",
       quantity: Number(quantity),
       price: Number(price),
       amountBeforeVat,
@@ -245,7 +251,7 @@ router.put("/:id", async (req, res) => {
   try {
     const restaurantId = getRestaurantId(req);
     const id = parseInt(req.params.id);
-    const { date, supplierName, productName, category, quantity, price, priceIncludesVat, invoiceType, paymentType, notes } = req.body;
+    const { date, supplierName, productName, category, unit, quantity, price, priceIncludesVat, invoiceType, paymentType, notes } = req.body;
     const invType = invoiceType === "non-tax" ? "non-tax" : "tax";
     const { amountBeforeVat, vatAmount, totalAmount } = calcPurchase(
       Number(quantity),
@@ -260,6 +266,7 @@ router.put("/:id", async (req, res) => {
         supplierName: supplierName || "",
         productName,
         category: category || "others",
+        unit: unit || "unit",
         quantity: String(Number(quantity).toFixed(3)),
         price: String(Number(price).toFixed(2)),
         priceIncludesVat: Boolean(priceIncludesVat),
@@ -279,6 +286,7 @@ router.put("/:id", async (req, res) => {
       date,
       productName,
       category: category || "others",
+      unit: unit || "unit",
       quantity: Number(quantity),
       price: Number(price),
       amountBeforeVat,

@@ -238,7 +238,7 @@ export default function Inventory() {
       "Transfer Out": i.transferOutQuantity,
       "Adjustments": i.adjustmentQuantity,
       "Current Qty": i.currentQuantity,
-      "Last Price (SAR)": i.lastPurchasePrice,
+      "Avg Cost (SAR)": i.avgCost,
       "Value (SAR)": i.currentValue,
     }));
     exportToExcel(rows, `stock-levels-${new Date().toISOString().split("T")[0]}`, "Stock Levels");
@@ -382,6 +382,7 @@ export default function Inventory() {
                       <th className="p-3 text-right">Transfer Out</th>
                       <th className="p-3 text-right">Adjustments</th>
                       <th className="p-3 text-right font-semibold">Current Qty</th>
+                      <th className="p-3 text-right">Avg Cost</th>
                       <th className="p-3 text-right">Value (SAR)</th>
                     </tr>
                   </thead>
@@ -404,13 +405,14 @@ export default function Inventory() {
                         <td className={`p-3 text-right font-bold ${item.currentQuantity < 0 ? "text-red-600" : item.currentQuantity === 0 ? "text-gray-400" : "text-gray-900"}`}>
                           {item.currentQuantity.toFixed(2)}
                         </td>
+                        <td className="p-3 text-right text-gray-600">{item.avgCost > 0 ? formatSAR(item.avgCost) : "—"}</td>
                         <td className="p-3 text-right font-medium text-blue-700">{formatSAR(item.currentValue)}</td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot className="bg-gray-100 font-semibold">
                     <tr>
-                      <td className="p-3" colSpan={10}>Total Value</td>
+                      <td className="p-3" colSpan={11}>Total Value</td>
                       <td className="p-3 text-right text-blue-700">{formatSAR(filteredItems.reduce((s, i) => s + i.currentValue, 0))}</td>
                     </tr>
                   </tfoot>

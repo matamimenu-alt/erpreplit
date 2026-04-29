@@ -10,6 +10,7 @@ import type { PurchaseCategory } from "./purchaseCategory";
 export interface BatchInvoiceItem {
   productName: string;
   category: PurchaseCategory;
+  unit?: string;
   quantity: number;
   price: number;
   notes?: string | null;
