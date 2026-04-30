@@ -6,7 +6,8 @@ import { restaurantsTable } from "./restaurants";
 export const branchTransfersTable = pgTable("branch_transfers", {
   id: serial("id").primaryKey(),
   fromRestaurantId: integer("from_restaurant_id").notNull().references(() => restaurantsTable.id),
-  toRestaurantId: integer("to_restaurant_id").notNull().references(() => restaurantsTable.id),
+  toRestaurantId: integer("to_restaurant_id").references(() => restaurantsTable.id),
+  destinationName: text("destination_name"),
   itemName: text("item_name").notNull(),
   category: text("category").notNull(),
   subCategory: text("sub_category"),

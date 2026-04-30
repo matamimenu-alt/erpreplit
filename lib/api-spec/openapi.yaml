@@ -2280,6 +2280,10 @@ components:
           type: integer
         toRestaurantId:
           type: integer
+          nullable: true
+        destinationName:
+          type: string
+          nullable: true
         fromRestaurantName:
           type: string
         toRestaurantName:
@@ -2290,6 +2294,7 @@ components:
           type: string
         subCategory:
           type: string
+          nullable: true
         unit:
           type: string
         quantity:
@@ -2300,16 +2305,19 @@ components:
           type: number
         referenceNumber:
           type: string
+          nullable: true
         transferDate:
           type: string
         notes:
           type: string
+          nullable: true
         createdAt:
           type: string
       required:
         - id
         - fromRestaurantId
-        - toRestaurantId
+        - fromRestaurantName
+        - toRestaurantName
         - itemName
         - category
         - unit
@@ -2326,12 +2334,17 @@ components:
           type: integer
         toRestaurantId:
           type: integer
+          nullable: true
+        destinationName:
+          type: string
+          nullable: true
         itemName:
           type: string
         category:
           type: string
         subCategory:
           type: string
+          nullable: true
         unit:
           type: string
         quantity:
@@ -2340,13 +2353,14 @@ components:
           type: number
         referenceNumber:
           type: string
+          nullable: true
         transferDate:
           type: string
         notes:
           type: string
+          nullable: true
       required:
         - fromRestaurantId
-        - toRestaurantId
         - itemName
         - category
         - unit

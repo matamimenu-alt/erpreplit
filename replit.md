@@ -5,6 +5,25 @@
 Multi-restaurant Management & Accounting System for Saudi Arabia. Manages 3 restaurants: **Asad Al-Hamra**, **Sabah Al-El**, **Chicken Bar**. Full-stack pnpm monorepo using TypeScript, React, and Express.
 
 ## Latest Changes (Session)
+- **Inventory/Transfer System Complete**: Full overhaul of transfers + movements modules.
+  - **DB Schema**: `branch_transfers` table — `toRestaurantId` made nullable, added `destinationName text` column. Supports both branch-to-branch and internal location transfers.
+  - **Backend (stock.ts)**:
+    - `getCurrentStockQty()` helper computes live WAC-based available quantity
+    - **Negative stock prevention**: `POST /api/stock/movements` (consumption) and `POST /api/stock/transfers` both check available qty before executing — return HTTP 400 with `{ error: "Insufficient stock...", available: N }` if violated
+    - **Free-text destination**: Transfers can target named locations (Kitchen, Warehouse, etc.) instead of restaurants — only creates transfer-out at source (no transfer-in at destination)
+    - **Branch transfer**: If `toRestaurantId` set, creates both transfer-out and transfer-in with named notes
+    - Better transfer notes: include resolved restaurant names instead of raw IDs
+    - `GET /api/stock/transfers` now returns `destinationName`, nullable `toRestaurantId`, resolved `toRestaurantName` for both types
+  - **OpenAPI + Codegen**: `BranchTransfer` and `CreateBranchTransfer` schemas updated — `destinationName` added, `toRestaurantId` made optional
+  - **Frontend (Inventory.tsx)**:
+    - **Hybrid "To" field**: Toggle buttons "Branch" / "Location" — branch mode shows restaurant dropdown (excluding source); location mode shows free-text input with datalist of common places (Kitchen, Warehouse, Cold Storage, etc.)
+    - **Available stock display**: When item selected in transfer form, shows `(avail: X.XX)` in quantity label; if qty exceeds available, quantity input turns red with "Exceeds available stock!" warning
+    - **Auto-fill WAC**: Selecting an item auto-fills unit price from average cost + auto-sets unit
+    - **Consumption check**: Client-side guard prevents submitting consumption if qty > available; backend also enforces as double-check
+    - **Error messages**: Now reads `err.data?.error` from `ApiError` (customFetch) instead of `err.response.data.error` — shows full server error messages ("Insufficient stock in source...")
+    - **Transfer list table**: Branch transfers shown in teal badge; location transfers shown in purple with "(internal)" label
+    - **Bug fix**: `PURCHASE_CATEGORY_GROUPS` references corrected from `g.groupLabel/g.categories` to `g.label/g.subcategories` throughout Inventory.tsx (was causing runtime crash)
+
 - **HR Payroll Simplification**: Completely rebuilt the payroll system. Formula: `Net Salary = Basic Salary + Overtime − Deductions − Absences`. Removed all allowances/benefits/GOSI from the payroll form and table. DB: added `overtime`, `deductions`, `absences` columns. The old legacy columns (socialSecurity, laborFees, etc.) remain in DB for data history but are no longer shown.
 - **Staff Expenses category**: Added `staff-expenses` category to the Fixed Expenses page. New "Add Staff Expense" button with types: Iqama Renewal, Visa Fees, Medical Insurance, Travel Ticket, Government Fees, Work Permit, Recruitment Fees. Shown as its own section with orange badge. Included in P&L operating expenses and dashboard overhead totals.
 - **Reports updated**: P&L now shows "Net Salaries (Payroll)" + "Staff Expenses (Iqama, Visa, Insurance, Tickets)" as separate line items. Excel export updated to match.

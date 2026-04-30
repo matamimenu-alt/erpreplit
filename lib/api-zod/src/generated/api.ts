@@ -1127,19 +1127,20 @@ export const ListBranchTransfersQueryParams = zod.object({
 export const ListBranchTransfersResponseItem = zod.object({
   id: zod.number(),
   fromRestaurantId: zod.number(),
-  toRestaurantId: zod.number(),
-  fromRestaurantName: zod.string().optional(),
-  toRestaurantName: zod.string().optional(),
+  toRestaurantId: zod.number().nullish(),
+  destinationName: zod.string().nullish(),
+  fromRestaurantName: zod.string(),
+  toRestaurantName: zod.string(),
   itemName: zod.string(),
   category: zod.string(),
-  subCategory: zod.string().optional(),
+  subCategory: zod.string().nullish(),
   unit: zod.string(),
   quantity: zod.number(),
   unitPrice: zod.number(),
   totalValue: zod.number(),
-  referenceNumber: zod.string().optional(),
+  referenceNumber: zod.string().nullish(),
   transferDate: zod.string(),
-  notes: zod.string().optional(),
+  notes: zod.string().nullish(),
   createdAt: zod.string(),
 });
 export const ListBranchTransfersResponse = zod.array(
@@ -1151,16 +1152,17 @@ export const ListBranchTransfersResponse = zod.array(
  */
 export const CreateBranchTransferBody = zod.object({
   fromRestaurantId: zod.number(),
-  toRestaurantId: zod.number(),
+  toRestaurantId: zod.number().nullish(),
+  destinationName: zod.string().nullish(),
   itemName: zod.string(),
   category: zod.string(),
-  subCategory: zod.string().optional(),
+  subCategory: zod.string().nullish(),
   unit: zod.string(),
   quantity: zod.number(),
   unitPrice: zod.number(),
-  referenceNumber: zod.string().optional(),
+  referenceNumber: zod.string().nullish(),
   transferDate: zod.string(),
-  notes: zod.string().optional(),
+  notes: zod.string().nullish(),
 });
 
 /**

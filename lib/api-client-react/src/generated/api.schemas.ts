@@ -555,34 +555,36 @@ export interface CreateStockMovement {
 export interface BranchTransfer {
   id: number;
   fromRestaurantId: number;
-  toRestaurantId: number;
-  fromRestaurantName?: string;
-  toRestaurantName?: string;
+  toRestaurantId?: number | null;
+  destinationName?: string | null;
+  fromRestaurantName: string;
+  toRestaurantName: string;
   itemName: string;
   category: string;
-  subCategory?: string;
+  subCategory?: string | null;
   unit: string;
   quantity: number;
   unitPrice: number;
   totalValue: number;
-  referenceNumber?: string;
+  referenceNumber?: string | null;
   transferDate: string;
-  notes?: string;
+  notes?: string | null;
   createdAt: string;
 }
 
 export interface CreateBranchTransfer {
   fromRestaurantId: number;
-  toRestaurantId: number;
+  toRestaurantId?: number | null;
+  destinationName?: string | null;
   itemName: string;
   category: string;
-  subCategory?: string;
+  subCategory?: string | null;
   unit: string;
   quantity: number;
   unitPrice: number;
-  referenceNumber?: string;
+  referenceNumber?: string | null;
   transferDate: string;
-  notes?: string;
+  notes?: string | null;
 }
 
 export interface StockItemReport {

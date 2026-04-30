@@ -55,7 +55,7 @@ function today() {
 
 function getCategoryBadge(cat: string) {
   for (const g of PURCHASE_CATEGORY_GROUPS) {
-    if (g.categories.some(c => c.value === cat)) return g.badge;
+    if (g.subcategories.some(c => c.value === cat)) return g.badge;
   }
   return "bg-gray-100 text-gray-700";
 }
@@ -122,8 +122,22 @@ export default function Inventory() {
       return;
     }
     const qty = parseFloat(quantity);
+    if (isNaN(qty) || qty <= 0) {
+      toast({ title: "Quantity must be greater than zero", variant: "destructive" }); return;
+    }
+    // Client-side negative stock check for consumption
+    if (movementType === "consumption") {
+      const match = stockItems.find(i => i.itemName === itemName && i.category === category);
+      if (match && qty > match.currentQuantity + 0.001) {
+        toast({
+          title: `Insufficient stock`,
+          description: `Available: ${match.currentQuantity.toFixed(3)} ${match.unit}, requested: ${qty.toFixed(3)}`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     const price = parseFloat(unitPrice) || 0;
-    // For adjustment-decrease, send negative quantity; for consumption, positive (backend handles direction)
     let finalType = movementType;
     let finalQty = qty;
     if (movementType === "adjustment-decrease") { finalType = "adjustment"; finalQty = -qty; }
@@ -132,13 +146,15 @@ export default function Inventory() {
       await createMovement.mutateAsync({
         data: { itemName, category, unit, movementType: finalType, quantity: finalQty, unitPrice: price, movementDate, notes: notes || undefined },
       });
-      toast({ title: "Movement added successfully" });
+      toast({ title: "Movement recorded successfully" });
       setMovForm(prev => ({ ...prev, itemName: "", quantity: "", unitPrice: "", notes: "" }));
       queryClient.invalidateQueries({ queryKey: getListStockItemsQueryKey({}) });
       queryClient.invalidateQueries({ queryKey: getListStockMovementsQueryKey({}) });
       queryClient.invalidateQueries({ queryKey: getGetStockReportQueryKey({ month: currentMonth() }) });
-    } catch {
-      toast({ title: "Failed to add movement", variant: "destructive" });
+    } catch (err: unknown) {
+      const e = err as { data?: { error?: string }; message?: string };
+      const msg = e.data?.error || e.message || "Failed to add movement";
+      toast({ title: msg, variant: "destructive" });
     }
   };
 
@@ -165,34 +181,76 @@ export default function Inventory() {
   const createTransfer = useCreateBranchTransfer();
   const deleteTransfer = useDeleteBranchTransfer();
 
+  // Destination type: "branch" = restaurant dropdown, "custom" = free-text location
+  const [txDestType, setTxDestType] = useState<"branch" | "custom">("branch");
   const [txForm, setTxForm] = useState({
-    fromRestaurantId: "", toRestaurantId: "", itemName: "", category: "",
+    fromRestaurantId: "", toRestaurantId: "", customDestination: "", itemName: "", category: "",
     unit: "kg", quantity: "", unitPrice: "", referenceNumber: "", transferDate: today(), notes: "",
   });
 
+  // Auto-fill unit price from WAC when item is selected in transfer form
+  useEffect(() => {
+    if (txForm.itemName && txForm.category) {
+      const match = stockItems.find(i => i.itemName === txForm.itemName && i.category === txForm.category);
+      if (match) {
+        setTxForm(prev => ({ ...prev, unit: match.unit, unitPrice: match.avgCost.toFixed(2) }));
+      }
+    }
+  }, [txForm.itemName, txForm.category, stockItems]);
+
+  // Available qty for transfer item
+  const txAvailableQty = useMemo(() => {
+    if (!txForm.itemName || !txForm.category) return null;
+    const match = stockItems.find(i => i.itemName === txForm.itemName && i.category === txForm.category);
+    return match ? match.currentQuantity : null;
+  }, [txForm.itemName, txForm.category, stockItems]);
+
   const handleAddTransfer = async () => {
-    const { fromRestaurantId, toRestaurantId, itemName, category, unit, quantity, unitPrice, referenceNumber, transferDate, notes } = txForm;
-    if (!fromRestaurantId || !toRestaurantId || !itemName || !category || !quantity || !transferDate) {
+    const { fromRestaurantId, toRestaurantId, customDestination, itemName, category, unit, quantity, unitPrice, referenceNumber, transferDate, notes } = txForm;
+    if (!fromRestaurantId || !itemName || !category || !quantity || !transferDate) {
       toast({ title: "Please fill all required fields", variant: "destructive" }); return;
     }
-    if (fromRestaurantId === toRestaurantId) {
-      toast({ title: "From and To branches must be different", variant: "destructive" }); return;
+    if (txDestType === "branch" && !toRestaurantId) {
+      toast({ title: "Please select the destination branch", variant: "destructive" }); return;
+    }
+    if (txDestType === "custom" && !customDestination.trim()) {
+      toast({ title: "Please enter the destination location name", variant: "destructive" }); return;
+    }
+    if (txDestType === "branch" && fromRestaurantId === toRestaurantId) {
+      toast({ title: "Source and destination branch cannot be the same", variant: "destructive" }); return;
+    }
+    const qty = parseFloat(quantity);
+    if (isNaN(qty) || qty <= 0) {
+      toast({ title: "Quantity must be greater than zero", variant: "destructive" }); return;
+    }
+    // Client-side negative stock check
+    if (txAvailableQty !== null && qty > txAvailableQty + 0.001) {
+      toast({
+        title: "Insufficient stock",
+        description: `Available: ${txAvailableQty.toFixed(3)} ${unit}, requested: ${qty.toFixed(3)}`,
+        variant: "destructive",
+      });
+      return;
     }
     try {
       await createTransfer.mutateAsync({
         data: {
-          fromRestaurantId: parseInt(fromRestaurantId), toRestaurantId: parseInt(toRestaurantId),
-          itemName, category, unit, quantity: parseFloat(quantity), unitPrice: parseFloat(unitPrice) || 0,
+          fromRestaurantId: parseInt(fromRestaurantId),
+          toRestaurantId: txDestType === "branch" ? parseInt(toRestaurantId) : undefined,
+          destinationName: txDestType === "custom" ? customDestination.trim() : undefined,
+          itemName, category, unit, quantity: qty, unitPrice: parseFloat(unitPrice) || 0,
           referenceNumber: referenceNumber || undefined, transferDate, notes: notes || undefined,
         },
       });
       toast({ title: "Transfer created successfully" });
-      setTxForm(prev => ({ ...prev, itemName: "", quantity: "", unitPrice: "", referenceNumber: "", notes: "" }));
+      setTxForm(prev => ({ ...prev, itemName: "", category: "", quantity: "", unitPrice: "", referenceNumber: "", notes: "" }));
       queryClient.invalidateQueries({ queryKey: getListStockItemsQueryKey({}) });
       queryClient.invalidateQueries({ queryKey: getListStockMovementsQueryKey({}) });
       queryClient.invalidateQueries({ queryKey: getListBranchTransfersQueryKey({}) });
-    } catch {
-      toast({ title: "Failed to create transfer", variant: "destructive" });
+    } catch (err: unknown) {
+      const e = err as { data?: { error?: string }; message?: string };
+      const msg = e.data?.error || e.message || "Failed to create transfer";
+      toast({ title: msg, variant: "destructive" });
     }
   };
 
@@ -335,7 +393,7 @@ export default function Inventory() {
                   <SelectContent>
                     <SelectItem value="all">All Categories</SelectItem>
                     {PURCHASE_CATEGORY_GROUPS.map(g => (
-                      <SelectItem key={g.color} value={g.color}>{g.groupLabel}</SelectItem>
+                      <SelectItem key={g.color} value={g.color}>{g.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -466,9 +524,9 @@ export default function Inventory() {
                       <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
                       <SelectContent>
                         {PURCHASE_CATEGORY_GROUPS.map(g => (
-                          <div key={g.groupLabel}>
-                            <div className="px-2 pt-2 pb-1 text-xs font-semibold text-gray-500">{g.groupLabel}</div>
-                            {g.categories.map(c => (
+                          <div key={g.label}>
+                            <div className="px-2 pt-2 pb-1 text-xs font-semibold text-gray-500">{g.label}</div>
+                            {g.subcategories.map(c => (
                               <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
                             ))}
                           </div>
@@ -602,23 +660,56 @@ export default function Inventory() {
               <Card>
                 <CardHeader><CardTitle className="text-base flex items-center gap-2"><ArrowLeftRight className="w-4 h-4" /> New Transfer</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
+                  {/* From Branch */}
                   <div>
                     <Label className="text-xs">From Branch *</Label>
                     <Select value={txForm.fromRestaurantId} onValueChange={v => setTxForm(p => ({ ...p, fromRestaurantId: v }))}>
-                      <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Select source branch" /></SelectTrigger>
                       <SelectContent>{allRestaurants.map(r => <SelectItem key={r.id} value={String(r.id)}>{r.name}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
+
+                  {/* Destination — hybrid: Branch or Custom Location */}
                   <div>
-                    <Label className="text-xs">To Branch *</Label>
-                    <Select value={txForm.toRestaurantId} onValueChange={v => setTxForm(p => ({ ...p, toRestaurantId: v }))}>
-                      <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
-                      <SelectContent>{allRestaurants.map(r => <SelectItem key={r.id} value={String(r.id)}>{r.name}</SelectItem>)}</SelectContent>
-                    </Select>
+                    <div className="flex items-center justify-between mb-1">
+                      <Label className="text-xs">To *</Label>
+                      <div className="flex rounded-md border overflow-hidden text-xs">
+                        <button
+                          type="button"
+                          className={`px-2 py-0.5 transition-colors ${txDestType === "branch" ? "bg-amber-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                          onClick={() => setTxDestType("branch")}
+                        >Branch</button>
+                        <button
+                          type="button"
+                          className={`px-2 py-0.5 transition-colors ${txDestType === "custom" ? "bg-amber-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                          onClick={() => setTxDestType("custom")}
+                        >Location</button>
+                      </div>
+                    </div>
+                    {txDestType === "branch" ? (
+                      <Select value={txForm.toRestaurantId} onValueChange={v => setTxForm(p => ({ ...p, toRestaurantId: v }))}>
+                        <SelectTrigger><SelectValue placeholder="Select destination branch" /></SelectTrigger>
+                        <SelectContent>{allRestaurants.filter(r => String(r.id) !== txForm.fromRestaurantId).map(r => <SelectItem key={r.id} value={String(r.id)}>{r.name}</SelectItem>)}</SelectContent>
+                      </Select>
+                    ) : (
+                      <>
+                        <Input
+                          list="tx-dest-suggestions"
+                          placeholder="e.g. Kitchen, Warehouse, Bar Storage..."
+                          value={txForm.customDestination}
+                          onChange={e => setTxForm(p => ({ ...p, customDestination: e.target.value }))}
+                        />
+                        <datalist id="tx-dest-suggestions">
+                          {["Kitchen", "Warehouse", "Cold Storage", "Bar", "Prep Area", "Dry Storage"].map(d => <option key={d} value={d} />)}
+                        </datalist>
+                      </>
+                    )}
                   </div>
+
+                  {/* Item Name */}
                   <div>
                     <Label className="text-xs">Item Name *</Label>
-                    <Input list="tx-item-suggestions" placeholder="Item name" value={txForm.itemName} onChange={e => {
+                    <Input list="tx-item-suggestions" placeholder="Search item..." value={txForm.itemName} onChange={e => {
                       const name = e.target.value;
                       const match = stockItems.find(i => i.itemName === name);
                       if (match) setTxForm(p => ({ ...p, itemName: name, category: match.category, unit: match.unit }));
@@ -626,20 +717,24 @@ export default function Inventory() {
                     }} />
                     <datalist id="tx-item-suggestions">{existingItemNames.map(n => <option key={n} value={n} />)}</datalist>
                   </div>
+
+                  {/* Category */}
                   <div>
                     <Label className="text-xs">Category *</Label>
                     <Select value={txForm.category} onValueChange={v => setTxForm(p => ({ ...p, category: v }))}>
                       <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
                       <SelectContent>
                         {PURCHASE_CATEGORY_GROUPS.map(g => (
-                          <div key={g.groupLabel}>
-                            <div className="px-2 pt-2 pb-1 text-xs font-semibold text-gray-500">{g.groupLabel}</div>
-                            {g.categories.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                          <div key={g.label}>
+                            <div className="px-2 pt-2 pb-1 text-xs font-semibold text-gray-500">{g.label}</div>
+                            {g.subcategories.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
                           </div>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Unit + Quantity */}
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <Label className="text-xs">Unit</Label>
@@ -649,26 +744,55 @@ export default function Inventory() {
                       </Select>
                     </div>
                     <div>
-                      <Label className="text-xs">Quantity *</Label>
-                      <Input type="number" min="0" step="0.001" placeholder="0.000" value={txForm.quantity} onChange={e => setTxForm(p => ({ ...p, quantity: e.target.value }))} />
+                      <Label className="text-xs flex items-center gap-1">
+                        Quantity *
+                        {txAvailableQty !== null && (
+                          <span className={`text-xs font-normal ${txForm.quantity && parseFloat(txForm.quantity) > txAvailableQty ? "text-red-500 font-semibold" : "text-gray-400"}`}>
+                            (avail: {txAvailableQty.toFixed(2)})
+                          </span>
+                        )}
+                      </Label>
+                      <Input
+                        type="number" min="0" step="0.001" placeholder="0.000"
+                        value={txForm.quantity}
+                        onChange={e => setTxForm(p => ({ ...p, quantity: e.target.value }))}
+                        className={txAvailableQty !== null && txForm.quantity && parseFloat(txForm.quantity) > txAvailableQty ? "border-red-400 focus:ring-red-400" : ""}
+                      />
+                      {txAvailableQty !== null && txForm.quantity && parseFloat(txForm.quantity) > txAvailableQty && (
+                        <p className="text-red-500 text-xs mt-0.5">Exceeds available stock!</p>
+                      )}
                     </div>
                   </div>
+
+                  {/* Unit Price — auto-filled from WAC */}
                   <div>
-                    <Label className="text-xs">Unit Price (SAR)</Label>
+                    <Label className="text-xs flex items-center gap-1">
+                      Unit Price (SAR)
+                      {txForm.itemName && txForm.category && txForm.unitPrice && (
+                        <span className="text-xs text-amber-600 font-normal">(auto-filled from avg cost)</span>
+                      )}
+                    </Label>
                     <Input type="number" min="0" step="0.01" placeholder="0.00" value={txForm.unitPrice} onChange={e => setTxForm(p => ({ ...p, unitPrice: e.target.value }))} />
                   </div>
+
+                  {/* Date */}
                   <div>
                     <Label className="text-xs">Date *</Label>
                     <Input type="date" value={txForm.transferDate} onChange={e => setTxForm(p => ({ ...p, transferDate: e.target.value }))} />
                   </div>
+
+                  {/* Reference */}
                   <div>
                     <Label className="text-xs">Reference Number</Label>
                     <Input placeholder="e.g. TRF-001" value={txForm.referenceNumber} onChange={e => setTxForm(p => ({ ...p, referenceNumber: e.target.value }))} />
                   </div>
+
+                  {/* Notes */}
                   <div>
                     <Label className="text-xs">Notes</Label>
                     <Input placeholder="Optional notes..." value={txForm.notes} onChange={e => setTxForm(p => ({ ...p, notes: e.target.value }))} />
                   </div>
+
                   <Button className="w-full" onClick={handleAddTransfer} disabled={createTransfer.isPending}>
                     <ArrowLeftRight className="w-4 h-4 mr-1" /> {createTransfer.isPending ? "Processing..." : "Create Transfer"}
                   </Button>
@@ -703,29 +827,37 @@ export default function Inventory() {
                       </tr>
                     </thead>
                     <tbody>
-                      {transfers.map(t => (
-                        <tr key={t.id} className="border-t hover:bg-gray-50">
-                          <td className="p-2 whitespace-nowrap">{t.transferDate}</td>
-                          <td className="p-2 text-gray-500 text-xs">{t.referenceNumber ?? `#${t.id}`}</td>
-                          <td className="p-2">
-                            <span className="px-2 py-0.5 rounded bg-orange-100 text-orange-800 text-xs">{t.fromRestaurantName}</span>
-                          </td>
-                          <td className="p-2">
-                            <span className="px-2 py-0.5 rounded bg-teal-100 text-teal-800 text-xs">{t.toRestaurantName}</span>
-                          </td>
-                          <td className="p-2 font-medium">{t.itemName}</td>
-                          <td className="p-2 text-right">{t.quantity.toFixed(2)} <span className="text-gray-400 text-xs">{t.unit}</span></td>
-                          <td className="p-2 text-right">{t.unitPrice > 0 ? formatSAR(t.unitPrice) : "—"}</td>
-                          <td className="p-2 text-right font-medium">{formatSAR(t.totalValue)}</td>
-                          <td className="p-2 text-gray-500 text-xs max-w-[100px] truncate">{t.notes ?? "—"}</td>
-                          <td className="p-2">
-                            <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500 hover:text-red-700"
-                              onClick={() => handleDeleteTransfer(t.id)}>
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
+                      {transfers.map(t => {
+                        const isBranchTransfer = !!t.toRestaurantId && !t.destinationName;
+                        return (
+                          <tr key={t.id} className="border-t hover:bg-gray-50">
+                            <td className="p-2 whitespace-nowrap">{t.transferDate}</td>
+                            <td className="p-2 text-gray-500 text-xs">{t.referenceNumber ?? `#${t.id}`}</td>
+                            <td className="p-2">
+                              <span className="px-2 py-0.5 rounded bg-orange-100 text-orange-800 text-xs">{t.fromRestaurantName}</span>
+                            </td>
+                            <td className="p-2">
+                              <span className={`px-2 py-0.5 rounded text-xs ${isBranchTransfer ? "bg-teal-100 text-teal-800" : "bg-purple-100 text-purple-800"}`}>
+                                {t.toRestaurantName}
+                              </span>
+                              {!isBranchTransfer && (
+                                <span className="ml-1 text-xs text-gray-400">(internal)</span>
+                              )}
+                            </td>
+                            <td className="p-2 font-medium">{t.itemName}</td>
+                            <td className="p-2 text-right">{t.quantity.toFixed(2)} <span className="text-gray-400 text-xs">{t.unit}</span></td>
+                            <td className="p-2 text-right">{t.unitPrice > 0 ? formatSAR(t.unitPrice) : "—"}</td>
+                            <td className="p-2 text-right font-medium">{formatSAR(t.totalValue)}</td>
+                            <td className="p-2 text-gray-500 text-xs max-w-[100px] truncate">{t.notes ?? "—"}</td>
+                            <td className="p-2">
+                              <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500 hover:text-red-700"
+                                onClick={() => handleDeleteTransfer(t.id)}>
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -748,7 +880,7 @@ export default function Inventory() {
                   <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Categories</SelectItem>
-                    {PURCHASE_CATEGORY_GROUPS.map(g => <SelectItem key={g.color} value={g.color}>{g.groupLabel}</SelectItem>)}
+                    {PURCHASE_CATEGORY_GROUPS.map(g => <SelectItem key={g.color} value={g.color}>{g.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>

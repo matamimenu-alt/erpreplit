@@ -8,14 +8,15 @@
 
 export interface CreateBranchTransfer {
   fromRestaurantId: number;
-  toRestaurantId: number;
+  toRestaurantId?: number | null;
+  destinationName?: string | null;
   itemName: string;
   category: string;
-  subCategory?: string;
+  subCategory?: string | null;
   unit: string;
   quantity: number;
   unitPrice: number;
-  referenceNumber?: string;
+  referenceNumber?: string | null;
   transferDate: string;
-  notes?: string;
+  notes?: string | null;
 }

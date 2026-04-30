@@ -207,6 +207,20 @@ router.get("/movements", async (req, res) => {
   }
 });
 
+/** Get current stock quantity for a specific item in a restaurant */
+async function getCurrentStockQty(restaurantId: number, itemName: string, category: string): Promise<number> {
+  const movements = await db.select()
+    .from(stockMovementsTable)
+    .where(and(
+      eq(stockMovementsTable.restaurantId, restaurantId),
+      eq(stockMovementsTable.itemName, itemName),
+      eq(stockMovementsTable.category, category)
+    ));
+  movements.sort((a, b) => a.movementDate.localeCompare(b.movementDate));
+  const { qty } = computeWAC(movements);
+  return qty;
+}
+
 // POST /api/stock/movements (manual: consumption, adjustment, opening balance)
 router.post("/movements", async (req, res) => {
   try {
@@ -215,9 +229,18 @@ router.post("/movements", async (req, res) => {
 
     const qty = parseFloat(String(quantity));
     const price = parseFloat(String(unitPrice)) || 0;
-    // For consumption and transfer-out, quantity should be stored as negative convention
-    // But in our DB we store positive and use movementType to determine direction for display
-    // The aggregation logic handles direction by movementType
+
+    // Negative stock check for consumption
+    if (movementType === "consumption") {
+      const available = await getCurrentStockQty(restaurantId, itemName, category);
+      if (qty > available + 0.001) {
+        return res.status(400).json({
+          error: `Insufficient stock. Available: ${available.toFixed(3)}, requested: ${qty.toFixed(3)}.`,
+          available,
+        });
+      }
+    }
+
     const [record] = await db.insert(stockMovementsTable).values({
       restaurantId,
       itemName,
@@ -274,24 +297,29 @@ router.get("/transfers", async (req, res) => {
     if (dateFrom) transfers = transfers.filter(t => t.transferDate >= dateFrom);
     if (dateTo) transfers = transfers.filter(t => t.transferDate <= dateTo);
 
-    res.json(transfers.map(t => ({
-      id: t.id,
-      fromRestaurantId: t.fromRestaurantId,
-      toRestaurantId: t.toRestaurantId,
-      fromRestaurantName: restaurantMap.get(t.fromRestaurantId) ?? String(t.fromRestaurantId),
-      toRestaurantName: restaurantMap.get(t.toRestaurantId) ?? String(t.toRestaurantId),
-      itemName: t.itemName,
-      category: t.category,
-      subCategory: t.subCategory ?? undefined,
-      unit: t.unit,
-      quantity: toNum(t.quantity),
-      unitPrice: toNum(t.unitPrice),
-      totalValue: toNum(t.quantity) * toNum(t.unitPrice),
-      referenceNumber: t.referenceNumber ?? undefined,
-      transferDate: t.transferDate,
-      notes: t.notes ?? undefined,
-      createdAt: t.createdAt.toISOString(),
-    })));
+    res.json(transfers.map(t => {
+      const destName = t.destinationName
+        ?? (t.toRestaurantId ? (restaurantMap.get(t.toRestaurantId) ?? String(t.toRestaurantId)) : "Unknown");
+      return {
+        id: t.id,
+        fromRestaurantId: t.fromRestaurantId,
+        toRestaurantId: t.toRestaurantId ?? undefined,
+        destinationName: t.destinationName ?? undefined,
+        fromRestaurantName: restaurantMap.get(t.fromRestaurantId) ?? String(t.fromRestaurantId),
+        toRestaurantName: destName,
+        itemName: t.itemName,
+        category: t.category,
+        subCategory: t.subCategory ?? undefined,
+        unit: t.unit,
+        quantity: toNum(t.quantity),
+        unitPrice: toNum(t.unitPrice),
+        totalValue: toNum(t.quantity) * toNum(t.unitPrice),
+        referenceNumber: t.referenceNumber ?? undefined,
+        transferDate: t.transferDate,
+        notes: t.notes ?? undefined,
+        createdAt: t.createdAt.toISOString(),
+      };
+    }));
   } catch (err) {
     req.log.error({ err }, "Error listing branch transfers");
     res.status(500).json({ error: "Internal server error" });
@@ -301,15 +329,50 @@ router.get("/transfers", async (req, res) => {
 // POST /api/stock/transfers
 router.post("/transfers", async (req, res) => {
   try {
-    const { fromRestaurantId, toRestaurantId, itemName, category, subCategory, unit, quantity, unitPrice, referenceNumber, transferDate, notes } = req.body;
+    const fromRestaurantIdRaw = req.body.fromRestaurantId;
+    const toRestaurantIdRaw = req.body.toRestaurantId;
+    const destinationNameRaw: string | undefined = req.body.destinationName;
+    const { itemName, category, subCategory, unit, quantity, unitPrice, referenceNumber, transferDate, notes } = req.body;
+
+    const fromId = parseInt(String(fromRestaurantIdRaw));
+    const toId = toRestaurantIdRaw ? parseInt(String(toRestaurantIdRaw)) : null;
+    const destName = destinationNameRaw?.trim() || null;
+
+    // Must have either a branch destination or a free-text destination
+    if (!toId && !destName) {
+      return res.status(400).json({ error: "Either 'toRestaurantId' or 'destinationName' is required." });
+    }
+    // Cannot transfer to self via branch transfer
+    if (toId && toId === fromId) {
+      return res.status(400).json({ error: "Source and destination branch cannot be the same." });
+    }
 
     const qty = parseFloat(String(quantity));
     const price = parseFloat(String(unitPrice)) || 0;
     const totalValue = qty * price;
 
+    if (!qty || qty <= 0) {
+      return res.status(400).json({ error: "Quantity must be greater than zero." });
+    }
+
+    // ── Negative stock check ──────────────────────────────────────────
+    const available = await getCurrentStockQty(fromId, itemName, category);
+    if (qty > available + 0.001) {
+      return res.status(400).json({
+        error: `Insufficient stock in source. Available: ${available.toFixed(3)}, requested: ${qty.toFixed(3)}.`,
+        available,
+      });
+    }
+
+    const allRestaurants = await db.select().from(restaurantsTable);
+    const restaurantMap = new Map(allRestaurants.map(r => [r.id, r.name]));
+    const fromName = restaurantMap.get(fromId) ?? String(fromId);
+    const resolvedDestName = destName ?? (toId ? (restaurantMap.get(toId) ?? String(toId)) : "Unknown");
+
     const [transfer] = await db.insert(branchTransfersTable).values({
-      fromRestaurantId: parseInt(String(fromRestaurantId)),
-      toRestaurantId: parseInt(String(toRestaurantId)),
+      fromRestaurantId: fromId,
+      toRestaurantId: toId,
+      destinationName: destName,
       itemName,
       category,
       subCategory: subCategory || null,
@@ -321,25 +384,28 @@ router.post("/transfers", async (req, res) => {
       notes: notes || null,
     }).returning();
 
-    // Auto-create stock movements for both branches
-    const moveValues = [
-      {
-        restaurantId: parseInt(String(fromRestaurantId)),
-        itemName,
-        category,
-        subCategory: subCategory || null,
-        unit: unit || "unit",
-        movementType: "transfer-out",
-        quantity: String(qty.toFixed(3)),
-        unitPrice: String(price.toFixed(2)),
-        totalValue: String(totalValue.toFixed(2)),
-        movementDate: transferDate,
-        referenceType: "transfer",
-        referenceId: transfer.id,
-        notes: `Transfer to ${toRestaurantId} - Ref: ${referenceNumber || transfer.id}`,
-      },
-      {
-        restaurantId: parseInt(String(toRestaurantId)),
+    // Build stock movements
+    const ref = referenceNumber || `TRF-${transfer.id}`;
+    const outMovement = {
+      restaurantId: fromId,
+      itemName,
+      category,
+      subCategory: subCategory || null,
+      unit: unit || "unit",
+      movementType: "transfer-out",
+      quantity: String(qty.toFixed(3)),
+      unitPrice: String(price.toFixed(2)),
+      totalValue: String(totalValue.toFixed(2)),
+      movementDate: transferDate,
+      referenceType: "transfer",
+      referenceId: transfer.id,
+      notes: `Transfer to ${resolvedDestName} — Ref: ${ref}`,
+    };
+
+    if (toId) {
+      // Branch-to-branch: create transfer-out and transfer-in
+      const inMovement = {
+        restaurantId: toId,
         itemName,
         category,
         subCategory: subCategory || null,
@@ -351,20 +417,21 @@ router.post("/transfers", async (req, res) => {
         movementDate: transferDate,
         referenceType: "transfer",
         referenceId: transfer.id,
-        notes: `Transfer from ${fromRestaurantId} - Ref: ${referenceNumber || transfer.id}`,
-      },
-    ];
-    await db.insert(stockMovementsTable).values(moveValues);
-
-    const allRestaurants = await db.select().from(restaurantsTable);
-    const restaurantMap = new Map(allRestaurants.map(r => [r.id, r.name]));
+        notes: `Transfer from ${fromName} — Ref: ${ref}`,
+      };
+      await db.insert(stockMovementsTable).values([outMovement, inMovement]);
+    } else {
+      // Internal transfer (warehouse/kitchen/etc.) — only deduct from source
+      await db.insert(stockMovementsTable).values([outMovement]);
+    }
 
     res.status(201).json({
       id: transfer.id,
       fromRestaurantId: transfer.fromRestaurantId,
-      toRestaurantId: transfer.toRestaurantId,
-      fromRestaurantName: restaurantMap.get(transfer.fromRestaurantId) ?? String(transfer.fromRestaurantId),
-      toRestaurantName: restaurantMap.get(transfer.toRestaurantId) ?? String(transfer.toRestaurantId),
+      toRestaurantId: transfer.toRestaurantId ?? undefined,
+      destinationName: transfer.destinationName ?? undefined,
+      fromRestaurantName: fromName,
+      toRestaurantName: resolvedDestName,
       itemName: transfer.itemName,
       category: transfer.category,
       subCategory: transfer.subCategory ?? undefined,
