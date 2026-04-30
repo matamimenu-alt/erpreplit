@@ -1938,6 +1938,15 @@ components:
           type: number
         adjustedCOGS:
           type: number
+        transfersInCost:
+          type: number
+          description: Total cost of items received from other internal branches (adds to COGS)
+        transfersOutCost:
+          type: number
+          description: Total cost of items sent to other internal branches (reduces COGS)
+        netTransferCOGS:
+          type: number
+          description: Net transfer impact on COGS (transfersInCost - transfersOutCost)
         grossProfit:
           type: number
         grossMarginPercent:

@@ -433,6 +433,12 @@ export interface PLReport {
   adjustedBeverageCost: number;
   adjustedOtherCost: number;
   adjustedCOGS: number;
+  /** Total cost of items received from other internal branches (adds to COGS) */
+  transfersInCost?: number;
+  /** Total cost of items sent to other internal branches (reduces COGS) */
+  transfersOutCost?: number;
+  /** Net transfer impact on COGS (transfersInCost - transfersOutCost) */
+  netTransferCOGS?: number;
   grossProfit: number;
   grossMarginPercent: number;
   foodCostPercent: number;

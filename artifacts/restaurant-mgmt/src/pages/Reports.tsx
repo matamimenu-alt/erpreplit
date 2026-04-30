@@ -291,10 +291,25 @@ export default function Reports() {
                         <Row label="Closing Beverage Inventory" value={-(pl?.closingBeverageInventory ?? 0)} indent percent={totalRevenue ? ((pl?.closingBeverageInventory ?? 0) / totalRevenue * 100) : 0} />
                         <Row label="Closing General Inventory" value={-(pl?.closingGeneralInventory ?? 0)} indent percent={totalRevenue ? ((pl?.closingGeneralInventory ?? 0) / totalRevenue * 100) : 0} />
                         <Row label="Total Inventory Deduction" value={-(pl?.totalInventoryAdjustment ?? 0)} bold highlight="neutral" percent={totalRevenue ? ((pl?.totalInventoryAdjustment ?? 0) / totalRevenue * 100) : 0} />
-                        <Div />
-                        <Row label="Adjusted COGS (After Inventory)" value={pl?.adjustedCOGS ?? pl?.totalCOGS ?? 0} bold highlight="neutral" percent={totalRevenue ? ((pl?.adjustedCOGS ?? pl?.totalCOGS ?? 0) / totalRevenue * 100) : 0} />
                       </>
                     )}
+
+                    {/* Internal Branch Transfers impact */}
+                    {((pl?.transfersInCost ?? 0) > 0 || (pl?.transfersOutCost ?? 0) > 0) && (
+                      <>
+                        <Div />
+                        <SH title="Internal Branch Transfers (COGS Impact)" />
+                        {(pl?.transfersInCost ?? 0) > 0 && (
+                          <Row label="Received from Other Branches (+COGS)" value={pl?.transfersInCost ?? 0} indent percent={totalRevenue ? ((pl?.transfersInCost ?? 0) / totalRevenue * 100) : 0} />
+                        )}
+                        {(pl?.transfersOutCost ?? 0) > 0 && (
+                          <Row label="Sent to Other Branches (−COGS Credit)" value={-(pl?.transfersOutCost ?? 0)} indent percent={totalRevenue ? ((pl?.transfersOutCost ?? 0) / totalRevenue * 100) : 0} />
+                        )}
+                      </>
+                    )}
+
+                    <Div />
+                    <Row label="Adjusted COGS (Purchases + Transfers − Inventory)" value={pl?.adjustedCOGS ?? pl?.totalCOGS ?? 0} bold highlight="neutral" percent={totalRevenue ? ((pl?.adjustedCOGS ?? pl?.totalCOGS ?? 0) / totalRevenue * 100) : 0} />
                     <Div />
 
                     {/* GROSS PROFIT */}

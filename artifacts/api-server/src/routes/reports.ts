@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { salesTable, purchasesTable, employeesTable, expensesTable, inventoryTable } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { salesTable, purchasesTable, employeesTable, expensesTable, inventoryTable, branchTransfersTable } from "@workspace/db/schema";
+import { eq, and, or, isNotNull } from "drizzle-orm";
 import { getRestaurantId } from "../lib/restaurant";
 
 const router: IRouter = Router();
@@ -209,8 +209,6 @@ router.get("/pl", async (req, res) => {
     const adjustedOtherCost    = Math.max(0, otherCost - closingGeneralInventory);
     const adjustedCOGS         = openingInventory + adjustedFoodCost + adjustedBeverageCost + adjustedOtherCost;
 
-    const grossProfit = totalRevenue - adjustedCOGS;
-
     // Purchase Operating Expenses
     const fuelEnergyCost    = purchaseRecords.filter(r => isFuelCost(r.category)).reduce((s, r) => s + toNum(r.amountBeforeVat), 0);
     const maintenanceCost   = purchaseRecords.filter(r => isMaintenanceCost(r.category)).reduce((s, r) => s + toNum(r.amountBeforeVat), 0);
@@ -232,6 +230,39 @@ router.get("/pl", async (req, res) => {
     const totalFixedExpenses  = expenses.filter(e => (e.category ?? "fixed") === "fixed").reduce((s, e) => s + toNum(e.monthlyCost), 0);
     const totalStaffExpenses  = expenses.filter(e => e.category === "staff-expenses").reduce((s, e) => s + toNum(e.monthlyCost), 0);
     const totalAppCommissions = expenses.filter(e => e.category === "app-commission").reduce((s, e) => s + toNum(e.monthlyCost), 0);
+
+    // ── Internal Branch Transfers impact on COGS ──────────────────────────────
+    // Incoming transfers = this branch received goods from another branch → adds to this branch's COGS
+    // Outgoing transfers (to another internal branch) = goods left → credits back from this branch's COGS
+    // External/free-text destinations (destinationName only) are NOT credited — they are treated as consumption
+    let allTransfersForRestaurant = await db.select()
+      .from(branchTransfersTable)
+      .where(or(
+        eq(branchTransfersTable.fromRestaurantId, restaurantId),
+        eq(branchTransfersTable.toRestaurantId, restaurantId)
+      ));
+
+    if (month) {
+      allTransfersForRestaurant = allTransfersForRestaurant.filter(t => t.transferDate.startsWith(month));
+    }
+
+    // Items received from other internal branches (toRestaurantId = this restaurant)
+    const transfersInCost = allTransfersForRestaurant
+      .filter(t => t.toRestaurantId === restaurantId)
+      .reduce((s, t) => s + toNum(t.quantity) * toNum(t.unitPrice), 0);
+
+    // Items sent to other internal branches (fromRestaurantId = this restaurant, toRestaurantId is set = internal)
+    const transfersOutCost = allTransfersForRestaurant
+      .filter(t => t.fromRestaurantId === restaurantId && t.toRestaurantId !== null && t.toRestaurantId !== restaurantId)
+      .reduce((s, t) => s + toNum(t.quantity) * toNum(t.unitPrice), 0);
+
+    // Net transfer impact on COGS: received adds cost, sent-to-branch removes cost (items are destination's expense now)
+    const netTransferCOGS = transfersInCost - transfersOutCost;
+
+    // Final adjusted COGS includes transfer impact
+    const finalAdjustedCOGS = adjustedCOGS + netTransferCOGS;
+
+    const grossProfit = totalRevenue - finalAdjustedCOGS;
 
     const totalOperatingExpenses = totalLaborCost + totalPurchaseOpex + totalFixedExpenses + totalStaffExpenses + totalAppCommissions;
     const operatingProfit = grossProfit - totalOperatingExpenses;
@@ -269,8 +300,12 @@ router.get("/pl", async (req, res) => {
       adjustedFoodCost: +adjustedFoodCost.toFixed(2),
       adjustedBeverageCost: +adjustedBeverageCost.toFixed(2),
       adjustedOtherCost: +adjustedOtherCost.toFixed(2),
-      adjustedCOGS: +adjustedCOGS.toFixed(2),
-      // Gross Profit (after inventory adjustment)
+      adjustedCOGS: +finalAdjustedCOGS.toFixed(2),
+      // Transfer impact on COGS
+      transfersInCost: +transfersInCost.toFixed(2),
+      transfersOutCost: +transfersOutCost.toFixed(2),
+      netTransferCOGS: +netTransferCOGS.toFixed(2),
+      // Gross Profit (after inventory adjustment + transfers)
       grossProfit: +grossProfit.toFixed(2),
       grossMarginPercent: pct(grossProfit, totalRevenue),
       foodCostPercent: pct(adjustedFoodCost, foodSales),

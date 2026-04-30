@@ -355,6 +355,13 @@ router.post("/transfers", async (req, res) => {
       return res.status(400).json({ error: "Quantity must be greater than zero." });
     }
 
+    // ── Require unit price for internal branch transfers (needed for P&L COGS) ──
+    if (toId && (!price || price <= 0)) {
+      return res.status(400).json({
+        error: "Unit price (cost) is required for internal branch transfers. It is used to calculate the branch P&L (Cost of Sales). Please ensure the WAC-based cost is filled in.",
+      });
+    }
+
     // ── Negative stock check ──────────────────────────────────────────
     const available = await getCurrentStockQty(fromId, itemName, category);
     if (qty > available + 0.001) {

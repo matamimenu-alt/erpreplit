@@ -948,6 +948,24 @@ export const GetPLReportResponse = zod.object({
   adjustedBeverageCost: zod.number(),
   adjustedOtherCost: zod.number(),
   adjustedCOGS: zod.number(),
+  transfersInCost: zod
+    .number()
+    .optional()
+    .describe(
+      "Total cost of items received from other internal branches (adds to COGS)",
+    ),
+  transfersOutCost: zod
+    .number()
+    .optional()
+    .describe(
+      "Total cost of items sent to other internal branches (reduces COGS)",
+    ),
+  netTransferCOGS: zod
+    .number()
+    .optional()
+    .describe(
+      "Net transfer impact on COGS (transfersInCost - transfersOutCost)",
+    ),
   grossProfit: zod.number(),
   grossMarginPercent: zod.number(),
   foodCostPercent: zod.number(),

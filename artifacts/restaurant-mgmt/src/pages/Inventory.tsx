@@ -224,6 +224,18 @@ export default function Inventory() {
     if (isNaN(qty) || qty <= 0) {
       toast({ title: "Quantity must be greater than zero", variant: "destructive" }); return;
     }
+    // For internal branch transfers, unit price is required (used in P&L COGS calculation)
+    if (txDestType === "branch") {
+      const price = parseFloat(unitPrice);
+      if (!price || price <= 0) {
+        toast({
+          title: "Unit price required for branch transfers",
+          description: "The cost price is needed to calculate Cost of Sales (COGS) in each branch's P&L. The WAC is auto-filled when you select an item.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     // Client-side negative stock check
     if (txAvailableQty !== null && qty > txAvailableQty + 0.001) {
       toast({
@@ -765,15 +777,31 @@ export default function Inventory() {
                     </div>
                   </div>
 
-                  {/* Unit Price — auto-filled from WAC */}
+                  {/* Unit Price — auto-filled from WAC, required for branch transfers */}
                   <div>
                     <Label className="text-xs flex items-center gap-1">
                       Unit Price (SAR)
+                      {txDestType === "branch" && <span className="text-red-500">*</span>}
                       {txForm.itemName && txForm.category && txForm.unitPrice && (
                         <span className="text-xs text-amber-600 font-normal">(auto-filled from avg cost)</span>
                       )}
                     </Label>
-                    <Input type="number" min="0" step="0.01" placeholder="0.00" value={txForm.unitPrice} onChange={e => setTxForm(p => ({ ...p, unitPrice: e.target.value }))} />
+                    <Input
+                      type="number" min="0" step="0.01" placeholder="0.00"
+                      value={txForm.unitPrice}
+                      onChange={e => setTxForm(p => ({ ...p, unitPrice: e.target.value }))}
+                      className={txDestType === "branch" && (!txForm.unitPrice || parseFloat(txForm.unitPrice) <= 0) ? "border-amber-400" : ""}
+                    />
+                    {txDestType === "branch" && (
+                      <p className="text-xs text-amber-600 mt-0.5">
+                        Required — used to record Cost of Sales in the destination branch's P&amp;L.
+                      </p>
+                    )}
+                    {txForm.unitPrice && txForm.quantity && (
+                      <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                        Total cost: SAR {(parseFloat(txForm.unitPrice || "0") * parseFloat(txForm.quantity || "0")).toFixed(2)}
+                      </p>
+                    )}
                   </div>
 
                   {/* Date */}
@@ -838,17 +866,21 @@ export default function Inventory() {
                               <span className="px-2 py-0.5 rounded bg-orange-100 text-orange-800 text-xs">{t.fromRestaurantName}</span>
                             </td>
                             <td className="p-2">
-                              <span className={`px-2 py-0.5 rounded text-xs ${isBranchTransfer ? "bg-teal-100 text-teal-800" : "bg-purple-100 text-purple-800"}`}>
-                                {t.toRestaurantName}
-                              </span>
-                              {!isBranchTransfer && (
-                                <span className="ml-1 text-xs text-gray-400">(internal)</span>
-                              )}
+                              <div className="flex flex-col gap-0.5">
+                                <span className={`px-2 py-0.5 rounded text-xs w-fit ${isBranchTransfer ? "bg-teal-100 text-teal-800" : "bg-purple-100 text-purple-800"}`}>
+                                  {t.toRestaurantName}
+                                </span>
+                                {isBranchTransfer ? (
+                                  <span className="text-xs text-emerald-600 font-medium">✓ Affects P&amp;L</span>
+                                ) : (
+                                  <span className="text-xs text-gray-400">Free-text location</span>
+                                )}
+                              </div>
                             </td>
                             <td className="p-2 font-medium">{t.itemName}</td>
                             <td className="p-2 text-right">{t.quantity.toFixed(2)} <span className="text-gray-400 text-xs">{t.unit}</span></td>
                             <td className="p-2 text-right">{t.unitPrice > 0 ? formatSAR(t.unitPrice) : "—"}</td>
-                            <td className="p-2 text-right font-medium">{formatSAR(t.totalValue)}</td>
+                            <td className={`p-2 text-right font-semibold ${isBranchTransfer && t.totalValue > 0 ? "text-rose-700" : ""}`}>{formatSAR(t.totalValue)}</td>
                             <td className="p-2 text-gray-500 text-xs max-w-[100px] truncate">{t.notes ?? "—"}</td>
                             <td className="p-2">
                               <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500 hover:text-red-700"
