@@ -19,6 +19,20 @@ import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { useRestaurant } from "@/contexts/RestaurantContext";
 
+const PAGE_TITLES: Record<string, string> = {
+  "/": "Financial Dashboard",
+  "/sales": "Sales & Revenue",
+  "/purchases": "Purchases",
+  "/suppliers": "Suppliers",
+  "/supplier-prices": "Price Comparison",
+  "/employees": "HR & Employees",
+  "/expenses": "Fixed Expenses",
+  "/inventory": "Inventory",
+  "/food-cost": "Food Cost & Pricing",
+  "/vat-report": "ZATCA VAT Report",
+  "/reports": "Financial Reports",
+};
+
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -91,11 +105,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { activeRestaurant } = useRestaurant();
+  const pageTitle = PAGE_TITLES[location] ?? "Report";
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       {/* Sidebar - Desktop */}
-      <aside className="hidden md:flex flex-col w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-xl z-20">
+      <aside className="no-print hidden md:flex flex-col w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-xl z-20">
         <div className="p-6 pb-4 flex items-center gap-3">
           <div className="bg-primary/20 p-2 rounded-xl text-primary-foreground">
             <UtensilsCrossed className="w-6 h-6" />
@@ -133,14 +148,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          className="no-print fixed inset-0 bg-black/50 z-40 md:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
       {/* Sidebar - Mobile */}
       <aside className={cn(
-        "fixed inset-y-0 left-0 w-64 bg-sidebar text-sidebar-foreground z-50 transform transition-transform duration-300 md:hidden",
+        "no-print fixed inset-y-0 left-0 w-64 bg-sidebar text-sidebar-foreground z-50 transform transition-transform duration-300 md:hidden",
         mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="p-6 pb-4 flex items-center gap-3 border-b border-sidebar-border/50">
@@ -174,7 +189,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* Mobile Header */}
-        <header className="md:hidden bg-white border-b px-4 py-3 flex items-center justify-between shadow-sm z-10">
+        <header className="no-print md:hidden bg-white border-b px-4 py-3 flex items-center justify-between shadow-sm z-10">
           <div className="flex items-center gap-2">
             <UtensilsCrossed className="w-5 h-5 text-primary" />
             <div>
@@ -194,6 +209,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Scrollable Page Area */}
         <main className="flex-1 overflow-y-auto p-4 md:p-8 w-full max-w-7xl mx-auto">
+          {/* Print Document Header — hidden on screen, visible when printing */}
+          <div className="print-only print-doc-header">
+            <div>
+              <div className="print-doc-header__title">Gourmet Ledger — {pageTitle}</div>
+              <div className="print-doc-header__sub">
+                {activeRestaurant?.name ?? "All Restaurants"}
+              </div>
+            </div>
+            <div className="print-doc-header__meta">
+              <div>Printed: {new Date().toLocaleDateString("en-SA", { year: "numeric", month: "long", day: "numeric" })}</div>
+              <div>{new Date().toLocaleTimeString("en-SA", { hour: "2-digit", minute: "2-digit" })}</div>
+            </div>
+          </div>
+
           <div className="animate-in fade-in duration-500 slide-in-from-bottom-4">
             {children}
           </div>

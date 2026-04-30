@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useGetDashboardSummary } from "@workspace/api-client-react";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PrintButton } from "@/components/ui/PrintButton";
 import { formatSAR, formatMonth } from "@/lib/format";
 import { 
   TrendingUp, 
@@ -79,12 +80,15 @@ export default function Dashboard() {
         title="Financial Dashboard" 
         description={`Overview for ${formatMonth(month)}`}
         action={
-          <input 
-            type="month" 
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-            className="px-4 py-2 border rounded-xl shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-          />
+          <div className="flex gap-2 items-center">
+            <input 
+              type="month" 
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+              className="no-print px-4 py-2 border rounded-xl shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+            />
+            <PrintButton />
+          </div>
         }
       />
 

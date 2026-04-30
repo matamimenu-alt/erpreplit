@@ -114,3 +114,186 @@
     @apply font-display tracking-tight;
   }
 }
+
+/* ─── Print-only helper (hidden on screen) ─────────────────────────────────── */
+.print-only {
+  display: none !important;
+}
+
+/* ─── Print Styles ──────────────────────────────────────────────────────────── */
+@media print {
+
+  /* ── Reset & Base ── */
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body {
+    background: white !important;
+    font-size: 12px !important;
+    color: #1e293b !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* ── Hide UI chrome ── */
+  aside,
+  header,
+  .no-print {
+    display: none !important;
+  }
+
+  /* ── Show print-only elements ── */
+  .print-only {
+    display: block !important;
+  }
+
+  /* ── Layout: full-width, remove overflow constraints ── */
+  html,
+  body,
+  #root {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .flex-1.flex.flex-col.h-screen,
+  .flex-1.flex.flex-col {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  main {
+    padding: 0 !important;
+    overflow: visible !important;
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  .overflow-x-auto,
+  .overflow-y-auto,
+  .overflow-hidden,
+  .overflow-auto {
+    overflow: visible !important;
+  }
+
+  /* ── Remove visual decorations ── */
+  .shadow-xl,
+  .shadow-lg,
+  .shadow-md,
+  .shadow-sm,
+  .shadow {
+    box-shadow: none !important;
+  }
+
+  .animate-in,
+  .animate-pulse,
+  .animate-spin {
+    animation: none !important;
+  }
+
+  /* ── Table styles: professional & paginated ── */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto !important;
+    font-size: 11px !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tfoot {
+    display: table-footer-group !important;
+  }
+
+  tbody {
+    display: table-row-group !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    page-break-after: auto !important;
+  }
+
+  th {
+    background-color: #f8fafc !important;
+    font-weight: 700 !important;
+    padding: 7px 10px !important;
+    border-bottom: 2px solid #cbd5e1 !important;
+    text-align: left !important;
+    font-size: 10px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    color: #475569 !important;
+  }
+
+  td {
+    padding: 6px 10px !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    vertical-align: middle !important;
+  }
+
+  /* ── Cards ── */
+  .rounded-xl,
+  .rounded-lg,
+  .rounded-2xl,
+  .rounded-3xl {
+    border-radius: 4px !important;
+  }
+
+  /* ── Grid & Flex adjustments ── */
+  .grid-cols-1.md\:grid-cols-4,
+  .grid-cols-2.md\:grid-cols-4,
+  .grid-cols-1.lg\:grid-cols-3 {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+  }
+
+  /* ── Page break helpers ── */
+  .print-page-break {
+    page-break-before: always !important;
+    margin-top: 0 !important;
+  }
+
+  .print-avoid-break {
+    page-break-inside: avoid !important;
+  }
+
+  /* ── Print header (shown only on print) ── */
+  .print-doc-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    border-bottom: 2px solid #1e293b !important;
+    padding-bottom: 10px !important;
+    margin-bottom: 20px !important;
+  }
+
+  .print-doc-header__title {
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+  }
+
+  .print-doc-header__sub {
+    font-size: 11px !important;
+    color: #64748b !important;
+    margin-top: 2px !important;
+  }
+
+  .print-doc-header__meta {
+    text-align: right !important;
+    font-size: 10px !important;
+    color: #64748b !important;
+    line-height: 1.6 !important;
+  }
+
+  /* ── Page margins (OS print dialog overrides these, but provide defaults) ── */
+  @page {
+    margin: 16mm 14mm;
+    size: A4 portrait;
+  }
+}

@@ -2,6 +2,7 @@ import { useState, memo } from "react";
 import { useListExpenses } from "@workspace/api-client-react";
 import { useExpenseMutations } from "@/hooks/use-expenses";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PrintButton } from "@/components/ui/PrintButton";
 import { formatSAR, formatDate } from "@/lib/format";
 import { exportToExcel } from "@/lib/export-excel";
 import { useForm, FormProvider, useFormContext } from "react-hook-form";
@@ -334,19 +335,22 @@ export default function Expenses() {
         title="Fixed Expenses"
         description="Track recurring monthly costs, delivery app commissions, and employee-related expenses."
         action={
-          <div className="flex gap-2 flex-wrap">
-            <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 text-sm">
-              <FileSpreadsheet className="w-4 h-4" /> Export Excel
-            </button>
-            <button onClick={() => setAddStaff(true)} className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-xl shadow-lg hover:-translate-y-0.5 transition-all text-sm">
-              <Users className="w-4 h-4" /> Add Staff Expense
-            </button>
-            <button onClick={() => setAddCommission(true)} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl shadow-lg hover:-translate-y-0.5 transition-all text-sm">
-              <Smartphone className="w-4 h-4" /> Add App Commission
-            </button>
-            <button onClick={() => setAddFixed(true)} className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl shadow-lg hover:-translate-y-0.5 transition-all text-sm">
-              <Plus className="w-4 h-4" /> Add Fixed Expense
-            </button>
+          <div className="flex gap-2 flex-wrap items-center">
+            <div className="no-print flex gap-2 flex-wrap">
+              <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 text-sm">
+                <FileSpreadsheet className="w-4 h-4" /> Export Excel
+              </button>
+              <button onClick={() => setAddStaff(true)} className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-xl shadow-lg hover:-translate-y-0.5 transition-all text-sm">
+                <Users className="w-4 h-4" /> Add Staff Expense
+              </button>
+              <button onClick={() => setAddCommission(true)} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl shadow-lg hover:-translate-y-0.5 transition-all text-sm">
+                <Smartphone className="w-4 h-4" /> Add App Commission
+              </button>
+              <button onClick={() => setAddFixed(true)} className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl shadow-lg hover:-translate-y-0.5 transition-all text-sm">
+                <Plus className="w-4 h-4" /> Add Fixed Expense
+              </button>
+            </div>
+            <PrintButton />
           </div>
         }
       />

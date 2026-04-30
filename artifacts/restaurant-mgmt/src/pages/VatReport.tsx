@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useGetVatReport } from "@workspace/api-client-react";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PrintButton } from "@/components/ui/PrintButton";
 import { formatSAR, formatMonth } from "@/lib/format";
 import { Calculator, ShieldCheck } from "lucide-react";
 
@@ -14,12 +15,15 @@ export default function VatReport() {
         title="ZATCA VAT Report" 
         description="Automated 15% VAT calculation for tax filing."
         action={
-          <input 
-            type="month" 
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-            className="px-4 py-2 border rounded-xl shadow-sm focus:ring-primary/20 outline-none"
-          />
+          <div className="flex gap-2 items-center">
+            <input 
+              type="month" 
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+              className="no-print px-4 py-2 border rounded-xl shadow-sm focus:ring-primary/20 outline-none"
+            />
+            <PrintButton />
+          </div>
         }
       />
 

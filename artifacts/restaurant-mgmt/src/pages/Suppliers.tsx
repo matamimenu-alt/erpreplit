@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useListSuppliers } from "@workspace/api-client-react";
 import { useSupplierMutations } from "@/hooks/use-suppliers";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PrintButton } from "@/components/ui/PrintButton";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,12 +29,15 @@ export default function Suppliers() {
         title="Supplier Directory" 
         description="Manage vendors and contact information."
         action={
-          <button 
-            onClick={() => setIsDialogOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl shadow-lg hover:-translate-y-0.5 transition-all"
-          >
-            <Plus className="w-4 h-4" /> Add Supplier
-          </button>
+          <div className="flex gap-2 items-center">
+            <button 
+              onClick={() => setIsDialogOpen(true)}
+              className="no-print flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl shadow-lg hover:-translate-y-0.5 transition-all"
+            >
+              <Plus className="w-4 h-4" /> Add Supplier
+            </button>
+            <PrintButton />
+          </div>
         }
       />
 

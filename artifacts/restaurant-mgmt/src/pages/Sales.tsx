@@ -8,6 +8,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PrintButton } from "@/components/ui/PrintButton";
 import { formatSAR, formatDate } from "@/lib/format";
 import { exportToExcel } from "@/lib/export-excel";
 import { useForm, FormProvider, useFormContext } from "react-hook-form";
@@ -391,22 +392,25 @@ export default function Sales() {
         title="Sales & Cash Management"
         description="Daily revenue tracking by payment channel with VAT handling and cash discrepancy control."
         action={
-          <div className="flex gap-2 flex-wrap">
-            <input
-              type="month"
-              value={month}
-              onChange={(e) => setMonth(e.target.value)}
-              className="px-4 py-2 border rounded-xl shadow-sm focus:ring-primary/20 outline-none text-sm"
-            />
-            <button onClick={exportExcel} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 text-sm">
-              <FileSpreadsheet className="w-4 h-4" /> Export
-            </button>
-            <button
-              onClick={() => setAddOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all text-sm"
-            >
-              <Plus className="w-4 h-4" /> Add Daily Record
-            </button>
+          <div className="flex gap-2 flex-wrap items-center">
+            <div className="no-print flex gap-2 flex-wrap">
+              <input
+                type="month"
+                value={month}
+                onChange={(e) => setMonth(e.target.value)}
+                className="px-4 py-2 border rounded-xl shadow-sm focus:ring-primary/20 outline-none text-sm"
+              />
+              <button onClick={exportExcel} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 text-sm">
+                <FileSpreadsheet className="w-4 h-4" /> Export
+              </button>
+              <button
+                onClick={() => setAddOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all text-sm"
+              >
+                <Plus className="w-4 h-4" /> Add Daily Record
+              </button>
+            </div>
+            <PrintButton />
           </div>
         }
       />

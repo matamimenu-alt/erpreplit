@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useGetSupplierPriceComparison, useListSuppliers } from "@workspace/api-client-react";
 import { useSupplierProductMutations } from "@/hooks/use-suppliers";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PrintButton } from "@/components/ui/PrintButton";
 import { formatSAR } from "@/lib/format";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -36,9 +37,12 @@ export default function SupplierPrices() {
         title="Price Comparison Engine" 
         description="Track supplier price changes and inflation."
         action={
-          <button onClick={() => setOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl shadow-lg hover:-translate-y-0.5 transition-all">
-            <Plus className="w-4 h-4" /> Update Price
-          </button>
+          <div className="flex gap-2 items-center">
+            <button onClick={() => setOpen(true)} className="no-print flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl shadow-lg hover:-translate-y-0.5 transition-all">
+              <Plus className="w-4 h-4" /> Update Price
+            </button>
+            <PrintButton />
+          </div>
         }
       />
 

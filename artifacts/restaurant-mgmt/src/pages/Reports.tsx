@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
   useGetPLReport,
   useGetMonthlyPurchaseReport,
@@ -11,10 +11,11 @@ import {
   getGetCategoryExpenseReportQueryKey,
 } from "@workspace/api-client-react";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PrintButton } from "@/components/ui/PrintButton";
 import { formatSAR, formatMonth } from "@/lib/format";
 import { exportToExcel } from "@/lib/export-excel";
 import { getCategoryMeta } from "@/lib/categories";
-import { Printer, TrendingUp, TrendingDown, FileSpreadsheet, RefreshCw } from "lucide-react";
+import { TrendingUp, TrendingDown, FileSpreadsheet, RefreshCw } from "lucide-react";
 
 // ─────────────────────────────────────── P&L helpers ──────────────────────────
 function Row({
@@ -61,7 +62,6 @@ type Tab = "pl" | "monthly" | "category";
 export default function Reports() {
   const [tab, setTab] = useState<Tab>("pl");
   const [month, setMonth] = useState("");
-  const printRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
   // Force always-fresh data when this page is visited
@@ -84,26 +84,6 @@ export default function Reports() {
   }, [queryClient]);
 
   const totalRevenue = pl?.totalRevenue ?? 0;
-
-  // ── Print P&L ──
-  const handlePrint = () => {
-    const el = printRef.current;
-    if (!el) return;
-    const w = window.open("", "_blank");
-    if (!w) return;
-    w.document.write(`<html><head><title>P&L Report</title>
-    <style>
-      body{font-family:Arial,sans-serif;padding:32px;color:#1e293b}
-      table{width:100%;border-collapse:collapse;font-size:14px}
-      td{padding:8px 12px;border-bottom:1px solid #f1f5f9}
-      .section{padding:20px 0 4px;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8}
-      .bold td{font-weight:bold}.indent td:first-child{padding-left:28px;color:#64748b}
-      .right{text-align:right}.divider td{border-top:2px solid #94a3b8;padding:0}
-      .profit{color:#059669;font-weight:bold}.loss{color:#dc2626;font-weight:bold}
-    </style></head><body>${el.innerHTML}</body></html>`);
-    w.document.close();
-    w.print();
-  };
 
   // ── Export monthly ──
   function exportMonthly() {
@@ -180,47 +160,45 @@ export default function Reports() {
         description="Profit & Loss, Purchase Analysis, and Category Breakdown"
         action={
           <div className="flex gap-2 items-center flex-wrap">
-            <button
-              onClick={handleRefreshAll}
-              disabled={plFetching}
-              title="Refresh all report data"
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm disabled:opacity-60"
-            >
-              <RefreshCw className={`w-4 h-4 ${plFetching ? "animate-spin" : ""}`} />
-              Refresh
-            </button>
-            <input
-              type="month"
-              value={month}
-              onChange={(e) => setMonth(e.target.value)}
-              className="px-4 py-2 border rounded-xl shadow-sm focus:ring-primary/20 outline-none text-sm"
-            />
-            {tab === "pl" && (
-              <>
+            <div className="no-print flex gap-2 items-center flex-wrap">
+              <button
+                onClick={handleRefreshAll}
+                disabled={plFetching}
+                title="Refresh all report data"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm disabled:opacity-60"
+              >
+                <RefreshCw className={`w-4 h-4 ${plFetching ? "animate-spin" : ""}`} />
+                Refresh
+              </button>
+              <input
+                type="month"
+                value={month}
+                onChange={(e) => setMonth(e.target.value)}
+                className="px-4 py-2 border rounded-xl shadow-sm focus:ring-primary/20 outline-none text-sm"
+              />
+              {tab === "pl" && (
                 <button onClick={exportPL} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 text-sm">
                   <FileSpreadsheet className="w-4 h-4" /> Excel
                 </button>
-                <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl hover:bg-slate-700 text-sm">
-                  <Printer className="w-4 h-4" /> Print
+              )}
+              {tab === "monthly" && (
+                <button onClick={exportMonthly} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 text-sm">
+                  <FileSpreadsheet className="w-4 h-4" /> Export Excel
                 </button>
-              </>
-            )}
-            {tab === "monthly" && (
-              <button onClick={exportMonthly} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 text-sm">
-                <FileSpreadsheet className="w-4 h-4" /> Export Excel
-              </button>
-            )}
-            {tab === "category" && (
-              <button onClick={exportCategory} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 text-sm">
-                <FileSpreadsheet className="w-4 h-4" /> Export Excel
-              </button>
-            )}
+              )}
+              {tab === "category" && (
+                <button onClick={exportCategory} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 text-sm">
+                  <FileSpreadsheet className="w-4 h-4" /> Export Excel
+                </button>
+              )}
+            </div>
+            <PrintButton />
           </div>
         }
       />
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 bg-slate-100 p-1 rounded-xl w-fit">
+      <div className="no-print flex gap-1 mb-6 bg-slate-100 p-1 rounded-xl w-fit">
         {tabs.map((t) => (
           <button
             key={t.id}
@@ -261,7 +239,7 @@ export default function Reports() {
             {plLoading ? (
               <div className="py-16 text-center text-slate-400">Loading P&L data...</div>
             ) : (
-              <div ref={printRef}>
+              <div>
                 <div className="hidden print:block mb-6 p-6">
                   <h1 className="text-2xl font-bold">Profit & Loss Statement</h1>
                   <p className="text-slate-500">{formatMonth(month)} — Gourmet Ledger, Saudi Arabia</p>

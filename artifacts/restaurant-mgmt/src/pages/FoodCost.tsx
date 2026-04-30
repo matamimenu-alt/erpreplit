@@ -6,6 +6,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PrintButton } from "@/components/ui/PrintButton";
 import { formatSAR } from "@/lib/format";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -355,12 +356,15 @@ export default function FoodCost() {
           title="Food Cost & Pricing Engine"
           description="Automated dish pricing based on real purchase data, fixed costs, and target margins."
         />
-        <Button variant="outline" size="sm" onClick={() => {
-          setConfigDraft(config ? { ...config } : { monthlyOrders: 1000, deliveryCostPerOrder: 7, deliveryCommissionPct: 25 });
-          setShowConfigPanel(true);
-        }}>
-          <Settings2 className="h-4 w-4 mr-2" /> Settings
-        </Button>
+        <div className="flex gap-2 items-center">
+          <Button variant="outline" size="sm" className="no-print" onClick={() => {
+            setConfigDraft(config ? { ...config } : { monthlyOrders: 1000, deliveryCostPerOrder: 7, deliveryCommissionPct: 25 });
+            setShowConfigPanel(true);
+          }}>
+            <Settings2 className="h-4 w-4 mr-2" /> Settings
+          </Button>
+          <PrintButton />
+        </div>
       </div>
 
       {/* Settings Panel */}

@@ -8,6 +8,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PrintButton } from "@/components/ui/PrintButton";
 import { formatSAR } from "@/lib/format";
 import { toast } from "@/hooks/use-toast";
 import { exportToExcel } from "@/lib/export-excel";
@@ -364,10 +365,10 @@ export default function Inventory() {
 
   return (
     <div className="space-y-6">
-      <PageHeader icon={<Warehouse className="w-6 h-6" />} title="Inventory Management" subtitle="Track stock levels, movements, and branch transfers" />
+      <PageHeader title="Inventory Management" description="Track stock levels, movements, and branch transfers" action={<PrintButton />} />
 
       <Tabs defaultValue="stock-levels">
-        <TabsList className="flex flex-wrap gap-1 h-auto mb-4">
+        <TabsList className="no-print flex flex-wrap gap-1 h-auto mb-4">
           <TabsTrigger value="stock-levels" className="gap-1"><Package className="w-4 h-4" /> Stock Levels</TabsTrigger>
           <TabsTrigger value="movements" className="gap-1"><TrendingDown className="w-4 h-4" /> Movements</TabsTrigger>
           <TabsTrigger value="transfers" className="gap-1"><ArrowLeftRight className="w-4 h-4" /> Transfers</TabsTrigger>

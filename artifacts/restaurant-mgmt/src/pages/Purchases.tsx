@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useListPurchases, useCreatePurchaseBatch, useGetPurchaseProductSuggestions } from "@workspace/api-client-react";
 import { usePurchasesMutations } from "@/hooks/use-purchases";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PrintButton } from "@/components/ui/PrintButton";
 import { formatSAR, formatDate, formatMonth } from "@/lib/format";
 import { exportToExcel } from "@/lib/export-excel";
 import { PURCHASE_CATEGORY_GROUPS, getCategoryMeta, getGroupForCategory } from "@/lib/categories";
@@ -1068,19 +1069,22 @@ export default function Purchases() {
         title="Purchases & Expenses"
         description="Track all purchasing and expense records with VAT."
         action={
-          <div className="flex gap-2 flex-wrap">
-            <button
-              onClick={handleExport}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors text-sm"
-            >
-              <FileSpreadsheet className="w-4 h-4" /> Export Excel
-            </button>
-            <button
-              onClick={() => setAddOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl shadow-lg shadow-primary/25 hover:-translate-y-0.5 transition-all"
-            >
-              <PackagePlus className="w-4 h-4" /> Add Invoice
-            </button>
+          <div className="flex gap-2 flex-wrap items-center">
+            <div className="no-print flex gap-2 flex-wrap">
+              <button
+                onClick={handleExport}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors text-sm"
+              >
+                <FileSpreadsheet className="w-4 h-4" /> Export Excel
+              </button>
+              <button
+                onClick={() => setAddOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl shadow-lg shadow-primary/25 hover:-translate-y-0.5 transition-all"
+              >
+                <PackagePlus className="w-4 h-4" /> Add Invoice
+              </button>
+            </div>
+            <PrintButton />
           </div>
         }
       />
