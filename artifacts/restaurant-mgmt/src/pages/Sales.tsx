@@ -107,12 +107,6 @@ function LivePreview({ appNames }: { appNames: AppConfig }) {
       <div><span className="text-slate-500">Total Revenue:</span><span className="font-bold ml-1 text-slate-800">{formatSAR(raw)}</span></div>
       <div><span className="text-slate-500">Net Sales:</span><span className="font-bold ml-1 text-emerald-700">{formatSAR(netSales)}</span></div>
       <div><span className="text-slate-500">VAT ({vatMode === "inclusive" ? "incl" : "excl"}):</span><span className="font-bold ml-1 text-purple-700">{formatSAR(vat)}</span></div>
-      <div>
-        <span className="text-slate-500">Cash Discrepancy:</span>
-        <span className={`font-bold ml-1 ${Math.abs(discrepancy) < 0.01 ? "text-emerald-600" : discrepancy > 0 ? "text-blue-600" : "text-rose-600"}`}>
-          {discrepancy >= 0 ? "+" : ""}{formatSAR(discrepancy)}
-        </span>
-      </div>
     </div>
   );
 }
@@ -335,8 +329,6 @@ export default function Sales() {
 
   // Computed per row: apps total
   const appsTotal = (r: SaleRecord) => r.app1 + r.app2 + r.app3 + r.app4 + r.app5 + r.app6;
-  const hasDiscrepancy = sales.some((r) => Math.abs(r.cashDiscrepancy) > 0.5);
-
   function exportExcel() {
     const rows = sales.map((r) => ({
       "Date": r.date,
@@ -358,19 +350,9 @@ export default function Sales() {
       "Petty Cash (SAR)": r.pettyCash,
       "Closing Balance (SAR)": r.closingBalance,
       "Expected Closing (SAR)": r.expectedClosing,
-      "Cash Discrepancy (SAR)": r.cashDiscrepancy,
       "Notes": r.dailyNotes,
     }));
     exportToExcel(rows, `sales-${month || "all"}`, "Sales");
-  }
-
-  function DiscrepancyBadge({ val }: { val: number }) {
-    if (Math.abs(val) < 0.01) return <span className="text-emerald-600 text-xs font-semibold">✓</span>;
-    return (
-      <span className={`text-xs font-bold ${val > 0 ? "text-blue-600" : "text-rose-600"}`}>
-        {val > 0 ? "+" : ""}{formatSAR(val)}
-      </span>
-    );
   }
 
   // ─── KPI Cards ─────────────────────────────────────────────────────────────
@@ -390,7 +372,7 @@ export default function Sales() {
     <div>
       <PageHeader
         title="Sales & Cash Management"
-        description="Daily revenue tracking by payment channel with VAT handling and cash discrepancy control."
+        description="Daily revenue tracking by payment channel with VAT handling."
         action={
           <div className="flex gap-2 flex-wrap items-center">
             <div className="no-print flex gap-2 flex-wrap">
@@ -428,17 +410,6 @@ export default function Sales() {
         </div>
       )}
 
-      {/* Cash Discrepancy Alert */}
-      {hasDiscrepancy && tab === "dashboard" && (
-        <div className="mb-4 flex items-start gap-3 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">
-          <AlertTriangle className="w-4 h-4 text-rose-500 mt-0.5 shrink-0" />
-          <div>
-            <p className="text-sm font-bold text-rose-700">Cash Discrepancy Detected</p>
-            <p className="text-xs text-rose-600">One or more daily records have a mismatch between expected and actual closing balance. Review the Cash Management tab.</p>
-          </div>
-        </div>
-      )}
-
       {/* Tabs */}
       <div className="flex gap-1 bg-slate-100 rounded-xl p-1 mb-5 overflow-x-auto">
         {TABS.map((t) => (
@@ -469,7 +440,6 @@ export default function Sales() {
                   <th className="px-3 py-2 text-right text-emerald-700">Net Sales</th>
                   <th className="px-3 py-2 text-right text-amber-600">Opening Bal</th>
                   <th className="px-3 py-2 text-right text-amber-600">Closing Bal</th>
-                  <th className="px-3 py-2 text-right">Discrepancy</th>
                   <th className="px-3 py-2">Notes</th>
                   <th className="px-3 py-2"></th>
                 </tr>
@@ -493,7 +463,6 @@ export default function Sales() {
                     <td className="px-3 py-3 text-right tabular-nums text-emerald-700 font-semibold">{formatSAR(s.netSales)}</td>
                     <td className="px-3 py-3 text-right tabular-nums text-amber-700">{formatSAR(s.openingBalance)}</td>
                     <td className="px-3 py-3 text-right tabular-nums text-amber-700">{formatSAR(s.closingBalance)}</td>
-                    <td className="px-3 py-3 text-right"><DiscrepancyBadge val={s.cashDiscrepancy} /></td>
                     <td className="px-3 py-3 max-w-[140px] truncate text-slate-500">{s.dailyNotes || "—"}</td>
                     <td className="px-3 py-3">
                       <div className="flex gap-1">
@@ -518,7 +487,7 @@ export default function Sales() {
                     <td className="px-3 py-3 text-right tabular-nums text-slate-900">{formatSAR(sales.reduce((s, r) => s + r.totalRevenue, 0))}</td>
                     <td className="px-3 py-3 text-right tabular-nums text-purple-600">{formatSAR(sales.reduce((s, r) => s + r.outputVat, 0))}</td>
                     <td className="px-3 py-3 text-right tabular-nums text-emerald-700">{formatSAR(sales.reduce((s, r) => s + r.netSales, 0))}</td>
-                    <td colSpan={3} />
+                    <td colSpan={2} />
                     <td colSpan={2} />
                   </tr>
                 </tfoot>
@@ -572,12 +541,11 @@ export default function Sales() {
             ) : reportData ? (
               <>
                 {/* Summary Cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                   {[
                     { label: "Total Revenue", value: reportData.totals.totalRevenue, color: "bg-slate-700 text-white" },
                     { label: "Net Sales", value: reportData.totals.netSales, color: "bg-emerald-50 border border-emerald-200 text-emerald-900" },
                     { label: "Output VAT", value: reportData.totals.outputVat, color: "bg-purple-50 border border-purple-200 text-purple-900" },
-                    { label: "Cash Discrepancy", value: reportData.totals.cashDiscrepancy, color: Math.abs(reportData.totals.cashDiscrepancy) < 1 ? "bg-emerald-50 border border-emerald-200 text-emerald-900" : "bg-rose-50 border border-rose-200 text-rose-900" },
                   ].map((k) => (
                     <div key={k.label} className={`rounded-2xl p-4 ${k.color}`}>
                       <p className="text-[10px] font-bold uppercase tracking-wide opacity-60 mb-1">{k.label}</p>
@@ -634,7 +602,6 @@ export default function Sales() {
                           "Total Revenue": d.totalRevenue,
                           "Net Sales": d.netSales,
                           "Output VAT": d.outputVat,
-                          "Cash Discrepancy": d.cashDiscrepancy,
                           "Notes": d.dailyNotes,
                         }));
                         exportToExcel(rows, `sales-report-${reportFrom}-${reportTo}`, "Sales Report");
@@ -655,7 +622,6 @@ export default function Sales() {
                           <th className="px-3 py-2 text-right font-extrabold text-slate-700">Revenue</th>
                           <th className="px-3 py-2 text-right text-purple-500">VAT</th>
                           <th className="px-3 py-2 text-right text-emerald-700">Net Sales</th>
-                          <th className="px-3 py-2 text-right">Discrepancy</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y">
@@ -668,14 +634,6 @@ export default function Sales() {
                             <td className="px-3 py-2 text-right tabular-nums font-bold">{formatSAR(d.totalRevenue)}</td>
                             <td className="px-3 py-2 text-right tabular-nums text-purple-600">{formatSAR(d.outputVat)}</td>
                             <td className="px-3 py-2 text-right tabular-nums text-emerald-700 font-semibold">{formatSAR(d.netSales)}</td>
-                            <td className="px-3 py-2 text-right">
-                              {Math.abs(d.cashDiscrepancy) < 0.01
-                                ? <CheckCircle2 className="w-3 h-3 text-emerald-500 inline" />
-                                : <span className={`font-bold ${d.cashDiscrepancy > 0 ? "text-blue-600" : "text-rose-600"}`}>
-                                    {d.cashDiscrepancy > 0 ? "+" : ""}{formatSAR(d.cashDiscrepancy)}
-                                  </span>
-                              }
-                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -690,7 +648,7 @@ export default function Sales() {
             <div className="text-center py-12 text-slate-400">
               <BarChart3 className="w-10 h-10 mx-auto mb-3 opacity-30" />
               <p className="font-medium">Select a date range and click "Generate Report"</p>
-              <p className="text-xs mt-1">Get a full breakdown of cash, card, app sales, VAT, and cash discrepancies</p>
+              <p className="text-xs mt-1">Get a full breakdown of cash, card, app sales, and VAT by date range</p>
             </div>
           )}
         </div>
@@ -715,43 +673,24 @@ export default function Sales() {
                     <th className="px-3 py-2 text-right text-amber-500">Petty Cash</th>
                     <th className="px-3 py-2 text-right text-blue-600">Expected Closing</th>
                     <th className="px-3 py-2 text-right text-slate-700">Actual Closing</th>
-                    <th className="px-3 py-2 text-right font-bold">Discrepancy</th>
-                    <th className="px-3 py-2">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
                   {isLoading ? (
-                    <tr><td colSpan={9} className="text-center py-8 text-slate-400">Loading...</td></tr>
+                    <tr><td colSpan={7} className="text-center py-8 text-slate-400">Loading...</td></tr>
                   ) : sales.length === 0 ? (
-                    <tr><td colSpan={9} className="text-center py-8 text-slate-400">No cash records for {month}</td></tr>
-                  ) : sales.map((s) => {
-                    const ok = Math.abs(s.cashDiscrepancy) < 0.5;
-                    const surplus = s.cashDiscrepancy > 0;
-                    return (
-                      <tr key={s.id} className={`hover:bg-slate-50 ${!ok ? (surplus ? "bg-blue-50/50" : "bg-rose-50/50") : ""}`}>
-                        <td className="px-3 py-3 font-semibold">{formatDate(s.date)}</td>
-                        <td className="px-3 py-3 text-right tabular-nums">{formatSAR(s.openingBalance)}</td>
-                        <td className="px-3 py-3 text-right tabular-nums text-emerald-700">{formatSAR(s.cash)}</td>
-                        <td className="px-3 py-3 text-right tabular-nums text-rose-600">{formatSAR(s.cashExpenses)}</td>
-                        <td className="px-3 py-3 text-right tabular-nums text-amber-600">{formatSAR(s.pettyCash)}</td>
-                        <td className="px-3 py-3 text-right tabular-nums text-blue-700 font-semibold">{formatSAR(s.expectedClosing)}</td>
-                        <td className="px-3 py-3 text-right tabular-nums font-bold">{formatSAR(s.closingBalance)}</td>
-                        <td className="px-3 py-3 text-right">
-                          <span className={`font-bold ${ok ? "text-emerald-600" : surplus ? "text-blue-600" : "text-rose-600"}`}>
-                            {s.cashDiscrepancy >= 0 ? "+" : ""}{formatSAR(s.cashDiscrepancy)}
-                          </span>
-                        </td>
-                        <td className="px-3 py-3">
-                          {ok
-                            ? <span className="inline-flex items-center gap-1 text-emerald-600 text-xs font-medium"><CheckCircle2 className="w-3 h-3" /> OK</span>
-                            : <span className={`inline-flex items-center gap-1 text-xs font-medium ${surplus ? "text-blue-600" : "text-rose-600"}`}>
-                                <AlertTriangle className="w-3 h-3" /> {surplus ? "Surplus" : "Shortage"}
-                              </span>
-                          }
-                        </td>
-                      </tr>
-                    );
-                  })}
+                    <tr><td colSpan={7} className="text-center py-8 text-slate-400">No cash records for {month}</td></tr>
+                  ) : sales.map((s) => (
+                    <tr key={s.id} className="hover:bg-slate-50">
+                      <td className="px-3 py-3 font-semibold">{formatDate(s.date)}</td>
+                      <td className="px-3 py-3 text-right tabular-nums">{formatSAR(s.openingBalance)}</td>
+                      <td className="px-3 py-3 text-right tabular-nums text-emerald-700">{formatSAR(s.cash)}</td>
+                      <td className="px-3 py-3 text-right tabular-nums text-rose-600">{formatSAR(s.cashExpenses)}</td>
+                      <td className="px-3 py-3 text-right tabular-nums text-amber-600">{formatSAR(s.pettyCash)}</td>
+                      <td className="px-3 py-3 text-right tabular-nums text-blue-700 font-semibold">{formatSAR(s.expectedClosing)}</td>
+                      <td className="px-3 py-3 text-right tabular-nums font-bold">{formatSAR(s.closingBalance)}</td>
+                    </tr>
+                  ))}
                 </tbody>
                 {sales.length > 0 && (
                   <tfoot className="border-t-2 border-slate-300 bg-slate-100 font-bold text-xs text-slate-800">
@@ -763,15 +702,6 @@ export default function Sales() {
                       <td className="px-3 py-3 text-right tabular-nums text-amber-600">{formatSAR(sales.reduce((s, r) => s + r.pettyCash, 0))}</td>
                       <td className="px-3 py-3 text-right tabular-nums text-blue-700">{formatSAR(sales.reduce((s, r) => s + r.expectedClosing, 0))}</td>
                       <td className="px-3 py-3 text-right tabular-nums">{formatSAR(sales.reduce((s, r) => s + r.closingBalance, 0))}</td>
-                      <td className="px-3 py-3 text-right tabular-nums">
-                        {(() => {
-                          const total = sales.reduce((s, r) => s + r.cashDiscrepancy, 0);
-                          return <span className={`font-bold ${Math.abs(total) < 1 ? "text-emerald-600" : total > 0 ? "text-blue-600" : "text-rose-600"}`}>
-                            {total >= 0 ? "+" : ""}{formatSAR(total)}
-                          </span>;
-                        })()}
-                      </td>
-                      <td />
                     </tr>
                   </tfoot>
                 )}
