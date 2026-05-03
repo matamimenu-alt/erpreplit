@@ -1,0 +1,107 @@
+يوجد خلل في نظام الـ Transfer بين المستودع (Purchases/Warehouse) والمطاعم، حيث أن العمليات الحالية:
+
+لا تقوم بخصم قيمة الترانزفير من المشتريات
+لا تنعكس في تقارير الـ P&L
+لا تعالج محاسبيًا بشكل صحيح
+
+المطلوب هو تعديل منطق الترانزفير ليكون مترابط بالكامل مع:
+
+Purchases
+Inventory
+P&L Reports
+🎯 Objective
+
+ضمان أن أي عملية Transfer:
+
+تؤثر على المشتريات (خصم/إضافة)
+تؤثر على المخزون (حركة فعلية)
+تظهر في جميع التقارير المالية بشكل صحيح
+تعتمد على سعر يتم إدخاله يدويًا
+⚙️ Requirements
+1. Purchases Adjustment (Critical)
+عند تنفيذ Transfer من Warehouse إلى Restaurant:
+يتم خصم قيمة الترانزفير من إجمالي Purchases (Warehouse)
+
+Example:
+
+Purchases = 200,000
+Transfer = 20,000
+New Purchases = 180,000
+2. Receiving Side (Restaurant)
+يتم تسجيل قيمة الترانزفير في المطعم المستلم كـ:
+Purchases أو Internal Cost
+يجب أن يظهر كأنه شراء داخلي
+3. Manual Pricing (Mandatory)
+إضافة حقل Manual Price Input أثناء عملية Transfer
+النظام:
+❌ لا يستخدم Last Cost
+❌ لا يستخدم Average Cost
+✅ يعتمد فقط على السعر المدخل من المستخدم
+4. Inventory Impact
+خصم الكمية من:
+Warehouse Inventory
+إضافة الكمية إلى:
+Restaurant Inventory
+ربط الكمية بالسعر اليدوي
+5. Reporting Impact
+
+يجب أن تنعكس العملية في:
+
+Inventory Movement Report
+Purchases Report
+Cost of Sales
+Profit & Loss (P&L)
+6. P&L Behavior
+Source (Warehouse):
+انخفاض في Purchases
+Destination (Restaurant):
+زيادة في Purchases / Cost
+Overall Impact:
+تحديث:
+Cost of Sales
+Gross Profit
+7. Accounting Logic (Double Entry)
+عند الترانزفير:
+
+Warehouse (Source):
+
+Debit: Transfer Out / Internal Expense
+Credit: Inventory
+
+Restaurant (Destination):
+
+Debit: Inventory
+Credit: Internal Transfer / Purchases
+8. Bug Fix (Critical)
+
+🔴 المشكلة الحالية:
+
+Transfer لا يؤثر على Purchases
+لا يظهر في P&L
+
+🟢 المطلوب:
+
+إصلاح كامل بحيث تكون العملية:
+Automated
+Reflected in all financial reports
+No manual adjustments required
+✅ Acceptance Criteria
+ عند عمل Transfer يتم خصم القيمة من Purchases (Warehouse)
+ يتم إضافة نفس القيمة في Purchases (Restaurant)
+ السعر يتم إدخاله يدويًا فقط
+ يتم تحديث المخزون (خصم + إضافة)
+ تظهر العملية في جميع التقارير
+ يظهر التأثير في P&L بشكل صحيح
+ لا يحتاج المستخدم أي تعديل يدوي بعد الترانزفير
+🔥 Priority
+
+High – Financial Impact
+
+🧪 Test Scenario
+إضافة Purchases = 200,000
+تنفيذ Transfer = 20,000
+التحقق:
+Purchases (Warehouse) = 180,000 ✅
+Purchases (Restaurant) = +20,000 ✅
+Inventory Updated ✅
+P&L Updated ✅

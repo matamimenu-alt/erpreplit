@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { salesTable, purchasesTable, employeesTable, expensesTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { salesTable, purchasesTable, employeesTable, expensesTable, branchTransfersTable } from "@workspace/db/schema";
+import { eq, or, isNotNull } from "drizzle-orm";
 import { getRestaurantId } from "../lib/restaurant";
 
 const router: IRouter = Router();
@@ -48,7 +48,33 @@ router.get("/summary", async (req, res) => {
     const totalSalaries = employees.reduce((s, e) => s + toNum(e.totalMonthlyCost), 0);
     const totalFixedExpenses = expenses.reduce((s, e) => s + toNum(e.monthlyCost), 0);
 
-    const netProfit = totalNetSales - totalPurchases - totalSalaries - totalFixedExpenses - vatPayable;
+    // ── Internal Branch Transfers — adjust effective purchases ─────────────────
+    // Transfers received from other branches = additional internal cost (adds to this branch's effective purchases)
+    // Transfers sent to other branches = those goods are no longer this branch's cost (reduces effective purchases)
+    // Only branch-to-branch transfers (toRestaurantId IS NOT NULL) are credited back — free-text destinations are consumption
+    let allTransfers = await db.select()
+      .from(branchTransfersTable)
+      .where(or(
+        eq(branchTransfersTable.toRestaurantId, restaurantId),
+        eq(branchTransfersTable.fromRestaurantId, restaurantId),
+      ));
+
+    if (month) {
+      allTransfers = allTransfers.filter(t => t.transferDate.startsWith(month));
+    }
+
+    const transfersInCost = allTransfers
+      .filter(t => t.toRestaurantId === restaurantId)
+      .reduce((s, t) => s + toNum(t.quantity) * toNum(t.unitPrice), 0);
+
+    const transfersOutCost = allTransfers
+      .filter(t => t.fromRestaurantId === restaurantId && t.toRestaurantId !== null && t.toRestaurantId !== restaurantId)
+      .reduce((s, t) => s + toNum(t.quantity) * toNum(t.unitPrice), 0);
+
+    const netTransferCost = transfersInCost - transfersOutCost;
+    const effectivePurchases = totalPurchases + netTransferCost;
+
+    const netProfit = totalNetSales - effectivePurchases - totalSalaries - totalFixedExpenses - vatPayable;
 
     res.json({
       month: month ?? "all",
@@ -62,6 +88,10 @@ router.get("/summary", async (req, res) => {
       totalCard: +totalCard.toFixed(2),
       totalApps: +totalApps.toFixed(2),
       totalPurchases: +totalPurchases.toFixed(2),
+      transfersInCost: +transfersInCost.toFixed(2),
+      transfersOutCost: +transfersOutCost.toFixed(2),
+      netTransferCost: +netTransferCost.toFixed(2),
+      effectivePurchases: +effectivePurchases.toFixed(2),
       outputVat: +outputVat.toFixed(2),
       inputVat: +inputVat.toFixed(2),
       vatPayable: +vatPayable.toFixed(2),

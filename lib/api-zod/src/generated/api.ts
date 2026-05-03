@@ -1043,7 +1043,31 @@ export const GetDashboardSummaryResponse = zod.object({
   totalFoodSales: zod.number(),
   totalBeverageSales: zod.number(),
   totalSales: zod.number(),
-  totalPurchases: zod.number(),
+  totalPurchases: zod
+    .number()
+    .describe(
+      "Raw purchases from invoices only (excludes transfer adjustments)",
+    ),
+  transfersInCost: zod
+    .number()
+    .optional()
+    .describe(
+      "Cost of goods received from other internal branches (adds to effective purchases)",
+    ),
+  transfersOutCost: zod
+    .number()
+    .optional()
+    .describe(
+      "Cost of goods sent to other internal branches (reduces effective purchases)",
+    ),
+  netTransferCost: zod
+    .number()
+    .optional()
+    .describe("Net transfer impact = transfersInCost - transfersOutCost"),
+  effectivePurchases: zod
+    .number()
+    .optional()
+    .describe("Total effective purchases = raw purchases + net transfer cost"),
   vatPayable: zod.number(),
   totalSalaries: zod.number(),
   totalFixedExpenses: zod.number(),

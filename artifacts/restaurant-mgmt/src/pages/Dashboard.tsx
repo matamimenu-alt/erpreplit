@@ -47,8 +47,8 @@ export default function Dashboard() {
       color: "text-blue-600 bg-blue-100"
     },
     { 
-      label: "Total Purchases", 
-      value: summary?.totalPurchases, 
+      label: "Effective Purchases", 
+      value: summary?.effectivePurchases ?? summary?.totalPurchases, 
       icon: ShoppingBag,
       color: "text-orange-600 bg-orange-100"
     },
@@ -66,7 +66,7 @@ export default function Dashboard() {
   ];
 
   const expensesBreakdown = [
-    { name: 'Purchases', value: summary?.totalPurchases || 0 },
+    { name: 'Purchases', value: summary?.effectivePurchases ?? summary?.totalPurchases ?? 0 },
     { name: 'Salaries', value: summary?.totalSalaries || 0 },
     { name: 'Fixed Expenses', value: summary?.totalFixedExpenses || 0 },
     { name: 'VAT Payable', value: Math.max(0, summary?.vatPayable || 0) },

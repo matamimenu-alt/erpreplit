@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { useListPurchases, useCreatePurchaseBatch, useGetPurchaseProductSuggestions } from "@workspace/api-client-react";
+import { useListPurchases, useCreatePurchaseBatch, useGetPurchaseProductSuggestions, useListBranchTransfers } from "@workspace/api-client-react";
 import { usePurchasesMutations } from "@/hooks/use-purchases";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PrintButton } from "@/components/ui/PrintButton";
@@ -952,6 +952,25 @@ export default function Purchases() {
   const { update, remove } = usePurchasesMutations();
   const batchCreate = useCreatePurchaseBatch();
 
+  // ── Branch Transfers — fetch to calculate internal cost adjustments ──────────
+  const { data: allTransfers = [] } = useListBranchTransfers({});
+  const { transfersIn, transfersOut, transfersInCost, transfersOutCost, netTransferCost } = useMemo(() => {
+    const filtered = month
+      ? allTransfers.filter(t => t.transferDate.startsWith(month))
+      : allTransfers;
+    const inn = filtered.filter(t => t.toRestaurantId != null && !t.destinationName);
+    const out = filtered.filter(t => t.fromRestaurantId != null && t.toRestaurantId != null && !t.destinationName);
+    const inCost  = inn.reduce((s, t) => s + t.quantity * t.unitPrice, 0);
+    const outCost = out.reduce((s, t) => s + t.quantity * t.unitPrice, 0);
+    return {
+      transfersIn:  inn,
+      transfersOut: out,
+      transfersInCost:  inCost,
+      transfersOutCost: outCost,
+      netTransferCost:  inCost - outCost,
+    };
+  }, [allTransfers, month]);
+
   const invalidateAll = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: getListPurchasesQueryKey() });
     queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
@@ -1169,10 +1188,44 @@ export default function Purchases() {
             <p className="text-[10px] text-slate-400">{nonTaxable.length} non-tax items</p>
           </div>
           <div className="bg-slate-900 rounded-xl px-4 py-3 text-center">
-            <p className="text-xs text-slate-400 mb-0.5">Grand Total</p>
+            <p className="text-xs text-slate-400 mb-0.5">Direct Purchases Total</p>
             <p className="font-bold text-white text-sm">{formatSAR(grandTotal)}</p>
             <p className="text-[10px] text-slate-400">{filtered.length} records</p>
           </div>
+        </div>
+      )}
+
+      {/* Internal Transfer Cost Adjustments */}
+      {(transfersInCost > 0 || transfersOutCost > 0) && (
+        <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-blue-700">Internal Transfer Cost Adjustments</span>
+            <span className="text-[10px] text-blue-500 bg-blue-100 rounded-full px-2 py-0.5">Affects P&amp;L · Manual Price Only</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {transfersInCost > 0 && (
+              <div className="bg-white border border-blue-200 rounded-lg px-4 py-3">
+                <p className="text-xs text-slate-500 mb-0.5">Received from Other Branches</p>
+                <p className="font-bold text-blue-700 text-sm">+{formatSAR(transfersInCost)}</p>
+                <p className="text-[10px] text-slate-400">{transfersIn.length} transfer{transfersIn.length !== 1 ? "s" : ""} · Added to COGS</p>
+              </div>
+            )}
+            {transfersOutCost > 0 && (
+              <div className="bg-white border border-rose-200 rounded-lg px-4 py-3">
+                <p className="text-xs text-slate-500 mb-0.5">Sent to Other Branches</p>
+                <p className="font-bold text-rose-600 text-sm">−{formatSAR(transfersOutCost)}</p>
+                <p className="text-[10px] text-slate-400">{transfersOut.length} transfer{transfersOut.length !== 1 ? "s" : ""} · Deducted from COGS</p>
+              </div>
+            )}
+            <div className={`rounded-lg px-4 py-3 ${netTransferCost >= 0 ? "bg-blue-700" : "bg-slate-700"}`}>
+              <p className="text-xs text-blue-100 mb-0.5">Net Transfer Impact</p>
+              <p className="font-bold text-white text-sm">{netTransferCost >= 0 ? "+" : ""}{formatSAR(netTransferCost)}</p>
+              <p className="text-[10px] text-blue-200">Effective Purchases: {formatSAR(grandTotal + netTransferCost)}</p>
+            </div>
+          </div>
+          <p className="text-[10px] text-blue-600 mt-2">
+            ⓘ These transfers use manually entered prices. They adjust Cost of Sales (COGS) in both the source and destination branch P&amp;L.{month ? "" : " Showing all-time transfers — select a month to filter."}
+          </p>
         </div>
       )}
 

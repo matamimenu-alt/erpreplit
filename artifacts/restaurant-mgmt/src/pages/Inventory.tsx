@@ -189,12 +189,13 @@ export default function Inventory() {
     unit: "kg", quantity: "", unitPrice: "", referenceNumber: "", transferDate: today(), notes: "",
   });
 
-  // Auto-fill unit price from WAC when item is selected in transfer form
+  // Auto-fill unit and category when item is selected — price is ALWAYS manual (no WAC auto-fill)
   useEffect(() => {
     if (txForm.itemName && txForm.category) {
       const match = stockItems.find(i => i.itemName === txForm.itemName && i.category === txForm.category);
       if (match) {
-        setTxForm(prev => ({ ...prev, unit: match.unit, unitPrice: match.avgCost.toFixed(2) }));
+        // Only auto-fill unit (NOT price — price must be entered manually per user requirement)
+        setTxForm(prev => ({ ...prev, unit: match.unit }));
       }
     }
   }, [txForm.itemName, txForm.category, stockItems]);
@@ -777,13 +778,14 @@ export default function Inventory() {
                     </div>
                   </div>
 
-                  {/* Unit Price — auto-filled from WAC, required for branch transfers */}
+                  {/* Unit Price — MANUAL entry always required (no WAC auto-fill) */}
                   <div>
                     <Label className="text-xs flex items-center gap-1">
-                      Unit Price (SAR)
-                      {txDestType === "branch" && <span className="text-red-500">*</span>}
-                      {txForm.itemName && txForm.category && txForm.unitPrice && (
-                        <span className="text-xs text-amber-600 font-normal">(auto-filled from avg cost)</span>
+                      Transfer Cost Price (SAR)
+                      {txDestType === "branch" ? (
+                        <span className="text-red-500">*</span>
+                      ) : (
+                        <span className="text-gray-400">(optional)</span>
                       )}
                     </Label>
                     <Input

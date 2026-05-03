@@ -2135,6 +2135,19 @@ components:
           type: number
         totalPurchases:
           type: number
+          description: Raw purchases from invoices only (excludes transfer adjustments)
+        transfersInCost:
+          type: number
+          description: Cost of goods received from other internal branches (adds to effective purchases)
+        transfersOutCost:
+          type: number
+          description: Cost of goods sent to other internal branches (reduces effective purchases)
+        netTransferCost:
+          type: number
+          description: Net transfer impact = transfersInCost - transfersOutCost
+        effectivePurchases:
+          type: number
+          description: Total effective purchases = raw purchases + net transfer cost
         vatPayable:
           type: number
         totalSalaries:

@@ -11,7 +11,16 @@ export interface DashboardSummary {
   totalFoodSales: number;
   totalBeverageSales: number;
   totalSales: number;
+  /** Raw purchases from invoices only (excludes transfer adjustments) */
   totalPurchases: number;
+  /** Cost of goods received from other internal branches (adds to effective purchases) */
+  transfersInCost?: number;
+  /** Cost of goods sent to other internal branches (reduces effective purchases) */
+  transfersOutCost?: number;
+  /** Net transfer impact = transfersInCost - transfersOutCost */
+  netTransferCost?: number;
+  /** Total effective purchases = raw purchases + net transfer cost */
+  effectivePurchases?: number;
   vatPayable: number;
   totalSalaries: number;
   totalFixedExpenses: number;
