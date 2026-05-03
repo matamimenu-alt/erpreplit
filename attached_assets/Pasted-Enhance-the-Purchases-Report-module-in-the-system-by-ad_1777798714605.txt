@@ -1,0 +1,104 @@
+Enhance the Purchases Report module in the system by adding advanced filtering and summary KPIs at the top of the page.
+
+GOAL:
+Improve the Purchases Report so it becomes a powerful financial analysis tool with filtering and real-time totals for Cash, Credit, and Accounts Payable (A/P).
+
+--------------------------------------
+1. FILTER SYSTEM (MANDATORY)
+--------------------------------------
+Add filtering options in the Purchases Report:
+
+Filters must include:
+- Payment Type:
+  - Cash
+  - Credit (A/P - Accounts Payable)
+  - All
+
+- Supplier (Vendor):
+  - Filter by supplier name
+
+- Item / Product:
+  - Filter by product/category
+
+- Date Range:
+  - From Date
+  - To Date
+
+- Restaurant (if multi-tenant enabled)
+
+All filters must work together (combined filtering supported).
+
+--------------------------------------
+2. SUMMARY HEADER (VERY IMPORTANT)
+--------------------------------------
+At the TOP of the Purchases Report page, add a summary dashboard with real-time calculated totals:
+
+Display:
+
+1. Total Cash Purchases:
+- Sum of all purchases paid in CASH
+
+2. Total Credit Purchases (A/P):
+- Sum of all purchases on credit / vendor payable
+
+3. Total Overall Purchases:
+- Cash + Credit combined
+
+4. Optional (if applicable):
+- Paid Amount
+- Outstanding Payables
+
+These values must update dynamically based on filters applied.
+
+--------------------------------------
+3. DATA LOGIC
+--------------------------------------
+Each purchase record must include:
+
+- purchase_id
+- supplier_id
+- product_id
+- restaurant_id
+- date
+- amount
+- payment_type (cash / credit)
+- status (paid / unpaid if credit)
+
+--------------------------------------
+4. UI REQUIREMENTS
+--------------------------------------
+- Clean filter bar at top
+- Summary cards displayed above table
+- Table below showing filtered results
+- Real-time update when filters change
+
+--------------------------------------
+5. TABLE DISPLAY
+--------------------------------------
+Show:
+- Date
+- Supplier
+- Product
+- Amount
+- Payment Type
+- Status
+
+--------------------------------------
+6. BUSINESS VALUE
+--------------------------------------
+This report must allow restaurant owners to instantly understand:
+- How much cash purchases they made
+- How much credit (A/P) they owe suppliers
+- Full purchasing breakdown per supplier and product
+
+--------------------------------------
+7. PERFORMANCE
+--------------------------------------
+- Optimize filtering for large datasets
+- Avoid full reloads if possible (use API filtering)
+
+--------------------------------------
+OUTPUT:
+- Updated backend API for filtering purchases
+- Updated frontend report UI
+- Summary calculations at top of page

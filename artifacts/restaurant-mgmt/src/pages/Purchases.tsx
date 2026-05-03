@@ -9,7 +9,7 @@ import { PURCHASE_CATEGORY_GROUPS, getCategoryMeta, getGroupForCategory } from "
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Trash2, Pencil, Search, X, FileSpreadsheet, Receipt, Tag, PackagePlus, ChevronRight } from "lucide-react";
+import { Plus, Trash2, Pencil, Search, X, FileSpreadsheet, Receipt, Tag, PackagePlus, ChevronRight, Banknote, CreditCard, BookOpen, BarChart3, ChevronDown } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   getListPurchasesQueryKey,
@@ -941,9 +941,13 @@ function PurchaseEditModal({
 
 export default function Purchases() {
   const [month, setMonth] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [invoiceFilter, setInvoiceFilter] = useState<"" | "tax" | "non-tax">("");
+  const [paymentFilter, setPaymentFilter] = useState<"" | "cash" | "card" | "credit">("");
+  const [supplierFilter, setSupplierFilter] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [editRecord, setEditRecord] = useState<{ id: number; data: EditForm } | null>(null);
 
@@ -951,6 +955,12 @@ export default function Purchases() {
   const { data: purchases, isLoading } = useListPurchases(month ? { month } : undefined);
   const { update, remove } = usePurchasesMutations();
   const batchCreate = useCreatePurchaseBatch();
+
+  // ── Unique suppliers extracted from purchase records ─────────────────────────
+  const uniqueSuppliers = useMemo(() => {
+    const names = new Set((purchases ?? []).map(p => p.supplierName).filter(Boolean) as string[]);
+    return Array.from(names).sort();
+  }, [purchases]);
 
   // ── Branch Transfers — fetch to calculate internal cost adjustments ──────────
   const { data: allTransfers = [] } = useListBranchTransfers({});
@@ -980,13 +990,25 @@ export default function Purchases() {
     queryClient.invalidateQueries({ queryKey: getGetCategoryExpenseReportQueryKey() });
   }, [queryClient]);
 
-  // Client-side filtering
+  // ── Client-side filtering (all combined) ─────────────────────────────────────
   const filtered = (purchases ?? []).filter((p) => {
     if (categoryFilter && p.category !== categoryFilter) return false;
     if (searchQuery && !p.productName.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     if (invoiceFilter && p.invoiceType !== invoiceFilter) return false;
+    if (paymentFilter && p.paymentType !== paymentFilter) return false;
+    if (supplierFilter && !(p.supplierName ?? "").toLowerCase().includes(supplierFilter.toLowerCase())) return false;
+    if (dateFrom && p.date < dateFrom) return false;
+    if (dateTo && p.date > dateTo) return false;
     return true;
   });
+
+  // ── Payment-type KPI totals ──────────────────────────────────────────────────
+  const cashTotal   = filtered.filter(p => p.paymentType === "cash").reduce((s, p) => s + p.totalAmount, 0);
+  const cardTotal   = filtered.filter(p => p.paymentType === "card").reduce((s, p) => s + p.totalAmount, 0);
+  const creditTotal = filtered.filter(p => p.paymentType === "credit").reduce((s, p) => s + p.totalAmount, 0);
+  const cashCount   = filtered.filter(p => p.paymentType === "cash").length;
+  const cardCount   = filtered.filter(p => p.paymentType === "card").length;
+  const creditCount = filtered.filter(p => p.paymentType === "credit").length;
 
   // Summary stats
   const taxable    = filtered.filter(p => p.invoiceType !== "non-tax");
@@ -1080,7 +1102,7 @@ export default function Purchases() {
     exportToExcel(rows, `purchases-${month || "all"}`);
   }
 
-  const hasActiveFilters = !!(categoryFilter || searchQuery || month || invoiceFilter);
+  const hasActiveFilters = !!(categoryFilter || searchQuery || month || invoiceFilter || paymentFilter || supplierFilter || dateFrom || dateTo);
 
   return (
     <div>
@@ -1108,89 +1130,202 @@ export default function Purchases() {
         }
       />
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-4">
-        <input
-          type="month"
-          value={month}
-          onChange={(e) => setMonth(e.target.value)}
-          className="px-4 py-2 border rounded-xl shadow-sm outline-none text-sm"
-        />
-        <div className="relative flex-1 min-w-48">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+      {/* ── Payment-type KPI Cards (always visible) ─────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        {/* Cash */}
+        <button
+          onClick={() => setPaymentFilter(paymentFilter === "cash" ? "" : "cash")}
+          className={`rounded-2xl p-4 text-left transition-all border-2 ${paymentFilter === "cash" ? "border-emerald-500 bg-emerald-50 shadow-md" : "border-transparent bg-white shadow-sm hover:shadow-md border border-slate-200"}`}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+              <Banknote className="w-4 h-4 text-emerald-700" />
+            </div>
+            {paymentFilter === "cash" && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded-full">ACTIVE</span>}
+          </div>
+          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Cash Purchases</p>
+          <p className="text-xl font-extrabold text-slate-900 tabular-nums mt-0.5">{formatSAR(cashTotal)}</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">{cashCount} {cashCount === 1 ? "record" : "records"}</p>
+        </button>
+        {/* Card */}
+        <button
+          onClick={() => setPaymentFilter(paymentFilter === "card" ? "" : "card")}
+          className={`rounded-2xl p-4 text-left transition-all border-2 ${paymentFilter === "card" ? "border-blue-500 bg-blue-50 shadow-md" : "border-transparent bg-white shadow-sm hover:shadow-md border border-slate-200"}`}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+              <CreditCard className="w-4 h-4 text-blue-700" />
+            </div>
+            {paymentFilter === "card" && <span className="text-[10px] font-bold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded-full">ACTIVE</span>}
+          </div>
+          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Card / POS</p>
+          <p className="text-xl font-extrabold text-slate-900 tabular-nums mt-0.5">{formatSAR(cardTotal)}</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">{cardCount} {cardCount === 1 ? "record" : "records"}</p>
+        </button>
+        {/* Credit A/P */}
+        <button
+          onClick={() => setPaymentFilter(paymentFilter === "credit" ? "" : "credit")}
+          className={`rounded-2xl p-4 text-left transition-all border-2 ${paymentFilter === "credit" ? "border-amber-500 bg-amber-50 shadow-md" : "border-transparent bg-white shadow-sm hover:shadow-md border border-slate-200"}`}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+              <BookOpen className="w-4 h-4 text-amber-700" />
+            </div>
+            {paymentFilter === "credit" && <span className="text-[10px] font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded-full">ACTIVE</span>}
+          </div>
+          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Credit (A/P)</p>
+          <p className="text-xl font-extrabold text-slate-900 tabular-nums mt-0.5">{formatSAR(creditTotal)}</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">{creditCount} {creditCount === 1 ? "record" : "records"}</p>
+        </button>
+        {/* Grand Total */}
+        <div className="rounded-2xl p-4 bg-slate-900 text-white">
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center">
+              <BarChart3 className="w-4 h-4 text-slate-300" />
+            </div>
+            {hasActiveFilters && <span className="text-[10px] text-slate-400">filtered</span>}
+          </div>
+          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Total Purchases</p>
+          <p className="text-xl font-extrabold tabular-nums mt-0.5">{formatSAR(grandTotal)}</p>
+          <p className="text-[10px] text-slate-500 mt-0.5">{filtered.length} {filtered.length === 1 ? "record" : "records"}</p>
+        </div>
+      </div>
+
+      {/* ── Filters ────────────────────────────────────────────────────────────── */}
+      <div className="bg-white border rounded-2xl shadow-sm p-4 mb-4 space-y-3">
+        {/* Row 1: Date range + Month quick-pick */}
+        <div className="flex flex-wrap gap-3 items-center">
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-slate-500 font-medium whitespace-nowrap">From</label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => { setDateFrom(e.target.value); setMonth(""); }}
+              className="px-3 py-2 border rounded-xl text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-slate-500 font-medium whitespace-nowrap">To</label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => { setDateTo(e.target.value); setMonth(""); }}
+              className="px-3 py-2 border rounded-xl text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+          <span className="text-slate-300 text-xs font-medium hidden sm:inline">or</span>
           <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by product..."
-            className="w-full pl-9 pr-3 py-2 border rounded-xl shadow-sm outline-none text-sm"
+            type="month"
+            value={month}
+            onChange={(e) => { setMonth(e.target.value); setDateFrom(""); setDateTo(""); }}
+            className="px-3 py-2 border rounded-xl shadow-sm outline-none text-sm"
+            title="Quick month filter"
           />
-          {searchQuery && (
-            <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-              <X className="w-3.5 h-3.5" />
+          {hasActiveFilters && (
+            <button
+              onClick={() => { setCategoryFilter(""); setSearchQuery(""); setMonth(""); setInvoiceFilter(""); setPaymentFilter(""); setSupplierFilter(""); setDateFrom(""); setDateTo(""); }}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm text-rose-500 hover:text-rose-700 border border-rose-200 hover:border-rose-400 rounded-xl transition-colors"
+            >
+              <X className="w-3.5 h-3.5" /> Clear all
             </button>
           )}
         </div>
-        <select
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          className="px-4 py-2 border rounded-xl shadow-sm outline-none text-sm bg-white"
-        >
-          <option value="">All Categories</option>
-          {PURCHASE_CATEGORY_GROUPS.map(g => (
-            <optgroup key={g.key} label={`${g.label} — ${g.labelAr}`}>
-              {g.subcategories.map(s => (
-                <option key={s.value} value={s.value}>{s.label} — {s.labelAr}</option>
+        {/* Row 2: Search + Supplier + Category + Invoice + Payment */}
+        <div className="flex flex-wrap gap-3">
+          <div className="relative flex-1 min-w-44">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search product / item..."
+              className="w-full pl-9 pr-3 py-2 border rounded-xl shadow-sm outline-none text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          {/* Supplier dropdown */}
+          <div className="relative min-w-40">
+            <select
+              value={supplierFilter}
+              onChange={(e) => setSupplierFilter(e.target.value)}
+              className="w-full appearance-none px-3 py-2 border rounded-xl shadow-sm outline-none text-sm bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 pr-8"
+            >
+              <option value="">All Suppliers</option>
+              {uniqueSuppliers.map(s => (
+                <option key={s} value={s}>{s}</option>
               ))}
-            </optgroup>
-          ))}
-        </select>
-        <select
-          value={invoiceFilter}
-          onChange={(e) => setInvoiceFilter(e.target.value as "" | "tax" | "non-tax")}
-          className="px-4 py-2 border rounded-xl shadow-sm outline-none text-sm bg-white"
-        >
-          <option value="">All Invoice Types</option>
-          <option value="tax">🧾 Tax Invoice</option>
-          <option value="non-tax">🏷️ Non-Tax Invoice</option>
-        </select>
-        {hasActiveFilters && (
-          <button
-            onClick={() => { setCategoryFilter(""); setSearchQuery(""); setMonth(""); setInvoiceFilter(""); }}
-            className="px-3 py-2 text-sm text-slate-500 hover:text-slate-800 border rounded-xl"
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          </div>
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="px-3 py-2 border rounded-xl shadow-sm outline-none text-sm bg-white focus:border-primary focus:ring-2 focus:ring-primary/20"
           >
-            Clear filters
-          </button>
-        )}
+            <option value="">All Categories</option>
+            {PURCHASE_CATEGORY_GROUPS.map(g => (
+              <optgroup key={g.key} label={`${g.label} — ${g.labelAr}`}>
+                {g.subcategories.map(s => (
+                  <option key={s.value} value={s.value}>{s.label} — {s.labelAr}</option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+          <select
+            value={invoiceFilter}
+            onChange={(e) => setInvoiceFilter(e.target.value as "" | "tax" | "non-tax")}
+            className="px-3 py-2 border rounded-xl shadow-sm outline-none text-sm bg-white focus:border-primary focus:ring-2 focus:ring-primary/20"
+          >
+            <option value="">All Invoice Types</option>
+            <option value="tax">🧾 Tax Invoice</option>
+            <option value="non-tax">🏷️ Non-Tax Invoice</option>
+          </select>
+          {/* Payment type toggle buttons */}
+          <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
+            {([
+              { v: "" as const, label: "All" },
+              { v: "cash" as const, label: "💵 Cash" },
+              { v: "card" as const, label: "💳 Card" },
+              { v: "credit" as const, label: "📄 Credit" },
+            ]).map(opt => (
+              <button
+                key={opt.v}
+                onClick={() => setPaymentFilter(opt.v)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${paymentFilter === opt.v ? "bg-white shadow text-slate-900" : "text-slate-500 hover:text-slate-800"}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* Summary Bar */}
+      {/* VAT Summary Bar */}
       {filtered.length > 0 && (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
           <div className="bg-slate-50 border rounded-xl px-4 py-3 text-center">
             <p className="text-xs text-slate-500 mb-0.5">Taxable Net</p>
             <p className="font-bold text-slate-800 text-sm">{formatSAR(totalTaxableNet)}</p>
             <p className="text-[10px] text-slate-400">{taxable.length} tax items</p>
           </div>
           <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-center">
-            <p className="text-xs text-slate-500 mb-0.5">Input VAT</p>
+            <p className="text-xs text-slate-500 mb-0.5">Input VAT (Reclaimable)</p>
             <p className="font-bold text-emerald-700 text-sm">{formatSAR(totalInputVat)}</p>
-            <p className="text-[10px] text-slate-400">Reclaimable</p>
-          </div>
-          <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-center">
-            <p className="text-xs text-slate-500 mb-0.5">Taxable Total</p>
-            <p className="font-bold text-emerald-800 text-sm">{formatSAR(totalTaxableGross)}</p>
-            <p className="text-[10px] text-slate-400">incl. VAT</p>
+            <p className="text-[10px] text-slate-400">from {taxable.length} tax invoices</p>
           </div>
           <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-center">
-            <p className="text-xs text-slate-500 mb-0.5">Non-Taxable</p>
+            <p className="text-xs text-slate-500 mb-0.5">Non-Taxable Total</p>
             <p className="font-bold text-amber-700 text-sm">{formatSAR(totalNonTaxable)}</p>
             <p className="text-[10px] text-slate-400">{nonTaxable.length} non-tax items</p>
           </div>
-          <div className="bg-slate-900 rounded-xl px-4 py-3 text-center">
-            <p className="text-xs text-slate-400 mb-0.5">Direct Purchases Total</p>
-            <p className="font-bold text-white text-sm">{formatSAR(grandTotal)}</p>
-            <p className="text-[10px] text-slate-400">{filtered.length} records</p>
+          <div className="bg-slate-100 border rounded-xl px-4 py-3 text-center">
+            <p className="text-xs text-slate-500 mb-0.5">Taxable Total (incl. VAT)</p>
+            <p className="font-bold text-slate-800 text-sm">{formatSAR(totalTaxableGross)}</p>
+            <p className="text-[10px] text-slate-400">gross amount</p>
           </div>
         </div>
       )}
