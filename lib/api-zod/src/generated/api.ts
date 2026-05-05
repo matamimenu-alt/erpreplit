@@ -1178,8 +1178,24 @@ export const ListBranchTransfersResponseItem = zod.object({
   subCategory: zod.string().nullish(),
   unit: zod.string(),
   quantity: zod.number(),
-  unitPrice: zod.number(),
-  totalValue: zod.number(),
+  unitPrice: zod
+    .number()
+    .describe("Net unit price (before VAT). Used for COGS calculation."),
+  invoiceType: zod
+    .enum(["tax", "non-tax"])
+    .describe("Whether this transfer is a tax invoice (15% VAT) or non-tax."),
+  priceIncludesVat: zod
+    .boolean()
+    .describe("Whether the entered price includes VAT."),
+  amountBeforeVat: zod
+    .number()
+    .describe("Total net amount (qty \* netUnitPrice), before VAT."),
+  vatAmount: zod
+    .number()
+    .describe("Total VAT amount (15% of amountBeforeVat for tax invoices)."),
+  totalValue: zod
+    .number()
+    .describe("Total amount including VAT (amountBeforeVat + vatAmount)."),
   referenceNumber: zod.string().nullish(),
   transferDate: zod.string(),
   notes: zod.string().nullish(),
@@ -1192,6 +1208,9 @@ export const ListBranchTransfersResponse = zod.array(
 /**
  * @summary Create a branch transfer
  */
+export const createBranchTransferBodyInvoiceTypeDefault = `non-tax`;
+export const createBranchTransferBodyPriceIncludesVatDefault = false;
+
 export const CreateBranchTransferBody = zod.object({
   fromRestaurantId: zod.number(),
   toRestaurantId: zod.number().nullish(),
@@ -1201,7 +1220,18 @@ export const CreateBranchTransferBody = zod.object({
   subCategory: zod.string().nullish(),
   unit: zod.string(),
   quantity: zod.number(),
-  unitPrice: zod.number(),
+  unitPrice: zod
+    .number()
+    .describe(
+      "Price as entered by user (net or gross depending on priceIncludesVat).",
+    ),
+  invoiceType: zod
+    .enum(["tax", "non-tax"])
+    .default(createBranchTransferBodyInvoiceTypeDefault),
+  priceIncludesVat: zod
+    .boolean()
+    .default(createBranchTransferBodyPriceIncludesVatDefault)
+    .describe("Whether the entered unit price includes VAT."),
   referenceNumber: zod.string().nullish(),
   transferDate: zod.string(),
   notes: zod.string().nullish(),

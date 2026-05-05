@@ -184,9 +184,11 @@ export default function Inventory() {
 
   // Destination type: "branch" = restaurant dropdown, "custom" = free-text location
   const [txDestType, setTxDestType] = useState<"branch" | "custom">("branch");
+  const [txFormOpen, setTxFormOpen] = useState(false);
   const [txForm, setTxForm] = useState({
     fromRestaurantId: "", toRestaurantId: "", customDestination: "", itemName: "", category: "",
-    unit: "kg", quantity: "", unitPrice: "", referenceNumber: "", transferDate: today(), notes: "",
+    unit: "kg", quantity: "", unitPrice: "", invoiceType: "non-tax" as "tax" | "non-tax",
+    priceIncludesVat: false, referenceNumber: "", transferDate: today(), notes: "",
   });
 
   // Auto-fill unit and category when item is selected — price is ALWAYS manual (no WAC auto-fill)
@@ -207,8 +209,24 @@ export default function Inventory() {
     return match ? match.currentQuantity : null;
   }, [txForm.itemName, txForm.category, stockItems]);
 
+  // Live VAT preview for the form
+  const txVatPreview = useMemo(() => {
+    const qty = parseFloat(txForm.quantity) || 0;
+    const price = parseFloat(txForm.unitPrice) || 0;
+    if (!qty || !price || txForm.invoiceType !== "tax") return { net: qty * price, vat: 0, total: qty * price };
+    const VAT_RATE = 0.15;
+    if (txForm.priceIncludesVat) {
+      const net = (qty * price) / (1 + VAT_RATE);
+      const vat = qty * price - net;
+      return { net: +net.toFixed(2), vat: +vat.toFixed(2), total: +(qty * price).toFixed(2) };
+    }
+    const net = qty * price;
+    const vat = net * VAT_RATE;
+    return { net: +net.toFixed(2), vat: +vat.toFixed(2), total: +(net + vat).toFixed(2) };
+  }, [txForm.quantity, txForm.unitPrice, txForm.invoiceType, txForm.priceIncludesVat]);
+
   const handleAddTransfer = async () => {
-    const { fromRestaurantId, toRestaurantId, customDestination, itemName, category, unit, quantity, unitPrice, referenceNumber, transferDate, notes } = txForm;
+    const { fromRestaurantId, toRestaurantId, customDestination, itemName, category, unit, quantity, unitPrice, invoiceType, priceIncludesVat, referenceNumber, transferDate, notes } = txForm;
     if (!fromRestaurantId || !itemName || !category || !quantity || !transferDate) {
       toast({ title: "Please fill all required fields", variant: "destructive" }); return;
     }
@@ -231,7 +249,7 @@ export default function Inventory() {
       if (!price || price <= 0) {
         toast({
           title: "Unit price required for branch transfers",
-          description: "The cost price is needed to calculate Cost of Sales (COGS) in each branch's P&L. The WAC is auto-filled when you select an item.",
+          description: "The cost price is needed to calculate Cost of Sales (COGS) in each branch's P&L.",
           variant: "destructive",
         });
         return;
@@ -253,11 +271,13 @@ export default function Inventory() {
           toRestaurantId: txDestType === "branch" ? parseInt(toRestaurantId) : undefined,
           destinationName: txDestType === "custom" ? customDestination.trim() : undefined,
           itemName, category, unit, quantity: qty, unitPrice: parseFloat(unitPrice) || 0,
+          invoiceType, priceIncludesVat,
           referenceNumber: referenceNumber || undefined, transferDate, notes: notes || undefined,
         },
       });
       toast({ title: "Transfer created successfully" });
-      setTxForm(prev => ({ ...prev, itemName: "", category: "", quantity: "", unitPrice: "", referenceNumber: "", notes: "" }));
+      setTxForm(prev => ({ ...prev, itemName: "", category: "", quantity: "", unitPrice: "", referenceNumber: "", notes: "", invoiceType: "non-tax", priceIncludesVat: false }));
+      setTxFormOpen(false);
       queryClient.invalidateQueries({ queryKey: getListStockItemsQueryKey({}) });
       queryClient.invalidateQueries({ queryKey: getListStockMovementsQueryKey({}) });
       queryClient.invalidateQueries({ queryKey: getListBranchTransfersQueryKey({}) });
@@ -668,223 +688,333 @@ export default function Inventory() {
 
         {/* ── TAB 3: TRANSFERS ────────────────────────────────────── */}
         <TabsContent value="transfers">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Add Transfer Form */}
-            <div className="lg:col-span-1">
-              <Card>
-                <CardHeader><CardTitle className="text-base flex items-center gap-2"><ArrowLeftRight className="w-4 h-4" /> New Transfer</CardTitle></CardHeader>
-                <CardContent className="space-y-3">
-                  {/* From Branch */}
-                  <div>
-                    <Label className="text-xs">From Branch *</Label>
-                    <Select value={txForm.fromRestaurantId} onValueChange={v => setTxForm(p => ({ ...p, fromRestaurantId: v }))}>
-                      <SelectTrigger><SelectValue placeholder="Select source branch" /></SelectTrigger>
-                      <SelectContent>{allRestaurants.map(r => <SelectItem key={r.id} value={String(r.id)}>{r.name}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
+          <div className="space-y-4">
 
-                  {/* Destination — hybrid: Branch or Custom Location */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <Label className="text-xs">To *</Label>
-                      <div className="flex rounded-md border overflow-hidden text-xs">
-                        <button
-                          type="button"
-                          className={`px-2 py-0.5 transition-colors ${txDestType === "branch" ? "bg-amber-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
-                          onClick={() => setTxDestType("branch")}
-                        >Branch</button>
-                        <button
-                          type="button"
-                          className={`px-2 py-0.5 transition-colors ${txDestType === "custom" ? "bg-amber-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
-                          onClick={() => setTxDestType("custom")}
-                        >Location</button>
+            {/* ── KPI Summary Bar ─────────────────────────────────────────── */}
+            {transfers.length > 0 && (() => {
+              const totalIn  = transfers.filter(t => !!t.toRestaurantId && !t.destinationName).reduce((s, t) => s + t.totalValue, 0);
+              const totalOut = transfers.filter(t => !!t.toRestaurantId && !t.destinationName).reduce((s, t) => s + t.amountBeforeVat, 0);
+              const totalVat = transfers.reduce((s, t) => s + t.vatAmount, 0);
+              return (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="bg-white border rounded-2xl px-4 py-3">
+                    <p className="text-[11px] text-slate-500 uppercase font-semibold tracking-wider mb-1">Total Transfers</p>
+                    <p className="text-xl font-extrabold text-slate-900">{formatSAR(transfers.reduce((s, t) => s + t.totalValue, 0))}</p>
+                    <p className="text-[10px] text-slate-400">{transfers.length} records</p>
+                  </div>
+                  <div className="bg-white border rounded-2xl px-4 py-3">
+                    <p className="text-[11px] text-slate-500 uppercase font-semibold tracking-wider mb-1">Net (before VAT)</p>
+                    <p className="text-xl font-extrabold text-slate-900">{formatSAR(transfers.reduce((s, t) => s + t.amountBeforeVat, 0))}</p>
+                    <p className="text-[10px] text-slate-400">for COGS calculation</p>
+                  </div>
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3">
+                    <p className="text-[11px] text-slate-500 uppercase font-semibold tracking-wider mb-1">Input VAT</p>
+                    <p className="text-xl font-extrabold text-emerald-700">{formatSAR(totalVat)}</p>
+                    <p className="text-[10px] text-slate-400">{transfers.filter(t => t.invoiceType === "tax").length} tax invoices</p>
+                  </div>
+                  <div className="bg-slate-900 rounded-2xl px-4 py-3">
+                    <p className="text-[11px] text-slate-400 uppercase font-semibold tracking-wider mb-1">Branch P&amp;L Impact</p>
+                    <p className="text-xl font-extrabold text-white">{formatSAR(totalIn - totalOut)}</p>
+                    <p className="text-[10px] text-slate-500">net COGS adjustment</p>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── Add New Transfer (collapsible) ───────────────────────────── */}
+            <div className="bg-white border rounded-2xl overflow-hidden">
+              <button
+                className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors"
+                onClick={() => setTxFormOpen(o => !o)}
+              >
+                <div className="flex items-center gap-2 font-semibold text-slate-800">
+                  <ArrowLeftRight className="w-4 h-4 text-primary" />
+                  New Transfer
+                </div>
+                <span className={`text-xs px-3 py-1 rounded-full transition-colors ${txFormOpen ? "bg-primary text-white" : "bg-slate-100 text-slate-600"}`}>
+                  {txFormOpen ? "Cancel" : "+ Add"}
+                </span>
+              </button>
+
+              {txFormOpen && (
+                <div className="border-t px-5 py-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {/* From Branch */}
+                    <div>
+                      <Label className="text-xs font-semibold">From Branch *</Label>
+                      <Select value={txForm.fromRestaurantId} onValueChange={v => setTxForm(p => ({ ...p, fromRestaurantId: v }))}>
+                        <SelectTrigger><SelectValue placeholder="Select source branch" /></SelectTrigger>
+                        <SelectContent>{allRestaurants.map(r => <SelectItem key={r.id} value={String(r.id)}>{r.name}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Destination */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <Label className="text-xs font-semibold">To *</Label>
+                        <div className="flex rounded-lg border overflow-hidden text-xs">
+                          <button type="button" className={`px-2.5 py-1 transition-colors ${txDestType === "branch" ? "bg-primary text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`} onClick={() => setTxDestType("branch")}>Branch</button>
+                          <button type="button" className={`px-2.5 py-1 transition-colors ${txDestType === "custom" ? "bg-primary text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`} onClick={() => setTxDestType("custom")}>Location</button>
+                        </div>
+                      </div>
+                      {txDestType === "branch" ? (
+                        <Select value={txForm.toRestaurantId} onValueChange={v => setTxForm(p => ({ ...p, toRestaurantId: v }))}>
+                          <SelectTrigger><SelectValue placeholder="Select destination branch" /></SelectTrigger>
+                          <SelectContent>{allRestaurants.filter(r => String(r.id) !== txForm.fromRestaurantId).map(r => <SelectItem key={r.id} value={String(r.id)}>{r.name}</SelectItem>)}</SelectContent>
+                        </Select>
+                      ) : (
+                        <>
+                          <Input list="tx-dest-suggestions" placeholder="e.g. Kitchen, Warehouse..." value={txForm.customDestination} onChange={e => setTxForm(p => ({ ...p, customDestination: e.target.value }))} />
+                          <datalist id="tx-dest-suggestions">{["Kitchen", "Warehouse", "Cold Storage", "Bar", "Prep Area", "Dry Storage"].map(d => <option key={d} value={d} />)}</datalist>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Date */}
+                    <div>
+                      <Label className="text-xs font-semibold">Date *</Label>
+                      <Input type="date" value={txForm.transferDate} onChange={e => setTxForm(p => ({ ...p, transferDate: e.target.value }))} />
+                    </div>
+
+                    {/* Item Name */}
+                    <div>
+                      <Label className="text-xs font-semibold">Item Name *</Label>
+                      <Input list="tx-item-suggestions" placeholder="Search item..." value={txForm.itemName} onChange={e => {
+                        const name = e.target.value;
+                        const match = stockItems.find(i => i.itemName === name);
+                        if (match) setTxForm(p => ({ ...p, itemName: name, category: match.category, unit: match.unit }));
+                        else setTxForm(p => ({ ...p, itemName: name }));
+                      }} />
+                      <datalist id="tx-item-suggestions">{existingItemNames.map(n => <option key={n} value={n} />)}</datalist>
+                    </div>
+
+                    {/* Category */}
+                    <div>
+                      <Label className="text-xs font-semibold">Category *</Label>
+                      <Select value={txForm.category} onValueChange={v => setTxForm(p => ({ ...p, category: v }))}>
+                        <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                        <SelectContent>
+                          {PURCHASE_CATEGORY_GROUPS.map(g => (
+                            <div key={g.label}>
+                              <div className="px-2 pt-2 pb-1 text-xs font-semibold text-gray-500">{g.label}</div>
+                              {g.subcategories.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                            </div>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Unit + Quantity */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-xs font-semibold">Unit</Label>
+                        <Select value={txForm.unit} onValueChange={v => setTxForm(p => ({ ...p, unit: v }))}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>{UNITS.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-xs font-semibold flex items-center gap-1">
+                          Quantity *
+                          {txAvailableQty !== null && (
+                            <span className={`text-xs font-normal ${txForm.quantity && parseFloat(txForm.quantity) > txAvailableQty ? "text-red-500" : "text-gray-400"}`}>
+                              (avail: {txAvailableQty.toFixed(2)})
+                            </span>
+                          )}
+                        </Label>
+                        <Input
+                          type="number" min="0" step="0.001" placeholder="0.000"
+                          value={txForm.quantity}
+                          onChange={e => setTxForm(p => ({ ...p, quantity: e.target.value }))}
+                          className={txAvailableQty !== null && txForm.quantity && parseFloat(txForm.quantity) > txAvailableQty ? "border-red-400" : ""}
+                        />
                       </div>
                     </div>
-                    {txDestType === "branch" ? (
-                      <Select value={txForm.toRestaurantId} onValueChange={v => setTxForm(p => ({ ...p, toRestaurantId: v }))}>
-                        <SelectTrigger><SelectValue placeholder="Select destination branch" /></SelectTrigger>
-                        <SelectContent>{allRestaurants.filter(r => String(r.id) !== txForm.fromRestaurantId).map(r => <SelectItem key={r.id} value={String(r.id)}>{r.name}</SelectItem>)}</SelectContent>
-                      </Select>
-                    ) : (
-                      <>
-                        <Input
-                          list="tx-dest-suggestions"
-                          placeholder="e.g. Kitchen, Warehouse, Bar Storage..."
-                          value={txForm.customDestination}
-                          onChange={e => setTxForm(p => ({ ...p, customDestination: e.target.value }))}
-                        />
-                        <datalist id="tx-dest-suggestions">
-                          {["Kitchen", "Warehouse", "Cold Storage", "Bar", "Prep Area", "Dry Storage"].map(d => <option key={d} value={d} />)}
-                        </datalist>
-                      </>
-                    )}
-                  </div>
 
-                  {/* Item Name */}
-                  <div>
-                    <Label className="text-xs">Item Name *</Label>
-                    <Input list="tx-item-suggestions" placeholder="Search item..." value={txForm.itemName} onChange={e => {
-                      const name = e.target.value;
-                      const match = stockItems.find(i => i.itemName === name);
-                      if (match) setTxForm(p => ({ ...p, itemName: name, category: match.category, unit: match.unit }));
-                      else setTxForm(p => ({ ...p, itemName: name }));
-                    }} />
-                    <datalist id="tx-item-suggestions">{existingItemNames.map(n => <option key={n} value={n} />)}</datalist>
-                  </div>
-
-                  {/* Category */}
-                  <div>
-                    <Label className="text-xs">Category *</Label>
-                    <Select value={txForm.category} onValueChange={v => setTxForm(p => ({ ...p, category: v }))}>
-                      <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-                      <SelectContent>
-                        {PURCHASE_CATEGORY_GROUPS.map(g => (
-                          <div key={g.label}>
-                            <div className="px-2 pt-2 pb-1 text-xs font-semibold text-gray-500">{g.label}</div>
-                            {g.subcategories.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
-                          </div>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Unit + Quantity */}
-                  <div className="grid grid-cols-2 gap-2">
+                    {/* Invoice Type */}
                     <div>
-                      <Label className="text-xs">Unit</Label>
-                      <Select value={txForm.unit} onValueChange={v => setTxForm(p => ({ ...p, unit: v }))}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>{UNITS.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
-                      </Select>
+                      <Label className="text-xs font-semibold">Invoice Type</Label>
+                      <div className="flex gap-2 mt-1">
+                        <button
+                          type="button"
+                          onClick={() => setTxForm(p => ({ ...p, invoiceType: "non-tax", priceIncludesVat: false }))}
+                          className={`flex-1 py-2 rounded-xl border-2 text-xs font-semibold transition-all ${txForm.invoiceType === "non-tax" ? "border-slate-700 bg-slate-700 text-white" : "border-slate-200 text-slate-600 hover:border-slate-400"}`}
+                        >
+                          🏷️ Non-Tax
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTxForm(p => ({ ...p, invoiceType: "tax" }))}
+                          className={`flex-1 py-2 rounded-xl border-2 text-xs font-semibold transition-all ${txForm.invoiceType === "tax" ? "border-blue-600 bg-blue-600 text-white" : "border-slate-200 text-slate-600 hover:border-blue-300"}`}
+                        >
+                          🧾 Tax (15% VAT)
+                        </button>
+                      </div>
                     </div>
+
+                    {/* Unit Price */}
                     <div>
-                      <Label className="text-xs flex items-center gap-1">
-                        Quantity *
-                        {txAvailableQty !== null && (
-                          <span className={`text-xs font-normal ${txForm.quantity && parseFloat(txForm.quantity) > txAvailableQty ? "text-red-500 font-semibold" : "text-gray-400"}`}>
-                            (avail: {txAvailableQty.toFixed(2)})
-                          </span>
-                        )}
+                      <Label className="text-xs font-semibold flex items-center gap-1">
+                        Unit Price (SAR)
+                        {txDestType === "branch" && <span className="text-red-500">*</span>}
                       </Label>
                       <Input
-                        type="number" min="0" step="0.001" placeholder="0.000"
-                        value={txForm.quantity}
-                        onChange={e => setTxForm(p => ({ ...p, quantity: e.target.value }))}
-                        className={txAvailableQty !== null && txForm.quantity && parseFloat(txForm.quantity) > txAvailableQty ? "border-red-400 focus:ring-red-400" : ""}
+                        type="number" min="0" step="0.01" placeholder="0.00"
+                        value={txForm.unitPrice}
+                        onChange={e => setTxForm(p => ({ ...p, unitPrice: e.target.value }))}
+                        className={txDestType === "branch" && (!txForm.unitPrice || parseFloat(txForm.unitPrice) <= 0) ? "border-amber-400" : ""}
                       />
-                      {txAvailableQty !== null && txForm.quantity && parseFloat(txForm.quantity) > txAvailableQty && (
-                        <p className="text-red-500 text-xs mt-0.5">Exceeds available stock!</p>
+                      {txForm.invoiceType === "tax" && (
+                        <label className="flex items-center gap-1.5 mt-1.5 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={txForm.priceIncludesVat}
+                            onChange={e => setTxForm(p => ({ ...p, priceIncludesVat: e.target.checked }))}
+                            className="rounded"
+                          />
+                          <span className="text-xs text-slate-600">Price includes VAT (15%)</span>
+                        </label>
                       )}
+                    </div>
+
+                    {/* Reference */}
+                    <div>
+                      <Label className="text-xs font-semibold">Reference Number</Label>
+                      <Input placeholder="e.g. TRF-001" value={txForm.referenceNumber} onChange={e => setTxForm(p => ({ ...p, referenceNumber: e.target.value }))} />
+                    </div>
+
+                    {/* Notes — full width */}
+                    <div className="md:col-span-2 lg:col-span-3">
+                      <Label className="text-xs font-semibold">Notes</Label>
+                      <textarea
+                        rows={2}
+                        placeholder="Any notes about this transfer..."
+                        value={txForm.notes}
+                        onChange={e => setTxForm(p => ({ ...p, notes: e.target.value }))}
+                        className="w-full px-3 py-2 border rounded-xl text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 resize-none"
+                      />
                     </div>
                   </div>
 
-                  {/* Unit Price — MANUAL entry always required (no WAC auto-fill) */}
-                  <div>
-                    <Label className="text-xs flex items-center gap-1">
-                      Transfer Cost Price (SAR)
-                      {txDestType === "branch" ? (
-                        <span className="text-red-500">*</span>
-                      ) : (
-                        <span className="text-gray-400">(optional)</span>
-                      )}
-                    </Label>
-                    <Input
-                      type="number" min="0" step="0.01" placeholder="0.00"
-                      value={txForm.unitPrice}
-                      onChange={e => setTxForm(p => ({ ...p, unitPrice: e.target.value }))}
-                      className={txDestType === "branch" && (!txForm.unitPrice || parseFloat(txForm.unitPrice) <= 0) ? "border-amber-400" : ""}
-                    />
-                    {txDestType === "branch" && (
-                      <p className="text-xs text-amber-600 mt-0.5">
-                        Required — used to record Cost of Sales in the destination branch's P&amp;L.
-                      </p>
-                    )}
-                    {txForm.unitPrice && txForm.quantity && (
-                      <p className="text-xs text-slate-500 mt-0.5 font-medium">
-                        Total cost: SAR {(parseFloat(txForm.unitPrice || "0") * parseFloat(txForm.quantity || "0")).toFixed(2)}
-                      </p>
-                    )}
-                  </div>
+                  {/* VAT Preview */}
+                  {txForm.quantity && txForm.unitPrice && (
+                    <div className={`mt-4 rounded-xl p-4 ${txForm.invoiceType === "tax" ? "bg-blue-50 border border-blue-200" : "bg-slate-50 border"}`}>
+                      <p className="text-xs font-semibold text-slate-600 mb-2">Transfer Cost Summary</p>
+                      <div className="flex flex-wrap gap-6">
+                        <div>
+                          <p className="text-[10px] text-slate-500">Net Amount (COGS)</p>
+                          <p className="font-bold text-slate-900">{formatSAR(txVatPreview.net)}</p>
+                        </div>
+                        {txForm.invoiceType === "tax" && (
+                          <div>
+                            <p className="text-[10px] text-slate-500">VAT 15%</p>
+                            <p className="font-bold text-blue-700">{formatSAR(txVatPreview.vat)}</p>
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-[10px] text-slate-500">Total Paid</p>
+                          <p className="font-bold text-slate-900">{formatSAR(txVatPreview.total)}</p>
+                        </div>
+                        {txDestType === "branch" && (
+                          <div className="ml-auto text-right">
+                            <p className="text-[10px] text-emerald-600 font-medium">✓ Affects branch P&amp;L</p>
+                            <p className="text-[10px] text-slate-400">COGS uses net amount</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
-                  {/* Date */}
-                  <div>
-                    <Label className="text-xs">Date *</Label>
-                    <Input type="date" value={txForm.transferDate} onChange={e => setTxForm(p => ({ ...p, transferDate: e.target.value }))} />
+                  <div className="mt-4 flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => setTxFormOpen(false)}>Cancel</Button>
+                    <Button onClick={handleAddTransfer} disabled={createTransfer.isPending}>
+                      <ArrowLeftRight className="w-4 h-4 mr-1" />
+                      {createTransfer.isPending ? "Processing..." : "Create Transfer"}
+                    </Button>
                   </div>
-
-                  {/* Reference */}
-                  <div>
-                    <Label className="text-xs">Reference Number</Label>
-                    <Input placeholder="e.g. TRF-001" value={txForm.referenceNumber} onChange={e => setTxForm(p => ({ ...p, referenceNumber: e.target.value }))} />
-                  </div>
-
-                  {/* Notes */}
-                  <div>
-                    <Label className="text-xs">Notes</Label>
-                    <Input placeholder="Optional notes..." value={txForm.notes} onChange={e => setTxForm(p => ({ ...p, notes: e.target.value }))} />
-                  </div>
-
-                  <Button className="w-full" onClick={handleAddTransfer} disabled={createTransfer.isPending}>
-                    <ArrowLeftRight className="w-4 h-4 mr-1" /> {createTransfer.isPending ? "Processing..." : "Create Transfer"}
-                  </Button>
-                </CardContent>
-              </Card>
+                </div>
+              )}
             </div>
 
-            {/* Transfers List */}
-            <div className="lg:col-span-2">
+            {/* ── Transfers Table — full width ─────────────────────────────── */}
+            <div className="bg-white border rounded-2xl overflow-hidden">
               {loadingTransfers ? (
-                <div className="text-center py-8 text-gray-400">Loading transfers...</div>
+                <div className="text-center py-12 text-gray-400">Loading transfers...</div>
               ) : transfers.length === 0 ? (
-                <div className="text-center py-12 text-gray-400">
-                  <ArrowLeftRight className="w-12 h-12 mx-auto mb-2 opacity-30" />
-                  <p>No transfers recorded yet</p>
+                <div className="text-center py-16 text-gray-400">
+                  <ArrowLeftRight className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                  <p className="font-medium">No transfers recorded yet</p>
+                  <p className="text-sm mt-1">Click "New Transfer → + Add" to get started.</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto rounded-lg border">
+                <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-50 text-gray-600">
+                    <thead className="bg-slate-50 text-slate-600 font-medium border-b">
                       <tr>
-                        <th className="p-2 text-left">Date</th>
-                        <th className="p-2 text-left">Ref</th>
-                        <th className="p-2 text-left">From</th>
-                        <th className="p-2 text-left">To</th>
-                        <th className="p-2 text-left">Item</th>
-                        <th className="p-2 text-right">Qty</th>
-                        <th className="p-2 text-right">Price</th>
-                        <th className="p-2 text-right">Value</th>
-                        <th className="p-2 text-left">Notes</th>
-                        <th className="p-2"></th>
+                        <th className="px-4 py-3 text-left">Date</th>
+                        <th className="px-4 py-3 text-left">Ref</th>
+                        <th className="px-4 py-3 text-left">From</th>
+                        <th className="px-4 py-3 text-left">To</th>
+                        <th className="px-4 py-3 text-left">Item</th>
+                        <th className="px-4 py-3 text-left">Invoice</th>
+                        <th className="px-4 py-3 text-right">Qty</th>
+                        <th className="px-4 py-3 text-right">Unit Price</th>
+                        <th className="px-4 py-3 text-right">Net (COGS)</th>
+                        <th className="px-4 py-3 text-right">VAT</th>
+                        <th className="px-4 py-3 text-right">Total Paid</th>
+                        <th className="px-4 py-3 text-left">Notes</th>
+                        <th className="px-4 py-3 w-10"></th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y text-slate-700">
                       {transfers.map(t => {
                         const isBranchTransfer = !!t.toRestaurantId && !t.destinationName;
+                        const isTax = t.invoiceType === "tax";
                         return (
-                          <tr key={t.id} className="border-t hover:bg-gray-50">
-                            <td className="p-2 whitespace-nowrap">{t.transferDate}</td>
-                            <td className="p-2 text-gray-500 text-xs">{t.referenceNumber ?? `#${t.id}`}</td>
-                            <td className="p-2">
-                              <span className="px-2 py-0.5 rounded bg-orange-100 text-orange-800 text-xs">{t.fromRestaurantName}</span>
+                          <tr key={t.id} className="hover:bg-slate-50 transition-colors">
+                            <td className="px-4 py-3 whitespace-nowrap text-slate-600">{t.transferDate}</td>
+                            <td className="px-4 py-3 text-slate-400 text-xs font-mono">{t.referenceNumber ?? `#${t.id}`}</td>
+                            <td className="px-4 py-3">
+                              <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 text-xs font-medium">{t.fromRestaurantName}</span>
                             </td>
-                            <td className="p-2">
+                            <td className="px-4 py-3">
                               <div className="flex flex-col gap-0.5">
-                                <span className={`px-2 py-0.5 rounded text-xs w-fit ${isBranchTransfer ? "bg-teal-100 text-teal-800" : "bg-purple-100 text-purple-800"}`}>
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium w-fit ${isBranchTransfer ? "bg-teal-100 text-teal-800" : "bg-purple-100 text-purple-800"}`}>
                                   {t.toRestaurantName}
                                 </span>
                                 {isBranchTransfer ? (
-                                  <span className="text-xs text-emerald-600 font-medium">✓ Affects P&amp;L</span>
+                                  <span className="text-[10px] text-emerald-600 font-medium">✓ Affects P&amp;L</span>
                                 ) : (
-                                  <span className="text-xs text-gray-400">Free-text location</span>
+                                  <span className="text-[10px] text-slate-400">Free-text location</span>
                                 )}
                               </div>
                             </td>
-                            <td className="p-2 font-medium">{t.itemName}</td>
-                            <td className="p-2 text-right">{t.quantity.toFixed(2)} <span className="text-gray-400 text-xs">{t.unit}</span></td>
-                            <td className="p-2 text-right">{t.unitPrice > 0 ? formatSAR(t.unitPrice) : "—"}</td>
-                            <td className={`p-2 text-right font-semibold ${isBranchTransfer && t.totalValue > 0 ? "text-rose-700" : ""}`}>{formatSAR(t.totalValue)}</td>
-                            <td className="p-2 text-gray-500 text-xs max-w-[100px] truncate">{t.notes ?? "—"}</td>
-                            <td className="p-2">
+                            <td className="px-4 py-3 font-medium">{t.itemName}</td>
+                            <td className="px-4 py-3">
+                              {isTax ? (
+                                <div>
+                                  <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">🧾 Tax</span>
+                                  {t.priceIncludesVat && <p className="text-[10px] text-slate-400 mt-0.5">incl. VAT</p>}
+                                </div>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold">🏷️ No VAT</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-right">{t.quantity.toFixed(3)} <span className="text-slate-400 text-xs">{t.unit}</span></td>
+                            <td className="px-4 py-3 text-right">{t.unitPrice > 0 ? formatSAR(t.unitPrice) : "—"}</td>
+                            <td className="px-4 py-3 text-right font-medium">{formatSAR(t.amountBeforeVat)}</td>
+                            <td className="px-4 py-3 text-right">
+                              {isTax ? <span className="text-emerald-600">{formatSAR(t.vatAmount)}</span> : <span className="text-slate-300">—</span>}
+                            </td>
+                            <td className={`px-4 py-3 text-right font-bold ${isBranchTransfer && t.totalValue > 0 ? "text-rose-700" : "text-slate-800"}`}>
+                              {formatSAR(t.totalValue)}
+                            </td>
+                            <td className="px-4 py-3 text-slate-500 text-xs">
+                              {t.notes ? (
+                                <div className="max-w-[200px] whitespace-pre-wrap break-words">{t.notes}</div>
+                              ) : <span className="text-slate-300">—</span>}
+                            </td>
+                            <td className="px-4 py-3">
                               <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500 hover:text-red-700"
                                 onClick={() => handleDeleteTransfer(t.id)}>
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -894,6 +1024,15 @@ export default function Inventory() {
                         );
                       })}
                     </tbody>
+                    <tfoot className="bg-slate-50 border-t font-semibold text-slate-700">
+                      <tr>
+                        <td colSpan={8} className="px-4 py-3 text-right text-slate-500">{transfers.length} records</td>
+                        <td className="px-4 py-3 text-right">{formatSAR(transfers.reduce((s, t) => s + t.amountBeforeVat, 0))}</td>
+                        <td className="px-4 py-3 text-right text-emerald-600">{formatSAR(transfers.reduce((s, t) => s + t.vatAmount, 0))}</td>
+                        <td className="px-4 py-3 text-right">{formatSAR(transfers.reduce((s, t) => s + t.totalValue, 0))}</td>
+                        <td colSpan={2} />
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               )}

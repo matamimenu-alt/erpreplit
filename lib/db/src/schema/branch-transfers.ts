@@ -1,4 +1,4 @@
-import { pgTable, serial, text, numeric, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, numeric, integer, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { restaurantsTable } from "./restaurants";
@@ -13,7 +13,10 @@ export const branchTransfersTable = pgTable("branch_transfers", {
   subCategory: text("sub_category"),
   unit: text("unit").notNull().default("unit"),
   quantity: numeric("quantity", { precision: 12, scale: 3 }).notNull(),
-  unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull().default("0"),
+  unitPrice: numeric("unit_price", { precision: 12, scale: 4 }).notNull().default("0"),
+  invoiceType: text("invoice_type").notNull().default("non-tax"),
+  priceIncludesVat: boolean("price_includes_vat").notNull().default(false),
+  vatAmount: numeric("vat_amount", { precision: 12, scale: 2 }).notNull().default("0"),
   referenceNumber: text("reference_number"),
   transferDate: text("transfer_date").notNull(),
   notes: text("notes"),

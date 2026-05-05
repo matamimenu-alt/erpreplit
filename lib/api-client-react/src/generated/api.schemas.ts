@@ -567,6 +567,17 @@ export interface CreateStockMovement {
   notes?: string;
 }
 
+/**
+ * Whether this transfer is a tax invoice (15% VAT) or non-tax.
+ */
+export type BranchTransferInvoiceType =
+  (typeof BranchTransferInvoiceType)[keyof typeof BranchTransferInvoiceType];
+
+export const BranchTransferInvoiceType = {
+  tax: "tax",
+  "non-tax": "non-tax",
+} as const;
+
 export interface BranchTransfer {
   id: number;
   fromRestaurantId: number;
@@ -579,13 +590,31 @@ export interface BranchTransfer {
   subCategory?: string | null;
   unit: string;
   quantity: number;
+  /** Net unit price (before VAT). Used for COGS calculation. */
   unitPrice: number;
+  /** Whether this transfer is a tax invoice (15% VAT) or non-tax. */
+  invoiceType: BranchTransferInvoiceType;
+  /** Whether the entered price includes VAT. */
+  priceIncludesVat: boolean;
+  /** Total net amount (qty * netUnitPrice), before VAT. */
+  amountBeforeVat: number;
+  /** Total VAT amount (15% of amountBeforeVat for tax invoices). */
+  vatAmount: number;
+  /** Total amount including VAT (amountBeforeVat + vatAmount). */
   totalValue: number;
   referenceNumber?: string | null;
   transferDate: string;
   notes?: string | null;
   createdAt: string;
 }
+
+export type CreateBranchTransferInvoiceType =
+  (typeof CreateBranchTransferInvoiceType)[keyof typeof CreateBranchTransferInvoiceType];
+
+export const CreateBranchTransferInvoiceType = {
+  tax: "tax",
+  "non-tax": "non-tax",
+} as const;
 
 export interface CreateBranchTransfer {
   fromRestaurantId: number;
@@ -596,7 +625,11 @@ export interface CreateBranchTransfer {
   subCategory?: string | null;
   unit: string;
   quantity: number;
+  /** Price as entered by user (net or gross depending on priceIncludesVat). */
   unitPrice: number;
+  invoiceType?: CreateBranchTransferInvoiceType;
+  /** Whether the entered unit price includes VAT. */
+  priceIncludesVat?: boolean;
   referenceNumber?: string | null;
   transferDate: string;
   notes?: string | null;

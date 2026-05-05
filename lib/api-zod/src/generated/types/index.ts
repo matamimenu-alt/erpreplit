@@ -8,8 +8,10 @@
 
 export * from "./batchInvoiceItem";
 export * from "./branchTransfer";
+export * from "./branchTransferInvoiceType";
 export * from "./categoryExpenseReport";
 export * from "./createBranchTransfer";
+export * from "./createBranchTransferInvoiceType";
 export * from "./createDish";
 export * from "./createDish201";
 export * from "./createDishIngredient";

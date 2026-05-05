@@ -300,6 +300,10 @@ router.get("/transfers", async (req, res) => {
     res.json(transfers.map(t => {
       const destName = t.destinationName
         ?? (t.toRestaurantId ? (restaurantMap.get(t.toRestaurantId) ?? String(t.toRestaurantId)) : "Unknown");
+      const qty = toNum(t.quantity);
+      const netUnit = toNum(t.unitPrice);
+      const amountBeforeVat = +(qty * netUnit).toFixed(2);
+      const vatAmount = toNum(t.vatAmount);
       return {
         id: t.id,
         fromRestaurantId: t.fromRestaurantId,
@@ -311,9 +315,13 @@ router.get("/transfers", async (req, res) => {
         category: t.category,
         subCategory: t.subCategory ?? undefined,
         unit: t.unit,
-        quantity: toNum(t.quantity),
-        unitPrice: toNum(t.unitPrice),
-        totalValue: toNum(t.quantity) * toNum(t.unitPrice),
+        quantity: qty,
+        unitPrice: netUnit,
+        invoiceType: (t.invoiceType as "tax" | "non-tax") ?? "non-tax",
+        priceIncludesVat: t.priceIncludesVat ?? false,
+        amountBeforeVat,
+        vatAmount,
+        totalValue: +(amountBeforeVat + vatAmount).toFixed(2),
         referenceNumber: t.referenceNumber ?? undefined,
         transferDate: t.transferDate,
         notes: t.notes ?? undefined,
@@ -332,7 +340,7 @@ router.post("/transfers", async (req, res) => {
     const fromRestaurantIdRaw = req.body.fromRestaurantId;
     const toRestaurantIdRaw = req.body.toRestaurantId;
     const destinationNameRaw: string | undefined = req.body.destinationName;
-    const { itemName, category, subCategory, unit, quantity, unitPrice, referenceNumber, transferDate, notes } = req.body;
+    const { itemName, category, subCategory, unit, quantity, unitPrice, invoiceType, priceIncludesVat, referenceNumber, transferDate, notes } = req.body;
 
     const fromId = parseInt(String(fromRestaurantIdRaw));
     const toId = toRestaurantIdRaw ? parseInt(String(toRestaurantIdRaw)) : null;
@@ -348,15 +356,32 @@ router.post("/transfers", async (req, res) => {
     }
 
     const qty = parseFloat(String(quantity));
-    const price = parseFloat(String(unitPrice)) || 0;
-    const totalValue = qty * price;
+    const enteredPrice = parseFloat(String(unitPrice)) || 0;
+    const isTax = invoiceType === "tax";
+    const includesVat = !!priceIncludesVat;
+    const VAT_RATE = 0.15;
+
+    // Derive net unit price (before VAT) — this is stored in unitPrice column for COGS accuracy
+    let netUnitPrice: number;
+    let vatAmountTotal: number;
+    if (!isTax) {
+      netUnitPrice = enteredPrice;
+      vatAmountTotal = 0;
+    } else if (includesVat) {
+      netUnitPrice = enteredPrice / (1 + VAT_RATE);
+      vatAmountTotal = +(qty * netUnitPrice * VAT_RATE).toFixed(2);
+    } else {
+      netUnitPrice = enteredPrice;
+      vatAmountTotal = +(qty * netUnitPrice * VAT_RATE).toFixed(2);
+    }
+    const amountBeforeVat = +(qty * netUnitPrice).toFixed(2);
 
     if (!qty || qty <= 0) {
       return res.status(400).json({ error: "Quantity must be greater than zero." });
     }
 
     // ── Require unit price for internal branch transfers (needed for P&L COGS) ──
-    if (toId && (!price || price <= 0)) {
+    if (toId && (!enteredPrice || enteredPrice <= 0)) {
       return res.status(400).json({
         error: "Unit price (cost) is required for internal branch transfers. This manual price is used to calculate Cost of Sales (COGS) in both the source and destination branch P&L reports.",
       });
@@ -385,14 +410,18 @@ router.post("/transfers", async (req, res) => {
       subCategory: subCategory || null,
       unit: unit || "unit",
       quantity: String(qty.toFixed(3)),
-      unitPrice: String(price.toFixed(2)),
+      unitPrice: String(netUnitPrice.toFixed(4)),
+      invoiceType: isTax ? "tax" : "non-tax",
+      priceIncludesVat: includesVat,
+      vatAmount: String(vatAmountTotal.toFixed(2)),
       referenceNumber: referenceNumber || null,
       transferDate,
       notes: notes || null,
     }).returning();
 
-    // Build stock movements
+    // Build stock movements — use net unit price for COGS accuracy
     const ref = referenceNumber || `TRF-${transfer.id}`;
+    const netTotalValue = amountBeforeVat;
     const outMovement = {
       restaurantId: fromId,
       itemName,
@@ -401,8 +430,8 @@ router.post("/transfers", async (req, res) => {
       unit: unit || "unit",
       movementType: "transfer-out",
       quantity: String(qty.toFixed(3)),
-      unitPrice: String(price.toFixed(2)),
-      totalValue: String(totalValue.toFixed(2)),
+      unitPrice: String(netUnitPrice.toFixed(4)),
+      totalValue: String(netTotalValue.toFixed(2)),
       movementDate: transferDate,
       referenceType: "transfer",
       referenceId: transfer.id,
@@ -419,8 +448,8 @@ router.post("/transfers", async (req, res) => {
         unit: unit || "unit",
         movementType: "transfer-in",
         quantity: String(qty.toFixed(3)),
-        unitPrice: String(price.toFixed(2)),
-        totalValue: String(totalValue.toFixed(2)),
+        unitPrice: String(netUnitPrice.toFixed(4)),
+        totalValue: String(netTotalValue.toFixed(2)),
         movementDate: transferDate,
         referenceType: "transfer",
         referenceId: transfer.id,
@@ -445,7 +474,11 @@ router.post("/transfers", async (req, res) => {
       unit: transfer.unit,
       quantity: toNum(transfer.quantity),
       unitPrice: toNum(transfer.unitPrice),
-      totalValue,
+      invoiceType: (transfer.invoiceType as "tax" | "non-tax") ?? "non-tax",
+      priceIncludesVat: transfer.priceIncludesVat ?? false,
+      amountBeforeVat,
+      vatAmount: vatAmountTotal,
+      totalValue: +(amountBeforeVat + vatAmountTotal).toFixed(2),
       referenceNumber: transfer.referenceNumber ?? undefined,
       transferDate: transfer.transferDate,
       notes: transfer.notes ?? undefined,

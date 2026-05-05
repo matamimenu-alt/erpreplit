@@ -5,6 +5,7 @@
  * Restaurant Management & Accounting System API
  * OpenAPI spec version: 0.1.0
  */
+import type { BranchTransferInvoiceType } from "./branchTransferInvoiceType";
 
 export interface BranchTransfer {
   id: number;
@@ -18,7 +19,17 @@ export interface BranchTransfer {
   subCategory?: string | null;
   unit: string;
   quantity: number;
+  /** Net unit price (before VAT). Used for COGS calculation. */
   unitPrice: number;
+  /** Whether this transfer is a tax invoice (15% VAT) or non-tax. */
+  invoiceType: BranchTransferInvoiceType;
+  /** Whether the entered price includes VAT. */
+  priceIncludesVat: boolean;
+  /** Total net amount (qty * netUnitPrice), before VAT. */
+  amountBeforeVat: number;
+  /** Total VAT amount (15% of amountBeforeVat for tax invoices). */
+  vatAmount: number;
+  /** Total amount including VAT (amountBeforeVat + vatAmount). */
   totalValue: number;
   referenceNumber?: string | null;
   transferDate: string;

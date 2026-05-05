@@ -2323,8 +2323,23 @@ components:
           type: number
         unitPrice:
           type: number
+          description: Net unit price (before VAT). Used for COGS calculation.
+        invoiceType:
+          type: string
+          enum: [tax, non-tax]
+          description: Whether this transfer is a tax invoice (15% VAT) or non-tax.
+        priceIncludesVat:
+          type: boolean
+          description: Whether the entered price includes VAT.
+        amountBeforeVat:
+          type: number
+          description: Total net amount (qty * netUnitPrice), before VAT.
+        vatAmount:
+          type: number
+          description: Total VAT amount (15% of amountBeforeVat for tax invoices).
         totalValue:
           type: number
+          description: Total amount including VAT (amountBeforeVat + vatAmount).
         referenceNumber:
           type: string
           nullable: true
@@ -2345,6 +2360,10 @@ components:
         - unit
         - quantity
         - unitPrice
+        - invoiceType
+        - priceIncludesVat
+        - amountBeforeVat
+        - vatAmount
         - totalValue
         - transferDate
         - createdAt
@@ -2373,6 +2392,15 @@ components:
           type: number
         unitPrice:
           type: number
+          description: Price as entered by user (net or gross depending on priceIncludesVat).
+        invoiceType:
+          type: string
+          enum: [tax, non-tax]
+          default: non-tax
+        priceIncludesVat:
+          type: boolean
+          default: false
+          description: Whether the entered unit price includes VAT.
         referenceNumber:
           type: string
           nullable: true

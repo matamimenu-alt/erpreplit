@@ -5,6 +5,7 @@
  * Restaurant Management & Accounting System API
  * OpenAPI spec version: 0.1.0
  */
+import type { CreateBranchTransferInvoiceType } from "./createBranchTransferInvoiceType";
 
 export interface CreateBranchTransfer {
   fromRestaurantId: number;
@@ -15,7 +16,11 @@ export interface CreateBranchTransfer {
   subCategory?: string | null;
   unit: string;
   quantity: number;
+  /** Price as entered by user (net or gross depending on priceIncludesVat). */
   unitPrice: number;
+  invoiceType?: CreateBranchTransferInvoiceType;
+  /** Whether the entered unit price includes VAT. */
+  priceIncludesVat?: boolean;
   referenceNumber?: string | null;
   transferDate: string;
   notes?: string | null;
