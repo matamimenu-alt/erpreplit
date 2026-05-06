@@ -1929,7 +1929,7 @@ export function useGetSupplierProducts<
  * @summary List supplier products
  */
 export const getListSupplierProductsUrl = () => {
-  return `/api/supplier-products`;
+  return `/api/supplier-products/products`;
 };
 
 export const listSupplierProducts = async (
@@ -1942,7 +1942,7 @@ export const listSupplierProducts = async (
 };
 
 export const getListSupplierProductsQueryKey = () => {
-  return [`/api/supplier-products`] as const;
+  return [`/api/supplier-products/products`] as const;
 };
 
 export const getListSupplierProductsQueryOptions = <
@@ -2004,7 +2004,7 @@ export function useListSupplierProducts<
  * @summary Create a supplier product price entry
  */
 export const getCreateSupplierProductUrl = () => {
-  return `/api/supplier-products`;
+  return `/api/supplier-products/products`;
 };
 
 export const createSupplierProduct = async (
@@ -2090,7 +2090,7 @@ export const useCreateSupplierProduct = <
  * @summary Update a supplier product
  */
 export const getUpdateSupplierProductUrl = (id: number) => {
-  return `/api/supplier-products/${id}`;
+  return `/api/supplier-products/products/${id}`;
 };
 
 export const updateSupplierProduct = async (
@@ -2177,7 +2177,7 @@ export const useUpdateSupplierProduct = <
  * @summary Delete a supplier product
  */
 export const getDeleteSupplierProductUrl = (id: number) => {
-  return `/api/supplier-products/${id}`;
+  return `/api/supplier-products/products/${id}`;
 };
 
 export const deleteSupplierProduct = async (
