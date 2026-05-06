@@ -32,6 +32,8 @@ function toProduct(r: typeof supplierProductsTable.$inferSelect, supplierName: s
     supplierId: r.supplierId,
     supplierName,
     productName: r.productName,
+    category: r.category ?? "others",
+    unit: r.unit ?? "unit",
     previousPrice: prev ?? undefined,
     currentPrice: curr,
     priceDifference: diff,
@@ -122,6 +124,8 @@ router.get("/price-comparison", async (req, res) => {
         supplierId: p.supplierId,
         supplierName: supplierMap.get(p.supplierId!) ?? "Unknown",
         productName: p.productName,
+        category: p.category ?? "others",
+        unit: p.unit ?? "unit",
         previousPrice: prev ?? undefined,
         currentPrice: curr,
         priceDifference: diff,
@@ -132,6 +136,22 @@ router.get("/price-comparison", async (req, res) => {
     res.json(result);
   } catch (err) {
     req.log.error({ err }, "Error getting price comparison");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET /api/suppliers/:id/products  — products for a specific supplier
+router.get("/:id/products", async (req, res) => {
+  try {
+    const supplierId = parseInt(req.params.id);
+    const supplier = await db.select().from(suppliersTable).where(eq(suppliersTable.id, supplierId)).limit(1);
+    if (!supplier[0]) return res.status(404).json({ error: "Supplier not found" });
+    const products = await db.select().from(supplierProductsTable)
+      .where(eq(supplierProductsTable.supplierId, supplierId))
+      .orderBy(supplierProductsTable.productName);
+    res.json(products.map((p) => toProduct(p, supplier[0].name)));
+  } catch (err) {
+    req.log.error({ err }, "Error fetching supplier products");
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -156,13 +176,15 @@ router.get("/products", async (req, res) => {
 // POST /api/supplier-products
 router.post("/products", async (req, res) => {
   try {
-    const { supplierId, productName, previousPrice, currentPrice } = req.body;
+    const { supplierId, productName, category, unit, previousPrice, currentPrice } = req.body;
     const supplier = await db.select().from(suppliersTable).where(eq(suppliersTable.id, Number(supplierId))).limit(1);
     const [record] = await db
       .insert(supplierProductsTable)
       .values({
         supplierId: Number(supplierId),
         productName,
+        category: category || "others",
+        unit: unit || "unit",
         previousPrice: previousPrice != null ? String(Number(previousPrice).toFixed(2)) : null,
         currentPrice: String(Number(currentPrice).toFixed(2)),
       })
@@ -179,7 +201,7 @@ router.post("/products", async (req, res) => {
 router.put("/products/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { supplierId, productName, previousPrice, currentPrice } = req.body;
+    const { supplierId, productName, category, unit, previousPrice, currentPrice } = req.body;
     const [existing] = await db
       .select()
       .from(supplierProductsTable)
@@ -191,6 +213,8 @@ router.put("/products/:id", async (req, res) => {
       .set({
         supplierId: Number(supplierId),
         productName,
+        category: category || "others",
+        unit: unit || "unit",
         previousPrice: newPrev,
         currentPrice: String(Number(currentPrice).toFixed(2)),
       })

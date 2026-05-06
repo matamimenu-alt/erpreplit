@@ -17,6 +17,8 @@ export const supplierProductsTable = pgTable("supplier_products", {
   id: serial("id").primaryKey(),
   supplierId: serial("supplier_id").references(() => suppliersTable.id),
   productName: text("product_name").notNull(),
+  category: text("category").notNull().default("others"),
+  unit: text("unit").notNull().default("unit"),
   previousPrice: numeric("previous_price", { precision: 12, scale: 2 }),
   currentPrice: numeric("current_price", { precision: 12, scale: 2 }).notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

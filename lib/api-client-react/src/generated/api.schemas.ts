@@ -300,6 +300,8 @@ export interface SupplierProduct {
   supplierId: number;
   supplierName: string;
   productName: string;
+  category: string;
+  unit: string;
   previousPrice?: number;
   currentPrice: number;
   priceDifference: number;
@@ -310,6 +312,8 @@ export interface SupplierProduct {
 export interface CreateSupplierProduct {
   supplierId: number;
   productName: string;
+  category: string;
+  unit: string;
   previousPrice?: number;
   currentPrice: number;
 }

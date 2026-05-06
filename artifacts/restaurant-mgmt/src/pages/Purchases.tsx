@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { useListPurchases, useCreatePurchaseBatch, useGetPurchaseProductSuggestions, useListBranchTransfers } from "@workspace/api-client-react";
+import { useListPurchases, useCreatePurchaseBatch, useGetPurchaseProductSuggestions, useListBranchTransfers, useListSuppliers, useGetSupplierProducts } from "@workspace/api-client-react";
+import type { SupplierProduct } from "@workspace/api-client-react";
 import { usePurchasesMutations } from "@/hooks/use-purchases";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PrintButton } from "@/components/ui/PrintButton";
@@ -61,6 +62,7 @@ function newLocalId() {
 interface ProductSuggestion {
   productName: string;
   category: string;
+  unit?: string;
   lastPrice: number;
 }
 
@@ -73,6 +75,7 @@ function ProductCombobox({
   inputRef: externalRef,
   currentItems = [],
   editingLocalId,
+  supplierProducts,
 }: {
   value: string;
   onChange: (val: string) => void;
@@ -82,6 +85,7 @@ function ProductCombobox({
   inputRef?: React.RefObject<HTMLInputElement>;
   currentItems?: { productName: string; localId: string }[];
   editingLocalId?: string | null;
+  supplierProducts?: SupplierProduct[];
 }) {
   const [open, setOpen] = useState(false);
   const [highlightIdx, setHighlightIdx] = useState(-1);
@@ -91,10 +95,23 @@ function ProductCombobox({
 
   const { data: allProducts } = useGetPurchaseProductSuggestions();
 
-  const safeProducts = useMemo(
-    () => (allProducts ?? []).filter(p => !!p.productName),
-    [allProducts]
-  );
+  // When supplier is selected, use their catalog; otherwise fall back to purchase history
+  const safeProducts = useMemo(() => {
+    if (supplierProducts && supplierProducts.length > 0) {
+      return supplierProducts.map(p => ({
+        productName: p.productName,
+        category: p.category,
+        unit: p.unit,
+        lastPrice: p.currentPrice,
+      }));
+    }
+    return (allProducts ?? []).filter(p => !!p.productName).map(p => ({
+      productName: p.productName,
+      category: p.category,
+      unit: undefined,
+      lastPrice: p.lastPrice,
+    }));
+  }, [supplierProducts, allProducts]);
 
   const filtered = useMemo(() => {
     const q = value.trim().toLowerCase();
@@ -276,9 +293,17 @@ function PurchaseInvoiceModal({
   const [invoiceType, setInvoiceType] = useState<InvoiceType>("tax");
   const [date, setDate] = useState(today);
   const [supplier, setSupplier] = useState("");
+  const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(null);
   const [payment, setPayment] = useState<PaymentType>("cash");
   const [priceIncludesVat, setPriceIncludesVat] = useState(false);
   const [invoiceNotes, setInvoiceNotes] = useState("");
+
+  // Load suppliers + products for selected supplier
+  const { data: allSuppliers = [] } = useListSuppliers();
+  const { data: selectedSupplierProducts = [] } = useGetSupplierProducts(
+    selectedSupplierId ?? 0,
+    { query: { enabled: selectedSupplierId != null } }
+  );
 
   // Items list
   const [items, setItems] = useState<InvoiceItem[]>([]);
@@ -303,6 +328,7 @@ function PurchaseInvoiceModal({
       setInvoiceType("tax");
       setDate(today);
       setSupplier("");
+      setSelectedSupplierId(null);
       setPayment("cash");
       setPriceIncludesVat(false);
       setInvoiceNotes("");
@@ -380,7 +406,7 @@ function PurchaseInvoiceModal({
       productName: s.productName,
       mainGroupKey: grp?.key ?? PURCHASE_CATEGORY_GROUPS[0].key,
       category: s.category,
-      unit: (s as { unit?: string }).unit || f.unit || "unit",
+      unit: s.unit || f.unit || "unit",
       price: s.lastPrice,
     }));
     setAddError("");
@@ -485,13 +511,39 @@ function PurchaseInvoiceModal({
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Supplier / المورد (optional)</label>
-                <input
-                  value={supplier}
-                  onChange={e => setSupplier(e.target.value)}
-                  placeholder="Supplier name..."
-                  className="w-full px-3 py-2 border rounded-xl outline-none focus:border-primary text-sm"
-                />
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Supplier / المورد</label>
+                <select
+                  value={selectedSupplierId ?? ""}
+                  onChange={e => {
+                    const val = e.target.value;
+                    if (!val) {
+                      setSelectedSupplierId(null);
+                      setSupplier("");
+                      setAddForm(f => ({ ...f, productName: "", price: "" as unknown as number }));
+                    } else {
+                      const s = allSuppliers.find(s => s.id === parseInt(val));
+                      setSelectedSupplierId(parseInt(val));
+                      setSupplier(s?.name ?? "");
+                      setAddForm(f => ({ ...f, productName: "" }));
+                    }
+                  }}
+                  className="w-full px-3 py-2 border rounded-xl outline-none focus:border-primary bg-white text-sm"
+                >
+                  <option value="">— No supplier / بدون مورد —</option>
+                  {allSuppliers.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+                {selectedSupplierId && selectedSupplierProducts.length > 0 && (
+                  <p className="text-[10px] text-emerald-600 mt-0.5 font-medium">
+                    ✓ {selectedSupplierProducts.length} products linked — select from the list below
+                  </p>
+                )}
+                {selectedSupplierId && selectedSupplierProducts.length === 0 && (
+                  <p className="text-[10px] text-amber-500 mt-0.5">
+                    ⚠️ No catalog products for this supplier yet — add them in the Suppliers page
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Payment / طريقة الدفع</label>
@@ -609,17 +661,28 @@ function PurchaseInvoiceModal({
               <div className="mb-2">
                 <label className="block text-xs text-slate-500 mb-1">
                   Product / Item Name — اسم المنتج *
-                  <span className="ml-2 text-slate-400 font-normal">(type to search, ↑↓ to navigate, Enter to select)</span>
+                  {selectedSupplierId && selectedSupplierProducts.length > 0 ? (
+                    <span className="ml-2 text-emerald-600 font-medium">
+                      🔗 Showing {selectedSupplierProducts.length} products from selected supplier
+                    </span>
+                  ) : (
+                    <span className="ml-2 text-slate-400 font-normal">(type to search, ↑↓ to navigate, Enter to select)</span>
+                  )}
                 </label>
                 <ProductCombobox
                   value={addForm.productName}
                   onChange={val => setAddForm(f => ({ ...f, productName: val }))}
                   onSelect={handleProductSelect}
                   onEnter={handleAddItem}
-                  placeholder="e.g. Chicken Breast, Mineral Water... — ابحث أو أدخل اسم الصنف"
+                  placeholder={
+                    selectedSupplierId && selectedSupplierProducts.length > 0
+                      ? `Search ${selectedSupplierProducts.length} products from ${supplier}...`
+                      : "e.g. Chicken Breast, Mineral Water... — ابحث أو أدخل اسم الصنف"
+                  }
                   inputRef={productNameRef}
                   currentItems={items}
                   editingLocalId={editingLocalId}
+                  supplierProducts={selectedSupplierId ? selectedSupplierProducts : undefined}
                 />
               </div>
 

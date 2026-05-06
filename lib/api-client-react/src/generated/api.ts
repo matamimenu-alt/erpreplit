@@ -1839,6 +1839,93 @@ export function useGetSupplierPriceComparison<
 }
 
 /**
+ * @summary Get products for a specific supplier
+ */
+export const getGetSupplierProductsUrl = (id: number) => {
+  return `/api/suppliers/${id}/products`;
+};
+
+export const getSupplierProducts = async (
+  id: number,
+  options?: RequestInit,
+): Promise<SupplierProduct[]> => {
+  return customFetch<SupplierProduct[]>(getGetSupplierProductsUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSupplierProductsQueryKey = (id: number) => {
+  return [`/api/suppliers/${id}/products`] as const;
+};
+
+export const getGetSupplierProductsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSupplierProducts>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getSupplierProducts>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSupplierProductsQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getSupplierProducts>>
+  > = ({ signal }) => getSupplierProducts(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSupplierProducts>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetSupplierProductsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSupplierProducts>>
+>;
+export type GetSupplierProductsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get products for a specific supplier
+ */
+
+export function useGetSupplierProducts<
+  TData = Awaited<ReturnType<typeof getSupplierProducts>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getSupplierProducts>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetSupplierProductsQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
  * @summary List supplier products
  */
 export const getListSupplierProductsUrl = () => {

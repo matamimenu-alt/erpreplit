@@ -431,6 +431,28 @@ paths:
                 items:
                   $ref: "#/components/schemas/PriceComparison"
 
+  # Supplier Products — by supplier ID
+  /suppliers/{id}/products:
+    get:
+      operationId: getSupplierProducts
+      tags: [suppliers]
+      summary: Get products for a specific supplier
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of products for this supplier
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SupplierProduct"
+
   # Supplier Products
   /supplier-products:
     get:
@@ -1641,6 +1663,10 @@ components:
           type: string
         productName:
           type: string
+        category:
+          type: string
+        unit:
+          type: string
         previousPrice:
           type: number
         currentPrice:
@@ -1656,6 +1682,8 @@ components:
         - supplierId
         - supplierName
         - productName
+        - category
+        - unit
         - currentPrice
         - priceDifference
         - priceChangePercent
@@ -1668,6 +1696,10 @@ components:
           type: integer
         productName:
           type: string
+        category:
+          type: string
+        unit:
+          type: string
         previousPrice:
           type: number
         currentPrice:
@@ -1675,6 +1707,8 @@ components:
       required:
         - supplierId
         - productName
+        - category
+        - unit
         - currentPrice
 
     PriceComparison:

@@ -651,6 +651,30 @@ export const GetSupplierPriceComparisonResponse = zod.array(
 );
 
 /**
+ * @summary Get products for a specific supplier
+ */
+export const GetSupplierProductsParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetSupplierProductsResponseItem = zod.object({
+  id: zod.number(),
+  supplierId: zod.number(),
+  supplierName: zod.string(),
+  productName: zod.string(),
+  category: zod.string(),
+  unit: zod.string(),
+  previousPrice: zod.number().optional(),
+  currentPrice: zod.number(),
+  priceDifference: zod.number(),
+  priceChangePercent: zod.number(),
+  updatedAt: zod.string(),
+});
+export const GetSupplierProductsResponse = zod.array(
+  GetSupplierProductsResponseItem,
+);
+
+/**
  * @summary List supplier products
  */
 export const ListSupplierProductsResponseItem = zod.object({
@@ -658,6 +682,8 @@ export const ListSupplierProductsResponseItem = zod.object({
   supplierId: zod.number(),
   supplierName: zod.string(),
   productName: zod.string(),
+  category: zod.string(),
+  unit: zod.string(),
   previousPrice: zod.number().optional(),
   currentPrice: zod.number(),
   priceDifference: zod.number(),
@@ -674,6 +700,8 @@ export const ListSupplierProductsResponse = zod.array(
 export const CreateSupplierProductBody = zod.object({
   supplierId: zod.number(),
   productName: zod.string(),
+  category: zod.string(),
+  unit: zod.string(),
   previousPrice: zod.number().optional(),
   currentPrice: zod.number(),
 });
@@ -688,6 +716,8 @@ export const UpdateSupplierProductParams = zod.object({
 export const UpdateSupplierProductBody = zod.object({
   supplierId: zod.number(),
   productName: zod.string(),
+  category: zod.string(),
+  unit: zod.string(),
   previousPrice: zod.number().optional(),
   currentPrice: zod.number(),
 });
@@ -697,6 +727,8 @@ export const UpdateSupplierProductResponse = zod.object({
   supplierId: zod.number(),
   supplierName: zod.string(),
   productName: zod.string(),
+  category: zod.string(),
+  unit: zod.string(),
   previousPrice: zod.number().optional(),
   currentPrice: zod.number(),
   priceDifference: zod.number(),
