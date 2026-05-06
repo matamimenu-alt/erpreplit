@@ -135,7 +135,7 @@ export default function Reports() {
       { Section: "OPEX", Item: "IT & Communication", "Amount (SAR)": pl.itCommunicationCost },
       { Section: "OPEX", Item: "Marketing & Advertising", "Amount (SAR)": pl.marketingCost },
       { Section: "OPEX", Item: "Others Expenses", "Amount (SAR)": pl.othersPurchaseCost },
-      { Section: "OPEX", Item: "Fixed Expenses (Rent, Utilities, etc.)", "Amount (SAR)": pl.totalFixedExpenses },
+      { Section: "OPEX", Item: "Fixed Costs (Salaries, Rent, Utilities, etc.)", "Amount (SAR)": (pl as Record<string, number>).totalDynamicFixedCosts ?? pl.totalFixedExpenses },
       { Section: "OPEX", Item: "App Commissions (HungerStation, Jahez, etc.)", "Amount (SAR)": pl.totalAppCommissions ?? 0 },
       { Section: "OPEX", Item: "Total Operating Expenses", "Amount (SAR)": pl.totalOperatingExpenses },
       { Section: "OPERATING PROFIT", Item: "Operating Profit", "Amount (SAR)": pl.operatingProfit },
@@ -326,8 +326,8 @@ export default function Reports() {
                     <Row label="IT & Communication" value={pl?.itCommunicationCost ?? 0} indent percent={totalRevenue ? ((pl?.itCommunicationCost ?? 0) / totalRevenue * 100) : 0} />
                     <Row label="Marketing and Advertising" value={pl?.marketingCost ?? 0} indent percent={totalRevenue ? ((pl?.marketingCost ?? 0) / totalRevenue * 100) : 0} />
                     <Row label="Others Expenses" value={pl?.othersPurchaseCost ?? 0} indent percent={totalRevenue ? ((pl?.othersPurchaseCost ?? 0) / totalRevenue * 100) : 0} />
-                    <Row label="Fixed Expenses (Rent, Utilities, etc.)" value={pl?.totalFixedExpenses ?? 0} indent percent={totalRevenue ? ((pl?.totalFixedExpenses ?? 0) / totalRevenue * 100) : 0} />
-                    <Row label="App Commissions (HungerStation, Jahez, etc.)" value={pl?.totalAppCommissions ?? 0} indent percent={totalRevenue ? ((pl?.totalAppCommissions ?? 0) / totalRevenue * 100) : 0} />
+                    <Row label="Fixed Costs (Salaries, Rent, Utilities, etc.)" value={(pl as unknown as Record<string, number>)?.totalDynamicFixedCosts ?? (pl?.totalFixedExpenses ?? 0)} indent percent={totalRevenue ? (((pl as unknown as Record<string, number>)?.totalDynamicFixedCosts ?? (pl?.totalFixedExpenses ?? 0)) / totalRevenue * 100) : 0} />
+                    <Row label="App Commissions (HungerStation, Jahez, etc.)" value={(pl as unknown as Record<string, number>)?.totalAppCommissions ?? 0} indent percent={totalRevenue ? (((pl as unknown as Record<string, number>)?.totalAppCommissions ?? 0) / totalRevenue * 100) : 0} />
                     <Row label="Total Operating Expenses" value={pl?.totalOperatingExpenses ?? 0} bold highlight="neutral" percent={totalRevenue ? ((pl?.totalOperatingExpenses ?? 0) / totalRevenue * 100) : 0} />
                     <Div />
 

@@ -8,11 +8,16 @@
 
 export * from "./auditLogEntry";
 export * from "./batchInvoiceItem";
+export * from "./batchSaveMonthlyFixedCosts";
+export * from "./batchSaveMonthlyFixedCosts200";
+export * from "./batchSaveMonthlyFixedCostsItem";
 export * from "./branchTransfer";
 export * from "./branchTransferInvoiceType";
 export * from "./categoryExpenseReport";
 export * from "./closeMonth200";
 export * from "./closeMonthRequest";
+export * from "./copyPrevMonthFixedCosts200";
+export * from "./copyPrevMonthFixedCostsParams";
 export * from "./createBranchTransfer";
 export * from "./createBranchTransferInvoiceType";
 export * from "./createDish";
@@ -54,6 +59,8 @@ export * from "./getFixedCostAuditLogParams";
 export * from "./getFixedCostEffectiveTotal200";
 export * from "./getFixedCostEffectiveTotalParams";
 export * from "./getFixedCostHistoryParams";
+export * from "./getFixedCostYearSummary200";
+export * from "./getFixedCostYearSummaryParams";
 export * from "./getInventoryParams";
 export * from "./getMonthlyFixedCostsParams";
 export * from "./getPLReportParams";

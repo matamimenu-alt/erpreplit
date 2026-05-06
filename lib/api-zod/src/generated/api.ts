@@ -936,6 +936,41 @@ export const SetMonthlyOverrideBody = zod.object({
 export const SetMonthlyOverrideResponse = zod.object({}).passthrough();
 
 /**
+ * @summary Save all fixed cost amounts for a month at once
+ */
+export const BatchSaveMonthlyFixedCostsBody = zod.object({
+  month: zod.string(),
+  items: zod.array(
+    zod.object({
+      templateId: zod.number(),
+      amount: zod.number(),
+      notes: zod.string().nullish(),
+    }),
+  ),
+  changedBy: zod.string().nullish(),
+});
+
+export const BatchSaveMonthlyFixedCostsResponse = zod.object({}).passthrough();
+
+/**
+ * @summary Get previous month values as starting point for new month
+ */
+export const CopyPrevMonthFixedCostsQueryParams = zod.object({
+  month: zod.coerce.string(),
+});
+
+export const CopyPrevMonthFixedCostsResponse = zod.object({}).passthrough();
+
+/**
+ * @summary Get all 12 months of a year for comparison
+ */
+export const GetFixedCostYearSummaryQueryParams = zod.object({
+  year: zod.coerce.number().optional(),
+});
+
+export const GetFixedCostYearSummaryResponse = zod.object({}).passthrough();
+
+/**
  * @summary Remove a monthly override
  */
 export const RemoveMonthlyOverrideParams = zod.object({

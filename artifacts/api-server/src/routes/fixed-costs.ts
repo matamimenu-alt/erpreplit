@@ -443,6 +443,184 @@ router.get("/history", async (req, res) => {
   }
 });
 
+// ─── BATCH SAVE for an entire month ──────────────────────────────────────────
+
+// POST /api/fixed-costs/monthly/batch
+// Body: { month, items: [{templateId, amount, notes}], changedBy }
+router.post("/monthly/batch", async (req, res) => {
+  try {
+    const restaurantId = getRestaurantId(req);
+    const { month, items, changedBy } = req.body;
+    if (!month || !Array.isArray(items)) {
+      return res.status(400).json({ error: "month and items[] required" });
+    }
+
+    const locked = await isMonthLocked(restaurantId, month);
+    if (locked) return res.status(403).json({ error: "Month is locked — unlock it first." });
+
+    // Load all templates for validation
+    const templates = await db.select().from(fixedCostTemplatesTable)
+      .where(and(eq(fixedCostTemplatesTable.restaurantId, restaurantId), eq(fixedCostTemplatesTable.isActive, true)));
+    const templateMap = new Map(templates.map(t => [t.id, t]));
+
+    // Load existing monthly values
+    const existing = await db.select().from(fixedCostMonthlyValuesTable)
+      .where(and(
+        eq(fixedCostMonthlyValuesTable.restaurantId, restaurantId),
+        eq(fixedCostMonthlyValuesTable.month, month),
+      ));
+    const existingMap = new Map(existing.map(e => [e.templateId, e]));
+
+    const saved = [];
+    for (const item of items) {
+      const { templateId, amount, notes } = item;
+      const template = templateMap.get(templateId);
+      if (!template) continue;
+
+      const newAmt = Number(amount) ?? 0;
+      const existingRec = existingMap.get(templateId);
+      const oldAmt = existingRec ? toNum(existingRec.amount) : null;
+
+      let record;
+      if (existingRec) {
+        [record] = await db.update(fixedCostMonthlyValuesTable)
+          .set({ amount: fmtAmt(newAmt), notes: notes || null, createdBy: changedBy || "admin" })
+          .where(and(
+            eq(fixedCostMonthlyValuesTable.templateId, templateId),
+            eq(fixedCostMonthlyValuesTable.month, month),
+          ))
+          .returning();
+      } else {
+        [record] = await db.insert(fixedCostMonthlyValuesTable)
+          .values({ templateId, restaurantId, month, amount: fmtAmt(newAmt), notes: notes || null, createdBy: changedBy || "admin" })
+          .returning();
+      }
+      saved.push(record);
+
+      // Only audit if amount changed
+      if (oldAmt === null || Math.abs(oldAmt - newAmt) > 0.001) {
+        await writeAudit({
+          restaurantId, templateId, templateName: template.name, month,
+          action: existingRec ? "update_monthly" : "set_monthly",
+          oldAmount: oldAmt, newAmount: newAmt,
+          changedBy: changedBy || "admin", notes,
+        });
+      }
+    }
+
+    res.json({ saved: saved.length, month });
+  } catch (err) {
+    req.log.error({ err }, "Error batch saving monthly costs");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET /api/fixed-costs/monthly/copy-prev?month=YYYY-MM
+// Returns previous month's values to use as a starting point
+router.get("/monthly/copy-prev", async (req, res) => {
+  try {
+    const restaurantId = getRestaurantId(req);
+    const month = req.query.month as string;
+    if (!month) return res.status(400).json({ error: "month param required" });
+
+    const [y, m] = month.split("-").map(Number);
+    const prevDate = new Date(y, m - 2, 1);
+    const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, "0")}`;
+
+    const templates = await db.select().from(fixedCostTemplatesTable)
+      .where(and(eq(fixedCostTemplatesTable.restaurantId, restaurantId), eq(fixedCostTemplatesTable.isActive, true)))
+      .orderBy(fixedCostTemplatesTable.sortOrder, fixedCostTemplatesTable.id);
+
+    const prevValues = await db.select().from(fixedCostMonthlyValuesTable)
+      .where(and(
+        eq(fixedCostMonthlyValuesTable.restaurantId, restaurantId),
+        eq(fixedCostMonthlyValuesTable.month, prevMonth),
+      ));
+
+    const prevMap = new Map(prevValues.map(v => [v.templateId, toNum(v.amount)]));
+
+    const items = templates.map(t => ({
+      templateId: t.id,
+      category: t.category,
+      name: t.name,
+      suggestedAmount: prevMap.has(t.id) ? prevMap.get(t.id)! : toNum(t.defaultAmount),
+      source: prevMap.has(t.id) ? "prev-month" : "default",
+    }));
+
+    res.json({ sourceMonth: prevMonth, items });
+  } catch (err) {
+    req.log.error({ err }, "Error fetching previous month values");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET /api/fixed-costs/year-summary?year=YYYY
+// Returns all 12 months for a given year — for annual comparison table
+router.get("/year-summary", async (req, res) => {
+  try {
+    const restaurantId = getRestaurantId(req);
+    const year = parseInt((req.query.year as string) ?? String(new Date().getFullYear()));
+
+    const months = Array.from({ length: 12 }, (_, i) =>
+      `${year}-${String(i + 1).padStart(2, "0")}`
+    );
+
+    const templates = await db.select().from(fixedCostTemplatesTable)
+      .where(and(eq(fixedCostTemplatesTable.restaurantId, restaurantId), eq(fixedCostTemplatesTable.isActive, true)))
+      .orderBy(fixedCostTemplatesTable.sortOrder, fixedCostTemplatesTable.id);
+
+    const allValues = await db.select().from(fixedCostMonthlyValuesTable)
+      .where(and(
+        eq(fixedCostMonthlyValuesTable.restaurantId, restaurantId),
+        inArray(fixedCostMonthlyValuesTable.month, months),
+      ));
+
+    const closingStatuses = await db.select().from(monthlyClosingStatusTable)
+      .where(and(
+        eq(monthlyClosingStatusTable.restaurantId, restaurantId),
+        inArray(monthlyClosingStatusTable.month, months),
+      ));
+
+    const valIndex = new Map<string, Map<number, number>>();
+    for (const v of allValues) {
+      if (!valIndex.has(v.month)) valIndex.set(v.month, new Map());
+      valIndex.get(v.month)!.set(v.templateId, toNum(v.amount));
+    }
+    const lockIndex = new Map(closingStatuses.map(c => [c.month, c.isLocked]));
+
+    const result = months.map(month => {
+      const vals = valIndex.get(month) ?? new Map<number, number>();
+      let total = 0;
+      const breakdown: Record<string, number> = {};
+      const byTemplate: Record<number, number> = {};
+
+      for (const t of templates) {
+        const amt = vals.has(t.id) ? vals.get(t.id)! : toNum(t.defaultAmount);
+        total += amt;
+        breakdown[t.category] = (breakdown[t.category] ?? 0) + amt;
+        byTemplate[t.id] = +amt.toFixed(2);
+      }
+
+      return {
+        month,
+        isLocked: lockIndex.get(month) ?? false,
+        hasData: valIndex.has(month),
+        total: +total.toFixed(2),
+        breakdown: Object.fromEntries(Object.entries(breakdown).map(([k, v]) => [k, +v.toFixed(2)])),
+        byTemplate,
+      };
+    });
+
+    const yearTotal = result.reduce((s, m) => s + m.total, 0);
+    const templateList = templates.map(t => ({ id: t.id, name: t.name, category: t.category }));
+
+    res.json({ year, yearTotal: +yearTotal.toFixed(2), months: result, templates: templateList });
+  } catch (err) {
+    req.log.error({ err }, "Error fetching year summary");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // ─── CLOSING STATUS ───────────────────────────────────────────────────────────
 
 // POST /api/fixed-costs/close-month

@@ -18,10 +18,14 @@ import type {
 
 import type {
   AuditLogEntry,
+  BatchSaveMonthlyFixedCosts,
+  BatchSaveMonthlyFixedCosts200,
   BranchTransfer,
   CategoryExpenseReport,
   CloseMonth200,
   CloseMonthRequest,
+  CopyPrevMonthFixedCosts200,
+  CopyPrevMonthFixedCostsParams,
   CreateBranchTransfer,
   CreateDish,
   CreateDish201,
@@ -50,6 +54,8 @@ import type {
   GetFixedCostEffectiveTotal200,
   GetFixedCostEffectiveTotalParams,
   GetFixedCostHistoryParams,
+  GetFixedCostYearSummary200,
+  GetFixedCostYearSummaryParams,
   GetInventoryParams,
   GetMonthlyFixedCostsParams,
   GetPLReportParams,
@@ -3125,6 +3131,308 @@ export const useSetMonthlyOverride = <
 > => {
   return useMutation(getSetMonthlyOverrideMutationOptions(options));
 };
+
+/**
+ * @summary Save all fixed cost amounts for a month at once
+ */
+export const getBatchSaveMonthlyFixedCostsUrl = () => {
+  return `/api/fixed-costs/monthly/batch`;
+};
+
+export const batchSaveMonthlyFixedCosts = async (
+  batchSaveMonthlyFixedCosts: BatchSaveMonthlyFixedCosts,
+  options?: RequestInit,
+): Promise<BatchSaveMonthlyFixedCosts200> => {
+  return customFetch<BatchSaveMonthlyFixedCosts200>(
+    getBatchSaveMonthlyFixedCostsUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(batchSaveMonthlyFixedCosts),
+    },
+  );
+};
+
+export const getBatchSaveMonthlyFixedCostsMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof batchSaveMonthlyFixedCosts>>,
+    TError,
+    { data: BodyType<BatchSaveMonthlyFixedCosts> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof batchSaveMonthlyFixedCosts>>,
+  TError,
+  { data: BodyType<BatchSaveMonthlyFixedCosts> },
+  TContext
+> => {
+  const mutationKey = ["batchSaveMonthlyFixedCosts"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof batchSaveMonthlyFixedCosts>>,
+    { data: BodyType<BatchSaveMonthlyFixedCosts> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return batchSaveMonthlyFixedCosts(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type BatchSaveMonthlyFixedCostsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof batchSaveMonthlyFixedCosts>>
+>;
+export type BatchSaveMonthlyFixedCostsMutationBody =
+  BodyType<BatchSaveMonthlyFixedCosts>;
+export type BatchSaveMonthlyFixedCostsMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Save all fixed cost amounts for a month at once
+ */
+export const useBatchSaveMonthlyFixedCosts = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof batchSaveMonthlyFixedCosts>>,
+    TError,
+    { data: BodyType<BatchSaveMonthlyFixedCosts> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof batchSaveMonthlyFixedCosts>>,
+  TError,
+  { data: BodyType<BatchSaveMonthlyFixedCosts> },
+  TContext
+> => {
+  return useMutation(getBatchSaveMonthlyFixedCostsMutationOptions(options));
+};
+
+/**
+ * @summary Get previous month values as starting point for new month
+ */
+export const getCopyPrevMonthFixedCostsUrl = (
+  params: CopyPrevMonthFixedCostsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/fixed-costs/monthly/copy-prev?${stringifiedParams}`
+    : `/api/fixed-costs/monthly/copy-prev`;
+};
+
+export const copyPrevMonthFixedCosts = async (
+  params: CopyPrevMonthFixedCostsParams,
+  options?: RequestInit,
+): Promise<CopyPrevMonthFixedCosts200> => {
+  return customFetch<CopyPrevMonthFixedCosts200>(
+    getCopyPrevMonthFixedCostsUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getCopyPrevMonthFixedCostsQueryKey = (
+  params?: CopyPrevMonthFixedCostsParams,
+) => {
+  return [
+    `/api/fixed-costs/monthly/copy-prev`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getCopyPrevMonthFixedCostsQueryOptions = <
+  TData = Awaited<ReturnType<typeof copyPrevMonthFixedCosts>>,
+  TError = ErrorType<unknown>,
+>(
+  params: CopyPrevMonthFixedCostsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof copyPrevMonthFixedCosts>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getCopyPrevMonthFixedCostsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof copyPrevMonthFixedCosts>>
+  > = ({ signal }) =>
+    copyPrevMonthFixedCosts(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof copyPrevMonthFixedCosts>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type CopyPrevMonthFixedCostsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof copyPrevMonthFixedCosts>>
+>;
+export type CopyPrevMonthFixedCostsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get previous month values as starting point for new month
+ */
+
+export function useCopyPrevMonthFixedCosts<
+  TData = Awaited<ReturnType<typeof copyPrevMonthFixedCosts>>,
+  TError = ErrorType<unknown>,
+>(
+  params: CopyPrevMonthFixedCostsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof copyPrevMonthFixedCosts>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getCopyPrevMonthFixedCostsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get all 12 months of a year for comparison
+ */
+export const getGetFixedCostYearSummaryUrl = (
+  params?: GetFixedCostYearSummaryParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/fixed-costs/year-summary?${stringifiedParams}`
+    : `/api/fixed-costs/year-summary`;
+};
+
+export const getFixedCostYearSummary = async (
+  params?: GetFixedCostYearSummaryParams,
+  options?: RequestInit,
+): Promise<GetFixedCostYearSummary200> => {
+  return customFetch<GetFixedCostYearSummary200>(
+    getGetFixedCostYearSummaryUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetFixedCostYearSummaryQueryKey = (
+  params?: GetFixedCostYearSummaryParams,
+) => {
+  return [
+    `/api/fixed-costs/year-summary`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetFixedCostYearSummaryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getFixedCostYearSummary>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetFixedCostYearSummaryParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getFixedCostYearSummary>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetFixedCostYearSummaryQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getFixedCostYearSummary>>
+  > = ({ signal }) =>
+    getFixedCostYearSummary(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getFixedCostYearSummary>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetFixedCostYearSummaryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getFixedCostYearSummary>>
+>;
+export type GetFixedCostYearSummaryQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get all 12 months of a year for comparison
+ */
+
+export function useGetFixedCostYearSummary<
+  TData = Awaited<ReturnType<typeof getFixedCostYearSummary>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetFixedCostYearSummaryParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getFixedCostYearSummary>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetFixedCostYearSummaryQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Remove a monthly override

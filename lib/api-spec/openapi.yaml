@@ -702,6 +702,62 @@ paths:
               schema:
                 type: object
 
+  /fixed-costs/monthly/batch:
+    post:
+      operationId: batchSaveMonthlyFixedCosts
+      tags: [fixed-costs]
+      summary: Save all fixed cost amounts for a month at once
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BatchSaveMonthlyFixedCosts"
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /fixed-costs/monthly/copy-prev:
+    get:
+      operationId: copyPrevMonthFixedCosts
+      tags: [fixed-costs]
+      summary: Get previous month values as starting point for new month
+      parameters:
+        - name: month
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Previous month values
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /fixed-costs/year-summary:
+    get:
+      operationId: getFixedCostYearSummary
+      tags: [fixed-costs]
+      summary: Get all 12 months of a year for comparison
+      parameters:
+        - name: year
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Year summary
+          content:
+            application/json:
+              schema:
+                type: object
+
   /fixed-costs/monthly/{templateId}:
     delete:
       operationId: removeMonthlyOverride
@@ -3030,6 +3086,32 @@ components:
           items:
             type: object
       required: [month, isLocked, total, breakdown, items]
+
+    BatchSaveMonthlyFixedCostsItem:
+      type: object
+      properties:
+        templateId:
+          type: integer
+        amount:
+          type: number
+        notes:
+          type: string
+          nullable: true
+      required: [templateId, amount]
+
+    BatchSaveMonthlyFixedCosts:
+      type: object
+      properties:
+        month:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BatchSaveMonthlyFixedCostsItem"
+        changedBy:
+          type: string
+          nullable: true
+      required: [month, items]
 
     CloseMonthRequest:
       type: object

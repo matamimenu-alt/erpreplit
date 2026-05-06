@@ -800,6 +800,18 @@ export interface FixedCostHistoryMonth {
   items: FixedCostHistoryMonthItemsItem[];
 }
 
+export interface BatchSaveMonthlyFixedCostsItem {
+  templateId: number;
+  amount: number;
+  notes?: string | null;
+}
+
+export interface BatchSaveMonthlyFixedCosts {
+  month: string;
+  items: BatchSaveMonthlyFixedCostsItem[];
+  changedBy?: string | null;
+}
+
 export interface CloseMonthRequest {
   month: string;
   lockedBy?: string | null;
@@ -889,6 +901,20 @@ export type GetMonthlyFixedCostsParams = {
 };
 
 export type SetMonthlyOverride200 = { [key: string]: unknown };
+
+export type BatchSaveMonthlyFixedCosts200 = { [key: string]: unknown };
+
+export type CopyPrevMonthFixedCostsParams = {
+  month: string;
+};
+
+export type CopyPrevMonthFixedCosts200 = { [key: string]: unknown };
+
+export type GetFixedCostYearSummaryParams = {
+  year?: number;
+};
+
+export type GetFixedCostYearSummary200 = { [key: string]: unknown };
 
 export type RemoveMonthlyOverrideParams = {
   month: string;
