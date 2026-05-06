@@ -9,3 +9,4 @@ export * from "./inventory";
 export * from "./stock-movements";
 export * from "./branch-transfers";
 export * from "./dishes";
+export * from "./fixed-costs";

@@ -831,6 +831,194 @@ export const DeleteEmployeeParams = zod.object({
 });
 
 /**
+ * @summary List all fixed cost templates
+ */
+export const ListFixedCostTemplatesResponseItem = zod.object({
+  id: zod.number(),
+  category: zod.string(),
+  name: zod.string(),
+  defaultAmount: zod.number(),
+  notes: zod.string().nullish(),
+  isActive: zod.boolean(),
+  sortOrder: zod.number(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+export const ListFixedCostTemplatesResponse = zod.array(
+  ListFixedCostTemplatesResponseItem,
+);
+
+/**
+ * @summary Create a fixed cost template
+ */
+export const CreateFixedCostTemplateBody = zod.object({
+  category: zod.string(),
+  name: zod.string(),
+  defaultAmount: zod.number(),
+  notes: zod.string().nullish(),
+  sortOrder: zod.number().optional(),
+});
+
+/**
+ * @summary Update a fixed cost template
+ */
+export const UpdateFixedCostTemplateParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateFixedCostTemplateBody = zod.object({
+  category: zod.string(),
+  name: zod.string(),
+  defaultAmount: zod.number(),
+  notes: zod.string().nullish(),
+  sortOrder: zod.number().optional(),
+});
+
+export const UpdateFixedCostTemplateResponse = zod.object({
+  id: zod.number(),
+  category: zod.string(),
+  name: zod.string(),
+  defaultAmount: zod.number(),
+  notes: zod.string().nullish(),
+  isActive: zod.boolean(),
+  sortOrder: zod.number(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Delete a fixed cost template
+ */
+export const DeleteFixedCostTemplateParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Get effective fixed costs for a month
+ */
+export const GetMonthlyFixedCostsQueryParams = zod.object({
+  month: zod.coerce.string(),
+});
+
+export const GetMonthlyFixedCostsResponse = zod.object({
+  month: zod.string(),
+  isLocked: zod.boolean(),
+  lockedBy: zod.string().nullish(),
+  lockedAt: zod.string().nullish(),
+  total: zod.number(),
+  items: zod.array(
+    zod.object({
+      templateId: zod.number(),
+      category: zod.string(),
+      name: zod.string(),
+      defaultAmount: zod.number(),
+      overrideAmount: zod.number().nullish(),
+      effectiveAmount: zod.number(),
+      hasOverride: zod.boolean(),
+      overrideNotes: zod.string().nullish(),
+      overrideId: zod.number().nullish(),
+      notes: zod.string().nullish(),
+    }),
+  ),
+});
+
+/**
+ * @summary Set a monthly override for a template
+ */
+export const SetMonthlyOverrideBody = zod.object({
+  templateId: zod.number(),
+  month: zod.string(),
+  amount: zod.number(),
+  notes: zod.string().nullish(),
+  changedBy: zod.string().nullish(),
+});
+
+export const SetMonthlyOverrideResponse = zod.object({}).passthrough();
+
+/**
+ * @summary Remove a monthly override
+ */
+export const RemoveMonthlyOverrideParams = zod.object({
+  templateId: zod.coerce.number(),
+});
+
+export const RemoveMonthlyOverrideQueryParams = zod.object({
+  month: zod.coerce.string(),
+});
+
+/**
+ * @summary Get fixed cost history for charting
+ */
+export const GetFixedCostHistoryQueryParams = zod.object({
+  months: zod.coerce.number().optional(),
+});
+
+export const GetFixedCostHistoryResponseItem = zod.object({
+  month: zod.string(),
+  isLocked: zod.boolean(),
+  total: zod.number(),
+  breakdown: zod.object({}).passthrough(),
+  items: zod.array(zod.object({}).passthrough()),
+});
+export const GetFixedCostHistoryResponse = zod.array(
+  GetFixedCostHistoryResponseItem,
+);
+
+/**
+ * @summary Lock a month for editing
+ */
+export const CloseMonthBody = zod.object({
+  month: zod.string(),
+  lockedBy: zod.string().nullish(),
+  notes: zod.string().nullish(),
+});
+
+export const CloseMonthResponse = zod.object({}).passthrough();
+
+/**
+ * @summary Unlock a closed month
+ */
+export const UnlockMonthBody = zod.object({
+  month: zod.string(),
+  lockedBy: zod.string().nullish(),
+  notes: zod.string().nullish(),
+});
+
+export const UnlockMonthResponse = zod.object({}).passthrough();
+
+/**
+ * @summary Get audit log entries
+ */
+export const GetFixedCostAuditLogQueryParams = zod.object({
+  limit: zod.coerce.number().optional(),
+});
+
+export const GetFixedCostAuditLogResponseItem = zod.object({
+  id: zod.number(),
+  templateId: zod.number().nullish(),
+  templateName: zod.string().nullish(),
+  month: zod.string().nullish(),
+  action: zod.string(),
+  oldAmount: zod.number().nullish(),
+  newAmount: zod.number().nullish(),
+  changedBy: zod.string(),
+  changedAt: zod.string(),
+  notes: zod.string().nullish(),
+});
+export const GetFixedCostAuditLogResponse = zod.array(
+  GetFixedCostAuditLogResponseItem,
+);
+
+/**
+ * @summary Get effective total for P&L
+ */
+export const GetFixedCostEffectiveTotalQueryParams = zod.object({
+  month: zod.coerce.string().optional(),
+});
+
+export const GetFixedCostEffectiveTotalResponse = zod.object({}).passthrough();
+
+/**
  * @summary List all fixed expenses
  */
 export const ListExpensesResponseItem = zod.object({

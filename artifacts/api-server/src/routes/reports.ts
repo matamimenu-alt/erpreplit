@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { salesTable, purchasesTable, employeesTable, expensesTable, inventoryTable, branchTransfersTable } from "@workspace/db/schema";
+import { salesTable, purchasesTable, employeesTable, expensesTable, inventoryTable, branchTransfersTable, fixedCostTemplatesTable, fixedCostMonthlyValuesTable } from "@workspace/db/schema";
 import { eq, and, or, isNotNull } from "drizzle-orm";
 import { getRestaurantId } from "../lib/restaurant";
 
@@ -225,11 +225,29 @@ router.get("/pl", async (req, res) => {
       return s + net;
     }, 0);
 
-    // Fixed Expenses, Staff Expenses & App Commissions
+    // Fixed Expenses, Staff Expenses & App Commissions (legacy expensesTable)
     const expenses = await db.select().from(expensesTable).where(eq(expensesTable.restaurantId, restaurantId));
     const totalFixedExpenses  = expenses.filter(e => (e.category ?? "fixed") === "fixed").reduce((s, e) => s + toNum(e.monthlyCost), 0);
     const totalStaffExpenses  = expenses.filter(e => e.category === "staff-expenses").reduce((s, e) => s + toNum(e.monthlyCost), 0);
     const totalAppCommissions = expenses.filter(e => e.category === "app-commission").reduce((s, e) => s + toNum(e.monthlyCost), 0);
+
+    // Dynamic Monthly Fixed Costs (new system) — uses monthly override if exists, else default
+    const fcTemplates = await db.select().from(fixedCostTemplatesTable)
+      .where(and(eq(fixedCostTemplatesTable.restaurantId, restaurantId), eq(fixedCostTemplatesTable.isActive, true)));
+    let totalDynamicFixedCosts = 0;
+    const dynamicBreakdown: Record<string, number> = {};
+    if (fcTemplates.length > 0) {
+      const fcOverrides = month
+        ? await db.select().from(fixedCostMonthlyValuesTable)
+            .where(and(eq(fixedCostMonthlyValuesTable.restaurantId, restaurantId), eq(fixedCostMonthlyValuesTable.month, month)))
+        : [];
+      const overrideMap = new Map(fcOverrides.map(o => [o.templateId, toNum(o.amount)]));
+      for (const t of fcTemplates) {
+        const amt = overrideMap.has(t.id) ? overrideMap.get(t.id)! : toNum(t.defaultAmount);
+        totalDynamicFixedCosts += amt;
+        dynamicBreakdown[t.category] = (dynamicBreakdown[t.category] ?? 0) + amt;
+      }
+    }
 
     // ── Internal Branch Transfers impact on COGS ──────────────────────────────
     // Incoming transfers = this branch received goods from another branch → adds to this branch's COGS
@@ -264,7 +282,7 @@ router.get("/pl", async (req, res) => {
 
     const grossProfit = totalRevenue - finalAdjustedCOGS;
 
-    const totalOperatingExpenses = totalLaborCost + totalPurchaseOpex + totalFixedExpenses + totalStaffExpenses + totalAppCommissions;
+    const totalOperatingExpenses = totalLaborCost + totalPurchaseOpex + totalFixedExpenses + totalStaffExpenses + totalAppCommissions + totalDynamicFixedCosts;
     const operatingProfit = grossProfit - totalOperatingExpenses;
     const vatPayable = outputVat - inputVat;
     const netProfit  = operatingProfit - vatPayable;
@@ -321,6 +339,8 @@ router.get("/pl", async (req, res) => {
       totalFixedExpenses: +totalFixedExpenses.toFixed(2),
       totalStaffExpenses: +totalStaffExpenses.toFixed(2),
       totalAppCommissions: +totalAppCommissions.toFixed(2),
+      totalDynamicFixedCosts: +totalDynamicFixedCosts.toFixed(2),
+      dynamicFixedBreakdown: dynamicBreakdown,
       totalOperatingExpenses: +totalOperatingExpenses.toFixed(2),
       operatingProfit: +operatingProfit.toFixed(2),
       outputVat: +outputVat.toFixed(2),

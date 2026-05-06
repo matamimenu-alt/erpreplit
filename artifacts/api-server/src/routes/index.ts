@@ -12,6 +12,7 @@ import dashboardRouter from "./dashboard";
 import reportsRouter from "./reports";
 import { restaurantsRouter, seedRestaurants } from "./restaurants";
 import dishesRouter from "./dishes";
+import fixedCostsRouter from "./fixed-costs";
 
 const router: IRouter = Router();
 
@@ -31,5 +32,6 @@ router.use("/vat", vatRouter);
 router.use("/dashboard", dashboardRouter);
 router.use("/reports", reportsRouter);
 router.use("/dishes", dishesRouter);
+router.use("/fixed-costs", fixedCostsRouter);
 
 export default router;

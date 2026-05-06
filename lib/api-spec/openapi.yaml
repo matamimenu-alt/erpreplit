@@ -595,6 +595,229 @@ paths:
         "204":
           description: Deleted
 
+  # Fixed Costs (Dynamic Monthly)
+  /fixed-costs/templates:
+    get:
+      operationId: listFixedCostTemplates
+      tags: [fixed-costs]
+      summary: List all fixed cost templates
+      responses:
+        "200":
+          description: List of templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FixedCostTemplate"
+    post:
+      operationId: createFixedCostTemplate
+      tags: [fixed-costs]
+      summary: Create a fixed cost template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFixedCostTemplate"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FixedCostTemplate"
+
+  /fixed-costs/templates/{id}:
+    put:
+      operationId: updateFixedCostTemplate
+      tags: [fixed-costs]
+      summary: Update a fixed cost template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFixedCostTemplate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FixedCostTemplate"
+    delete:
+      operationId: deleteFixedCostTemplate
+      tags: [fixed-costs]
+      summary: Delete a fixed cost template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /fixed-costs/monthly:
+    get:
+      operationId: getMonthlyFixedCosts
+      tags: [fixed-costs]
+      summary: Get effective fixed costs for a month
+      parameters:
+        - name: month
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Monthly fixed cost data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MonthlyFixedCosts"
+    post:
+      operationId: setMonthlyOverride
+      tags: [fixed-costs]
+      summary: Set a monthly override for a template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetMonthlyOverride"
+      responses:
+        "200":
+          description: Override set
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /fixed-costs/monthly/{templateId}:
+    delete:
+      operationId: removeMonthlyOverride
+      tags: [fixed-costs]
+      summary: Remove a monthly override
+      parameters:
+        - name: templateId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: month
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Removed
+
+  /fixed-costs/history:
+    get:
+      operationId: getFixedCostHistory
+      tags: [fixed-costs]
+      summary: Get fixed cost history for charting
+      parameters:
+        - name: months
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: History data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FixedCostHistoryMonth"
+
+  /fixed-costs/close-month:
+    post:
+      operationId: closeMonth
+      tags: [fixed-costs]
+      summary: Lock a month for editing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CloseMonthRequest"
+      responses:
+        "200":
+          description: Month locked
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /fixed-costs/unlock-month:
+    post:
+      operationId: unlockMonth
+      tags: [fixed-costs]
+      summary: Unlock a closed month
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CloseMonthRequest"
+      responses:
+        "200":
+          description: Month unlocked
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /fixed-costs/audit-log:
+    get:
+      operationId: getFixedCostAuditLog
+      tags: [fixed-costs]
+      summary: Get audit log entries
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Audit log
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditLogEntry"
+
+  /fixed-costs/effective-total:
+    get:
+      operationId: getFixedCostEffectiveTotal
+      tags: [fixed-costs]
+      summary: Get effective total for P&L
+      parameters:
+        - name: month
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Effective total
+          content:
+            application/json:
+              schema:
+                type: object
+
   # Expenses
   /expenses:
     get:
@@ -2683,6 +2906,174 @@ components:
         pricing:
           $ref: "#/components/schemas/DishPricingBreakdown"
       required: [id, name, category, wastePercentage, targetFoodCostPct, ingredients, pricing]
+
+    FixedCostTemplate:
+      type: object
+      properties:
+        id:
+          type: integer
+        category:
+          type: string
+        name:
+          type: string
+        defaultAmount:
+          type: number
+        notes:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+        sortOrder:
+          type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required: [id, category, name, defaultAmount, isActive, sortOrder, createdAt, updatedAt]
+
+    CreateFixedCostTemplate:
+      type: object
+      properties:
+        category:
+          type: string
+        name:
+          type: string
+        defaultAmount:
+          type: number
+        notes:
+          type: string
+          nullable: true
+        sortOrder:
+          type: integer
+      required: [category, name, defaultAmount]
+
+    MonthlyFixedCostItem:
+      type: object
+      properties:
+        templateId:
+          type: integer
+        category:
+          type: string
+        name:
+          type: string
+        defaultAmount:
+          type: number
+        overrideAmount:
+          type: number
+          nullable: true
+        effectiveAmount:
+          type: number
+        hasOverride:
+          type: boolean
+        overrideNotes:
+          type: string
+          nullable: true
+        overrideId:
+          type: integer
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+      required: [templateId, category, name, defaultAmount, effectiveAmount, hasOverride]
+
+    MonthlyFixedCosts:
+      type: object
+      properties:
+        month:
+          type: string
+        isLocked:
+          type: boolean
+        lockedBy:
+          type: string
+          nullable: true
+        lockedAt:
+          type: string
+          nullable: true
+        total:
+          type: number
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MonthlyFixedCostItem"
+      required: [month, isLocked, total, items]
+
+    SetMonthlyOverride:
+      type: object
+      properties:
+        templateId:
+          type: integer
+        month:
+          type: string
+        amount:
+          type: number
+        notes:
+          type: string
+          nullable: true
+        changedBy:
+          type: string
+          nullable: true
+      required: [templateId, month, amount]
+
+    FixedCostHistoryMonth:
+      type: object
+      properties:
+        month:
+          type: string
+        isLocked:
+          type: boolean
+        total:
+          type: number
+        breakdown:
+          type: object
+        items:
+          type: array
+          items:
+            type: object
+      required: [month, isLocked, total, breakdown, items]
+
+    CloseMonthRequest:
+      type: object
+      properties:
+        month:
+          type: string
+        lockedBy:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+      required: [month]
+
+    AuditLogEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        templateId:
+          type: integer
+          nullable: true
+        templateName:
+          type: string
+          nullable: true
+        month:
+          type: string
+          nullable: true
+        action:
+          type: string
+        oldAmount:
+          type: number
+          nullable: true
+        newAmount:
+          type: number
+          nullable: true
+        changedBy:
+          type: string
+        changedAt:
+          type: string
+        notes:
+          type: string
+          nullable: true
+      required: [id, action, changedBy, changedAt]
 
     FixedCostSummary:
       type: object

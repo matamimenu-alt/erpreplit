@@ -738,6 +738,87 @@ export interface DishPricingItem {
   pricing: DishPricingBreakdown;
 }
 
+export interface FixedCostTemplate {
+  id: number;
+  category: string;
+  name: string;
+  defaultAmount: number;
+  notes?: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateFixedCostTemplate {
+  category: string;
+  name: string;
+  defaultAmount: number;
+  notes?: string | null;
+  sortOrder?: number;
+}
+
+export interface MonthlyFixedCostItem {
+  templateId: number;
+  category: string;
+  name: string;
+  defaultAmount: number;
+  overrideAmount?: number | null;
+  effectiveAmount: number;
+  hasOverride: boolean;
+  overrideNotes?: string | null;
+  overrideId?: number | null;
+  notes?: string | null;
+}
+
+export interface MonthlyFixedCosts {
+  month: string;
+  isLocked: boolean;
+  lockedBy?: string | null;
+  lockedAt?: string | null;
+  total: number;
+  items: MonthlyFixedCostItem[];
+}
+
+export interface SetMonthlyOverride {
+  templateId: number;
+  month: string;
+  amount: number;
+  notes?: string | null;
+  changedBy?: string | null;
+}
+
+export type FixedCostHistoryMonthBreakdown = { [key: string]: unknown };
+
+export type FixedCostHistoryMonthItemsItem = { [key: string]: unknown };
+
+export interface FixedCostHistoryMonth {
+  month: string;
+  isLocked: boolean;
+  total: number;
+  breakdown: FixedCostHistoryMonthBreakdown;
+  items: FixedCostHistoryMonthItemsItem[];
+}
+
+export interface CloseMonthRequest {
+  month: string;
+  lockedBy?: string | null;
+  notes?: string | null;
+}
+
+export interface AuditLogEntry {
+  id: number;
+  templateId?: number | null;
+  templateName?: string | null;
+  month?: string | null;
+  action: string;
+  oldAmount?: number | null;
+  newAmount?: number | null;
+  changedBy: string;
+  changedAt: string;
+  notes?: string | null;
+}
+
 export interface FixedCostSummary {
   totalExpenses: number;
   totalSalaries: number;
@@ -802,6 +883,34 @@ export type CreatePurchaseBatch201 = {
   invoiceId: string;
   items: Purchase[];
 };
+
+export type GetMonthlyFixedCostsParams = {
+  month: string;
+};
+
+export type SetMonthlyOverride200 = { [key: string]: unknown };
+
+export type RemoveMonthlyOverrideParams = {
+  month: string;
+};
+
+export type GetFixedCostHistoryParams = {
+  months?: number;
+};
+
+export type CloseMonth200 = { [key: string]: unknown };
+
+export type UnlockMonth200 = { [key: string]: unknown };
+
+export type GetFixedCostAuditLogParams = {
+  limit?: number;
+};
+
+export type GetFixedCostEffectiveTotalParams = {
+  month?: string;
+};
+
+export type GetFixedCostEffectiveTotal200 = { [key: string]: unknown };
 
 export type GetInventoryParams = {
   month: string;

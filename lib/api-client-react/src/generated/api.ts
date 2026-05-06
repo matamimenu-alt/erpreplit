@@ -17,13 +17,17 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AuditLogEntry,
   BranchTransfer,
   CategoryExpenseReport,
+  CloseMonth200,
+  CloseMonthRequest,
   CreateBranchTransfer,
   CreateDish,
   CreateDish201,
   CreateEmployee,
   CreateExpense,
+  CreateFixedCostTemplate,
   CreateInventory,
   CreatePurchase,
   CreatePurchaseBatch,
@@ -38,9 +42,16 @@ import type {
   DishWithIngredients,
   Employee,
   Expense,
+  FixedCostHistoryMonth,
+  FixedCostTemplate,
   GetCategoryExpenseReportParams,
   GetDashboardSummaryParams,
+  GetFixedCostAuditLogParams,
+  GetFixedCostEffectiveTotal200,
+  GetFixedCostEffectiveTotalParams,
+  GetFixedCostHistoryParams,
   GetInventoryParams,
+  GetMonthlyFixedCostsParams,
   GetPLReportParams,
   GetSalesReportParams,
   GetStockReportParams,
@@ -52,6 +63,7 @@ import type {
   ListSalesParams,
   ListStockItemsParams,
   ListStockMovementsParams,
+  MonthlyFixedCosts,
   MonthlyPurchaseReport,
   MonthlySalesSummary,
   PLReport,
@@ -59,15 +71,19 @@ import type {
   PricingConfig,
   Purchase,
   PurchaseProductSuggestion,
+  RemoveMonthlyOverrideParams,
   Restaurant,
   Sale,
   SalesAppConfig,
   SalesReport,
+  SetMonthlyOverride,
+  SetMonthlyOverride200,
   StockItem,
   StockMonthlyReport,
   StockMovement,
   Supplier,
   SupplierProduct,
+  UnlockMonth200,
   UpdateDish200,
   VatReport,
 } from "./api.schemas";
@@ -2588,6 +2604,1111 @@ export const useDeleteEmployee = <
 > => {
   return useMutation(getDeleteEmployeeMutationOptions(options));
 };
+
+/**
+ * @summary List all fixed cost templates
+ */
+export const getListFixedCostTemplatesUrl = () => {
+  return `/api/fixed-costs/templates`;
+};
+
+export const listFixedCostTemplates = async (
+  options?: RequestInit,
+): Promise<FixedCostTemplate[]> => {
+  return customFetch<FixedCostTemplate[]>(getListFixedCostTemplatesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListFixedCostTemplatesQueryKey = () => {
+  return [`/api/fixed-costs/templates`] as const;
+};
+
+export const getListFixedCostTemplatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listFixedCostTemplates>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listFixedCostTemplates>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListFixedCostTemplatesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listFixedCostTemplates>>
+  > = ({ signal }) => listFixedCostTemplates({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listFixedCostTemplates>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListFixedCostTemplatesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listFixedCostTemplates>>
+>;
+export type ListFixedCostTemplatesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all fixed cost templates
+ */
+
+export function useListFixedCostTemplates<
+  TData = Awaited<ReturnType<typeof listFixedCostTemplates>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listFixedCostTemplates>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListFixedCostTemplatesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a fixed cost template
+ */
+export const getCreateFixedCostTemplateUrl = () => {
+  return `/api/fixed-costs/templates`;
+};
+
+export const createFixedCostTemplate = async (
+  createFixedCostTemplate: CreateFixedCostTemplate,
+  options?: RequestInit,
+): Promise<FixedCostTemplate> => {
+  return customFetch<FixedCostTemplate>(getCreateFixedCostTemplateUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createFixedCostTemplate),
+  });
+};
+
+export const getCreateFixedCostTemplateMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createFixedCostTemplate>>,
+    TError,
+    { data: BodyType<CreateFixedCostTemplate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createFixedCostTemplate>>,
+  TError,
+  { data: BodyType<CreateFixedCostTemplate> },
+  TContext
+> => {
+  const mutationKey = ["createFixedCostTemplate"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createFixedCostTemplate>>,
+    { data: BodyType<CreateFixedCostTemplate> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createFixedCostTemplate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateFixedCostTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createFixedCostTemplate>>
+>;
+export type CreateFixedCostTemplateMutationBody =
+  BodyType<CreateFixedCostTemplate>;
+export type CreateFixedCostTemplateMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a fixed cost template
+ */
+export const useCreateFixedCostTemplate = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createFixedCostTemplate>>,
+    TError,
+    { data: BodyType<CreateFixedCostTemplate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createFixedCostTemplate>>,
+  TError,
+  { data: BodyType<CreateFixedCostTemplate> },
+  TContext
+> => {
+  return useMutation(getCreateFixedCostTemplateMutationOptions(options));
+};
+
+/**
+ * @summary Update a fixed cost template
+ */
+export const getUpdateFixedCostTemplateUrl = (id: number) => {
+  return `/api/fixed-costs/templates/${id}`;
+};
+
+export const updateFixedCostTemplate = async (
+  id: number,
+  createFixedCostTemplate: CreateFixedCostTemplate,
+  options?: RequestInit,
+): Promise<FixedCostTemplate> => {
+  return customFetch<FixedCostTemplate>(getUpdateFixedCostTemplateUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createFixedCostTemplate),
+  });
+};
+
+export const getUpdateFixedCostTemplateMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateFixedCostTemplate>>,
+    TError,
+    { id: number; data: BodyType<CreateFixedCostTemplate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateFixedCostTemplate>>,
+  TError,
+  { id: number; data: BodyType<CreateFixedCostTemplate> },
+  TContext
+> => {
+  const mutationKey = ["updateFixedCostTemplate"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateFixedCostTemplate>>,
+    { id: number; data: BodyType<CreateFixedCostTemplate> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateFixedCostTemplate(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateFixedCostTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateFixedCostTemplate>>
+>;
+export type UpdateFixedCostTemplateMutationBody =
+  BodyType<CreateFixedCostTemplate>;
+export type UpdateFixedCostTemplateMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update a fixed cost template
+ */
+export const useUpdateFixedCostTemplate = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateFixedCostTemplate>>,
+    TError,
+    { id: number; data: BodyType<CreateFixedCostTemplate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateFixedCostTemplate>>,
+  TError,
+  { id: number; data: BodyType<CreateFixedCostTemplate> },
+  TContext
+> => {
+  return useMutation(getUpdateFixedCostTemplateMutationOptions(options));
+};
+
+/**
+ * @summary Delete a fixed cost template
+ */
+export const getDeleteFixedCostTemplateUrl = (id: number) => {
+  return `/api/fixed-costs/templates/${id}`;
+};
+
+export const deleteFixedCostTemplate = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteFixedCostTemplateUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteFixedCostTemplateMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteFixedCostTemplate>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteFixedCostTemplate>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteFixedCostTemplate"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteFixedCostTemplate>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteFixedCostTemplate(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteFixedCostTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteFixedCostTemplate>>
+>;
+
+export type DeleteFixedCostTemplateMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a fixed cost template
+ */
+export const useDeleteFixedCostTemplate = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteFixedCostTemplate>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteFixedCostTemplate>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteFixedCostTemplateMutationOptions(options));
+};
+
+/**
+ * @summary Get effective fixed costs for a month
+ */
+export const getGetMonthlyFixedCostsUrl = (
+  params: GetMonthlyFixedCostsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/fixed-costs/monthly?${stringifiedParams}`
+    : `/api/fixed-costs/monthly`;
+};
+
+export const getMonthlyFixedCosts = async (
+  params: GetMonthlyFixedCostsParams,
+  options?: RequestInit,
+): Promise<MonthlyFixedCosts> => {
+  return customFetch<MonthlyFixedCosts>(getGetMonthlyFixedCostsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetMonthlyFixedCostsQueryKey = (
+  params?: GetMonthlyFixedCostsParams,
+) => {
+  return [`/api/fixed-costs/monthly`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetMonthlyFixedCostsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMonthlyFixedCosts>>,
+  TError = ErrorType<unknown>,
+>(
+  params: GetMonthlyFixedCostsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getMonthlyFixedCosts>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetMonthlyFixedCostsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getMonthlyFixedCosts>>
+  > = ({ signal }) =>
+    getMonthlyFixedCosts(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMonthlyFixedCosts>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetMonthlyFixedCostsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMonthlyFixedCosts>>
+>;
+export type GetMonthlyFixedCostsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get effective fixed costs for a month
+ */
+
+export function useGetMonthlyFixedCosts<
+  TData = Awaited<ReturnType<typeof getMonthlyFixedCosts>>,
+  TError = ErrorType<unknown>,
+>(
+  params: GetMonthlyFixedCostsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getMonthlyFixedCosts>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetMonthlyFixedCostsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Set a monthly override for a template
+ */
+export const getSetMonthlyOverrideUrl = () => {
+  return `/api/fixed-costs/monthly`;
+};
+
+export const setMonthlyOverride = async (
+  setMonthlyOverride: SetMonthlyOverride,
+  options?: RequestInit,
+): Promise<SetMonthlyOverride200> => {
+  return customFetch<SetMonthlyOverride200>(getSetMonthlyOverrideUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(setMonthlyOverride),
+  });
+};
+
+export const getSetMonthlyOverrideMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setMonthlyOverride>>,
+    TError,
+    { data: BodyType<SetMonthlyOverride> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof setMonthlyOverride>>,
+  TError,
+  { data: BodyType<SetMonthlyOverride> },
+  TContext
+> => {
+  const mutationKey = ["setMonthlyOverride"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof setMonthlyOverride>>,
+    { data: BodyType<SetMonthlyOverride> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return setMonthlyOverride(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SetMonthlyOverrideMutationResult = NonNullable<
+  Awaited<ReturnType<typeof setMonthlyOverride>>
+>;
+export type SetMonthlyOverrideMutationBody = BodyType<SetMonthlyOverride>;
+export type SetMonthlyOverrideMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Set a monthly override for a template
+ */
+export const useSetMonthlyOverride = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setMonthlyOverride>>,
+    TError,
+    { data: BodyType<SetMonthlyOverride> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof setMonthlyOverride>>,
+  TError,
+  { data: BodyType<SetMonthlyOverride> },
+  TContext
+> => {
+  return useMutation(getSetMonthlyOverrideMutationOptions(options));
+};
+
+/**
+ * @summary Remove a monthly override
+ */
+export const getRemoveMonthlyOverrideUrl = (
+  templateId: number,
+  params: RemoveMonthlyOverrideParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/fixed-costs/monthly/${templateId}?${stringifiedParams}`
+    : `/api/fixed-costs/monthly/${templateId}`;
+};
+
+export const removeMonthlyOverride = async (
+  templateId: number,
+  params: RemoveMonthlyOverrideParams,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getRemoveMonthlyOverrideUrl(templateId, params), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getRemoveMonthlyOverrideMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeMonthlyOverride>>,
+    TError,
+    { templateId: number; params: RemoveMonthlyOverrideParams },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof removeMonthlyOverride>>,
+  TError,
+  { templateId: number; params: RemoveMonthlyOverrideParams },
+  TContext
+> => {
+  const mutationKey = ["removeMonthlyOverride"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof removeMonthlyOverride>>,
+    { templateId: number; params: RemoveMonthlyOverrideParams }
+  > = (props) => {
+    const { templateId, params } = props ?? {};
+
+    return removeMonthlyOverride(templateId, params, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RemoveMonthlyOverrideMutationResult = NonNullable<
+  Awaited<ReturnType<typeof removeMonthlyOverride>>
+>;
+
+export type RemoveMonthlyOverrideMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Remove a monthly override
+ */
+export const useRemoveMonthlyOverride = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeMonthlyOverride>>,
+    TError,
+    { templateId: number; params: RemoveMonthlyOverrideParams },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof removeMonthlyOverride>>,
+  TError,
+  { templateId: number; params: RemoveMonthlyOverrideParams },
+  TContext
+> => {
+  return useMutation(getRemoveMonthlyOverrideMutationOptions(options));
+};
+
+/**
+ * @summary Get fixed cost history for charting
+ */
+export const getGetFixedCostHistoryUrl = (
+  params?: GetFixedCostHistoryParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/fixed-costs/history?${stringifiedParams}`
+    : `/api/fixed-costs/history`;
+};
+
+export const getFixedCostHistory = async (
+  params?: GetFixedCostHistoryParams,
+  options?: RequestInit,
+): Promise<FixedCostHistoryMonth[]> => {
+  return customFetch<FixedCostHistoryMonth[]>(
+    getGetFixedCostHistoryUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetFixedCostHistoryQueryKey = (
+  params?: GetFixedCostHistoryParams,
+) => {
+  return [`/api/fixed-costs/history`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetFixedCostHistoryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getFixedCostHistory>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetFixedCostHistoryParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getFixedCostHistory>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetFixedCostHistoryQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getFixedCostHistory>>
+  > = ({ signal }) =>
+    getFixedCostHistory(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getFixedCostHistory>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetFixedCostHistoryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getFixedCostHistory>>
+>;
+export type GetFixedCostHistoryQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get fixed cost history for charting
+ */
+
+export function useGetFixedCostHistory<
+  TData = Awaited<ReturnType<typeof getFixedCostHistory>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetFixedCostHistoryParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getFixedCostHistory>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetFixedCostHistoryQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Lock a month for editing
+ */
+export const getCloseMonthUrl = () => {
+  return `/api/fixed-costs/close-month`;
+};
+
+export const closeMonth = async (
+  closeMonthRequest: CloseMonthRequest,
+  options?: RequestInit,
+): Promise<CloseMonth200> => {
+  return customFetch<CloseMonth200>(getCloseMonthUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(closeMonthRequest),
+  });
+};
+
+export const getCloseMonthMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof closeMonth>>,
+    TError,
+    { data: BodyType<CloseMonthRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof closeMonth>>,
+  TError,
+  { data: BodyType<CloseMonthRequest> },
+  TContext
+> => {
+  const mutationKey = ["closeMonth"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof closeMonth>>,
+    { data: BodyType<CloseMonthRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return closeMonth(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CloseMonthMutationResult = NonNullable<
+  Awaited<ReturnType<typeof closeMonth>>
+>;
+export type CloseMonthMutationBody = BodyType<CloseMonthRequest>;
+export type CloseMonthMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Lock a month for editing
+ */
+export const useCloseMonth = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof closeMonth>>,
+    TError,
+    { data: BodyType<CloseMonthRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof closeMonth>>,
+  TError,
+  { data: BodyType<CloseMonthRequest> },
+  TContext
+> => {
+  return useMutation(getCloseMonthMutationOptions(options));
+};
+
+/**
+ * @summary Unlock a closed month
+ */
+export const getUnlockMonthUrl = () => {
+  return `/api/fixed-costs/unlock-month`;
+};
+
+export const unlockMonth = async (
+  closeMonthRequest: CloseMonthRequest,
+  options?: RequestInit,
+): Promise<UnlockMonth200> => {
+  return customFetch<UnlockMonth200>(getUnlockMonthUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(closeMonthRequest),
+  });
+};
+
+export const getUnlockMonthMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unlockMonth>>,
+    TError,
+    { data: BodyType<CloseMonthRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof unlockMonth>>,
+  TError,
+  { data: BodyType<CloseMonthRequest> },
+  TContext
+> => {
+  const mutationKey = ["unlockMonth"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof unlockMonth>>,
+    { data: BodyType<CloseMonthRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return unlockMonth(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UnlockMonthMutationResult = NonNullable<
+  Awaited<ReturnType<typeof unlockMonth>>
+>;
+export type UnlockMonthMutationBody = BodyType<CloseMonthRequest>;
+export type UnlockMonthMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Unlock a closed month
+ */
+export const useUnlockMonth = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unlockMonth>>,
+    TError,
+    { data: BodyType<CloseMonthRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof unlockMonth>>,
+  TError,
+  { data: BodyType<CloseMonthRequest> },
+  TContext
+> => {
+  return useMutation(getUnlockMonthMutationOptions(options));
+};
+
+/**
+ * @summary Get audit log entries
+ */
+export const getGetFixedCostAuditLogUrl = (
+  params?: GetFixedCostAuditLogParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/fixed-costs/audit-log?${stringifiedParams}`
+    : `/api/fixed-costs/audit-log`;
+};
+
+export const getFixedCostAuditLog = async (
+  params?: GetFixedCostAuditLogParams,
+  options?: RequestInit,
+): Promise<AuditLogEntry[]> => {
+  return customFetch<AuditLogEntry[]>(getGetFixedCostAuditLogUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetFixedCostAuditLogQueryKey = (
+  params?: GetFixedCostAuditLogParams,
+) => {
+  return [`/api/fixed-costs/audit-log`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetFixedCostAuditLogQueryOptions = <
+  TData = Awaited<ReturnType<typeof getFixedCostAuditLog>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetFixedCostAuditLogParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getFixedCostAuditLog>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetFixedCostAuditLogQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getFixedCostAuditLog>>
+  > = ({ signal }) =>
+    getFixedCostAuditLog(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getFixedCostAuditLog>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetFixedCostAuditLogQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getFixedCostAuditLog>>
+>;
+export type GetFixedCostAuditLogQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get audit log entries
+ */
+
+export function useGetFixedCostAuditLog<
+  TData = Awaited<ReturnType<typeof getFixedCostAuditLog>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetFixedCostAuditLogParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getFixedCostAuditLog>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetFixedCostAuditLogQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get effective total for P&L
+ */
+export const getGetFixedCostEffectiveTotalUrl = (
+  params?: GetFixedCostEffectiveTotalParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/fixed-costs/effective-total?${stringifiedParams}`
+    : `/api/fixed-costs/effective-total`;
+};
+
+export const getFixedCostEffectiveTotal = async (
+  params?: GetFixedCostEffectiveTotalParams,
+  options?: RequestInit,
+): Promise<GetFixedCostEffectiveTotal200> => {
+  return customFetch<GetFixedCostEffectiveTotal200>(
+    getGetFixedCostEffectiveTotalUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetFixedCostEffectiveTotalQueryKey = (
+  params?: GetFixedCostEffectiveTotalParams,
+) => {
+  return [
+    `/api/fixed-costs/effective-total`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetFixedCostEffectiveTotalQueryOptions = <
+  TData = Awaited<ReturnType<typeof getFixedCostEffectiveTotal>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetFixedCostEffectiveTotalParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getFixedCostEffectiveTotal>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetFixedCostEffectiveTotalQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getFixedCostEffectiveTotal>>
+  > = ({ signal }) =>
+    getFixedCostEffectiveTotal(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getFixedCostEffectiveTotal>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetFixedCostEffectiveTotalQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getFixedCostEffectiveTotal>>
+>;
+export type GetFixedCostEffectiveTotalQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get effective total for P&L
+ */
+
+export function useGetFixedCostEffectiveTotal<
+  TData = Awaited<ReturnType<typeof getFixedCostEffectiveTotal>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetFixedCostEffectiveTotalParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getFixedCostEffectiveTotal>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetFixedCostEffectiveTotalQueryOptions(
+    params,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary List all fixed expenses
