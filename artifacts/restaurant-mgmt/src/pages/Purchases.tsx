@@ -70,6 +70,7 @@ function ProductCombobox({
   value,
   onChange,
   onSelect,
+  onAfterSelect,
   onEnter,
   placeholder,
   inputRef: externalRef,
@@ -80,6 +81,7 @@ function ProductCombobox({
   value: string;
   onChange: (val: string) => void;
   onSelect: (s: ProductSuggestion) => void;
+  onAfterSelect?: () => void;
   onEnter?: () => void;
   placeholder?: string;
   inputRef?: React.RefObject<HTMLInputElement>;
@@ -155,9 +157,14 @@ function ProductCombobox({
     onSelect(s);
     setOpen(false);
     setHighlightIdx(-1);
+    setTimeout(() => onAfterSelect?.(), 0);
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Tab") {
+      setOpen(false);
+      return; // let Tab propagate normally for focus navigation
+    }
     if (!open) {
       if (e.key === "ArrowDown") { setOpen(true); setHighlightIdx(0); e.preventDefault(); return; }
       if (e.key === "Enter") { e.preventDefault(); onEnter?.(); return; }
@@ -174,10 +181,11 @@ function ProductCombobox({
       if (highlightIdx >= 0 && highlightIdx < filtered.length) {
         selectSuggestion(filtered[highlightIdx]);
       } else if (highlightIdx === filtered.length && showAddNew) {
-        setOpen(false); // keep typed value as-is
+        setOpen(false);
+        setTimeout(() => onAfterSelect?.(), 0);
       } else {
         setOpen(false);
-        onEnter?.(); // no highlighted item — act like submit
+        onEnter?.();
       }
     } else if (e.key === "Escape") {
       setOpen(false);
@@ -199,7 +207,6 @@ function ProductCombobox({
         type="text"
         value={value}
         onChange={e => { onChange(e.target.value); setOpen(true); }}
-        onFocus={() => setOpen(true)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         autoComplete="off"
@@ -322,6 +329,7 @@ function PurchaseInvoiceModal({
   const [addError, setAddError] = useState("");
 
   const productNameRef = useRef<HTMLInputElement>(null);
+  const qtyRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -673,6 +681,7 @@ function PurchaseInvoiceModal({
                   value={addForm.productName}
                   onChange={val => setAddForm(f => ({ ...f, productName: val }))}
                   onSelect={handleProductSelect}
+                  onAfterSelect={() => { qtyRef.current?.focus(); qtyRef.current?.select(); }}
                   onEnter={handleAddItem}
                   placeholder={
                     selectedSupplierId && selectedSupplierProducts.length > 0
@@ -719,6 +728,7 @@ function PurchaseInvoiceModal({
                 <div className="w-24">
                   <label className="block text-xs text-slate-500 mb-1">Qty / الكمية</label>
                   <input
+                    ref={qtyRef}
                     type="number"
                     step="0.001"
                     min="0"
@@ -1113,6 +1123,10 @@ export default function Purchases() {
         onSuccess: () => {
           setAddOpen(false);
           invalidateAll();
+        },
+        onError: (err: unknown) => {
+          const msg = err instanceof Error ? err.message : "Failed to save invoice. Please try again.";
+          alert(`⚠️ Save failed: ${msg}`);
         },
       }
     );
