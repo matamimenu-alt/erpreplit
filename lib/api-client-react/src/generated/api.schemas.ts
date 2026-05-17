@@ -9,11 +9,73 @@ export interface HealthStatus {
   status: string;
 }
 
+export type RestaurantStatus =
+  (typeof RestaurantStatus)[keyof typeof RestaurantStatus];
+
+export const RestaurantStatus = {
+  active: "active",
+  inactive: "inactive",
+  archived: "archived",
+} as const;
+
 export interface Restaurant {
   id: number;
   name: string;
   nameAr?: string | null;
+  brandName?: string | null;
+  branchCode?: string | null;
+  city?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  taxNumber?: string | null;
+  status: RestaurantStatus;
   createdAt: string;
+}
+
+export type CreateRestaurantStatus =
+  (typeof CreateRestaurantStatus)[keyof typeof CreateRestaurantStatus];
+
+export const CreateRestaurantStatus = {
+  active: "active",
+  inactive: "inactive",
+  archived: "archived",
+} as const;
+
+export interface CreateRestaurant {
+  name: string;
+  nameAr?: string | null;
+  brandName?: string | null;
+  branchCode?: string | null;
+  city?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  taxNumber?: string | null;
+  status?: CreateRestaurantStatus;
+}
+
+export interface BranchKpi {
+  restaurantId: number;
+  restaurantName: string;
+  brandName: string;
+  city: string;
+  status: string;
+  branchCode: string;
+  revenue: number;
+  purchases: number;
+  salaries: number;
+  fixedExpenses: number;
+  vatPayable: number;
+  profit: number;
+}
+
+export interface GroupSummary {
+  month: string;
+  totalRevenue: number;
+  totalExpenses: number;
+  totalProfit: number;
+  bestBranch?: BranchKpi | null;
+  worstBranch?: BranchKpi | null;
+  branches: BranchKpi[];
 }
 
 export interface Sale {
@@ -849,6 +911,38 @@ export interface DishPricingResult {
   fixedCostSummary: FixedCostSummary;
   dishes: DishPricingItem[];
 }
+
+export type ListRestaurantsParams = {
+  /**
+   * Pass "true" to include archived branches
+   */
+  includeArchived?: string;
+};
+
+export type GetGroupSummaryParams = {
+  /**
+   * Filter by month (YYYY-MM)
+   */
+  month?: string;
+};
+
+export type DeleteRestaurant200 = {
+  success?: boolean;
+  id?: number;
+};
+
+export type SetRestaurantStatusBodyStatus =
+  (typeof SetRestaurantStatusBodyStatus)[keyof typeof SetRestaurantStatusBodyStatus];
+
+export const SetRestaurantStatusBodyStatus = {
+  active: "active",
+  inactive: "inactive",
+  archived: "archived",
+} as const;
+
+export type SetRestaurantStatusBody = {
+  status: SetRestaurantStatusBodyStatus;
+};
 
 export type ListSalesParams = {
   /**

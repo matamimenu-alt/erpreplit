@@ -15,15 +15,176 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
- * @summary List all restaurants
+ * @summary List restaurants (excludes archived by default)
  */
+export const ListRestaurantsQueryParams = zod.object({
+  includeArchived: zod.coerce
+    .string()
+    .optional()
+    .describe('Pass \"true\" to include archived branches'),
+});
+
 export const ListRestaurantsResponseItem = zod.object({
   id: zod.number(),
   name: zod.string(),
   nameAr: zod.string().nullish(),
+  brandName: zod.string().nullish(),
+  branchCode: zod.string().nullish(),
+  city: zod.string().nullish(),
+  address: zod.string().nullish(),
+  phone: zod.string().nullish(),
+  taxNumber: zod.string().nullish(),
+  status: zod.enum(["active", "inactive", "archived"]),
   createdAt: zod.string(),
 });
 export const ListRestaurantsResponse = zod.array(ListRestaurantsResponseItem);
+
+/**
+ * @summary Create a new branch/restaurant
+ */
+export const CreateRestaurantBody = zod.object({
+  name: zod.string(),
+  nameAr: zod.string().nullish(),
+  brandName: zod.string().nullish(),
+  branchCode: zod.string().nullish(),
+  city: zod.string().nullish(),
+  address: zod.string().nullish(),
+  phone: zod.string().nullish(),
+  taxNumber: zod.string().nullish(),
+  status: zod.enum(["active", "inactive", "archived"]).optional(),
+});
+
+/**
+ * @summary Consolidated KPI summary across all active branches
+ */
+export const GetGroupSummaryQueryParams = zod.object({
+  month: zod.coerce.string().optional().describe("Filter by month (YYYY-MM)"),
+});
+
+export const GetGroupSummaryResponse = zod.object({
+  month: zod.string(),
+  totalRevenue: zod.number(),
+  totalExpenses: zod.number(),
+  totalProfit: zod.number(),
+  bestBranch: zod
+    .object({
+      restaurantId: zod.number(),
+      restaurantName: zod.string(),
+      brandName: zod.string(),
+      city: zod.string(),
+      status: zod.string(),
+      branchCode: zod.string(),
+      revenue: zod.number(),
+      purchases: zod.number(),
+      salaries: zod.number(),
+      fixedExpenses: zod.number(),
+      vatPayable: zod.number(),
+      profit: zod.number(),
+    })
+    .nullish(),
+  worstBranch: zod
+    .object({
+      restaurantId: zod.number(),
+      restaurantName: zod.string(),
+      brandName: zod.string(),
+      city: zod.string(),
+      status: zod.string(),
+      branchCode: zod.string(),
+      revenue: zod.number(),
+      purchases: zod.number(),
+      salaries: zod.number(),
+      fixedExpenses: zod.number(),
+      vatPayable: zod.number(),
+      profit: zod.number(),
+    })
+    .nullish(),
+  branches: zod.array(
+    zod.object({
+      restaurantId: zod.number(),
+      restaurantName: zod.string(),
+      brandName: zod.string(),
+      city: zod.string(),
+      status: zod.string(),
+      branchCode: zod.string(),
+      revenue: zod.number(),
+      purchases: zod.number(),
+      salaries: zod.number(),
+      fixedExpenses: zod.number(),
+      vatPayable: zod.number(),
+      profit: zod.number(),
+    }),
+  ),
+});
+
+/**
+ * @summary Update branch information
+ */
+export const UpdateRestaurantParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateRestaurantBody = zod.object({
+  name: zod.string(),
+  nameAr: zod.string().nullish(),
+  brandName: zod.string().nullish(),
+  branchCode: zod.string().nullish(),
+  city: zod.string().nullish(),
+  address: zod.string().nullish(),
+  phone: zod.string().nullish(),
+  taxNumber: zod.string().nullish(),
+  status: zod.enum(["active", "inactive", "archived"]).optional(),
+});
+
+export const UpdateRestaurantResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  nameAr: zod.string().nullish(),
+  brandName: zod.string().nullish(),
+  branchCode: zod.string().nullish(),
+  city: zod.string().nullish(),
+  address: zod.string().nullish(),
+  phone: zod.string().nullish(),
+  taxNumber: zod.string().nullish(),
+  status: zod.enum(["active", "inactive", "archived"]),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Soft-delete (archive) a restaurant
+ */
+export const DeleteRestaurantParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeleteRestaurantResponse = zod.object({
+  success: zod.boolean().optional(),
+  id: zod.number().optional(),
+});
+
+/**
+ * @summary Set restaurant status (active/inactive/archived)
+ */
+export const SetRestaurantStatusParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const SetRestaurantStatusBody = zod.object({
+  status: zod.enum(["active", "inactive", "archived"]),
+});
+
+export const SetRestaurantStatusResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  nameAr: zod.string().nullish(),
+  brandName: zod.string().nullish(),
+  branchCode: zod.string().nullish(),
+  city: zod.string().nullish(),
+  address: zod.string().nullish(),
+  phone: zod.string().nullish(),
+  taxNumber: zod.string().nullish(),
+  status: zod.enum(["active", "inactive", "archived"]),
+  createdAt: zod.string(),
+});
 
 /**
  * @summary List all sales records

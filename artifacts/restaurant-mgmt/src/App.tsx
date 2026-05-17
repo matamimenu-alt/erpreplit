@@ -16,6 +16,8 @@ import Inventory from "@/pages/Inventory";
 import FoodCost from "@/pages/FoodCost";
 import VatReport from "@/pages/VatReport";
 import Reports from "@/pages/Reports";
+import Branches from "@/pages/Branches";
+import GroupDashboard from "@/pages/GroupDashboard";
 import { RestaurantProvider } from "@/contexts/RestaurantContext";
 
 const queryClient = new QueryClient({
@@ -32,6 +34,8 @@ function Router() {
     <AppLayout>
       <Switch>
         <Route path="/" component={Dashboard} />
+        <Route path="/group-dashboard" component={GroupDashboard} />
+        <Route path="/branches" component={Branches} />
         <Route path="/sales" component={Sales} />
         <Route path="/purchases" component={Purchases} />
         <Route path="/suppliers" component={Suppliers} />

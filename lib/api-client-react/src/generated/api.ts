@@ -36,12 +36,14 @@ import type {
   CreatePurchase,
   CreatePurchaseBatch,
   CreatePurchaseBatch201,
+  CreateRestaurant,
   CreateSale,
   CreateStockMovement,
   CreateSupplier,
   CreateSupplierProduct,
   DashboardSummary,
   DeleteDish200,
+  DeleteRestaurant200,
   DishPricingResult,
   DishWithIngredients,
   Employee,
@@ -56,16 +58,19 @@ import type {
   GetFixedCostHistoryParams,
   GetFixedCostYearSummary200,
   GetFixedCostYearSummaryParams,
+  GetGroupSummaryParams,
   GetInventoryParams,
   GetMonthlyFixedCostsParams,
   GetPLReportParams,
   GetSalesReportParams,
   GetStockReportParams,
   GetVatReportParams,
+  GroupSummary,
   HealthStatus,
   Inventory,
   ListBranchTransfersParams,
   ListPurchasesParams,
+  ListRestaurantsParams,
   ListSalesParams,
   ListStockItemsParams,
   ListStockMovementsParams,
@@ -84,6 +89,7 @@ import type {
   SalesReport,
   SetMonthlyOverride,
   SetMonthlyOverride200,
+  SetRestaurantStatusBody,
   StockItem,
   StockMonthlyReport,
   StockMovement,
@@ -179,43 +185,59 @@ export function useHealthCheck<
 }
 
 /**
- * @summary List all restaurants
+ * @summary List restaurants (excludes archived by default)
  */
-export const getListRestaurantsUrl = () => {
-  return `/api/restaurants`;
+export const getListRestaurantsUrl = (params?: ListRestaurantsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/restaurants?${stringifiedParams}`
+    : `/api/restaurants`;
 };
 
 export const listRestaurants = async (
+  params?: ListRestaurantsParams,
   options?: RequestInit,
 ): Promise<Restaurant[]> => {
-  return customFetch<Restaurant[]>(getListRestaurantsUrl(), {
+  return customFetch<Restaurant[]>(getListRestaurantsUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getListRestaurantsQueryKey = () => {
-  return [`/api/restaurants`] as const;
+export const getListRestaurantsQueryKey = (params?: ListRestaurantsParams) => {
+  return [`/api/restaurants`, ...(params ? [params] : [])] as const;
 };
 
 export const getListRestaurantsQueryOptions = <
   TData = Awaited<ReturnType<typeof listRestaurants>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof listRestaurants>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}) => {
+>(
+  params?: ListRestaurantsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listRestaurants>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getListRestaurantsQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getListRestaurantsQueryKey(params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listRestaurants>>> = ({
     signal,
-  }) => listRestaurants({ signal, ...requestOptions });
+  }) => listRestaurants(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listRestaurants>>,
@@ -230,21 +252,24 @@ export type ListRestaurantsQueryResult = NonNullable<
 export type ListRestaurantsQueryError = ErrorType<unknown>;
 
 /**
- * @summary List all restaurants
+ * @summary List restaurants (excludes archived by default)
  */
 
 export function useListRestaurants<
   TData = Awaited<ReturnType<typeof listRestaurants>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof listRestaurants>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getListRestaurantsQueryOptions(options);
+>(
+  params?: ListRestaurantsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listRestaurants>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListRestaurantsQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
@@ -252,6 +277,447 @@ export function useListRestaurants<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Create a new branch/restaurant
+ */
+export const getCreateRestaurantUrl = () => {
+  return `/api/restaurants`;
+};
+
+export const createRestaurant = async (
+  createRestaurant: CreateRestaurant,
+  options?: RequestInit,
+): Promise<Restaurant> => {
+  return customFetch<Restaurant>(getCreateRestaurantUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createRestaurant),
+  });
+};
+
+export const getCreateRestaurantMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createRestaurant>>,
+    TError,
+    { data: BodyType<CreateRestaurant> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createRestaurant>>,
+  TError,
+  { data: BodyType<CreateRestaurant> },
+  TContext
+> => {
+  const mutationKey = ["createRestaurant"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createRestaurant>>,
+    { data: BodyType<CreateRestaurant> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createRestaurant(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateRestaurantMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createRestaurant>>
+>;
+export type CreateRestaurantMutationBody = BodyType<CreateRestaurant>;
+export type CreateRestaurantMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a new branch/restaurant
+ */
+export const useCreateRestaurant = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createRestaurant>>,
+    TError,
+    { data: BodyType<CreateRestaurant> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createRestaurant>>,
+  TError,
+  { data: BodyType<CreateRestaurant> },
+  TContext
+> => {
+  return useMutation(getCreateRestaurantMutationOptions(options));
+};
+
+/**
+ * @summary Consolidated KPI summary across all active branches
+ */
+export const getGetGroupSummaryUrl = (params?: GetGroupSummaryParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/restaurants/group/summary?${stringifiedParams}`
+    : `/api/restaurants/group/summary`;
+};
+
+export const getGroupSummary = async (
+  params?: GetGroupSummaryParams,
+  options?: RequestInit,
+): Promise<GroupSummary> => {
+  return customFetch<GroupSummary>(getGetGroupSummaryUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetGroupSummaryQueryKey = (params?: GetGroupSummaryParams) => {
+  return [
+    `/api/restaurants/group/summary`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetGroupSummaryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getGroupSummary>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetGroupSummaryParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getGroupSummary>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetGroupSummaryQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getGroupSummary>>> = ({
+    signal,
+  }) => getGroupSummary(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getGroupSummary>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetGroupSummaryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getGroupSummary>>
+>;
+export type GetGroupSummaryQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Consolidated KPI summary across all active branches
+ */
+
+export function useGetGroupSummary<
+  TData = Awaited<ReturnType<typeof getGroupSummary>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetGroupSummaryParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getGroupSummary>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetGroupSummaryQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update branch information
+ */
+export const getUpdateRestaurantUrl = (id: number) => {
+  return `/api/restaurants/${id}`;
+};
+
+export const updateRestaurant = async (
+  id: number,
+  createRestaurant: CreateRestaurant,
+  options?: RequestInit,
+): Promise<Restaurant> => {
+  return customFetch<Restaurant>(getUpdateRestaurantUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createRestaurant),
+  });
+};
+
+export const getUpdateRestaurantMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateRestaurant>>,
+    TError,
+    { id: number; data: BodyType<CreateRestaurant> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateRestaurant>>,
+  TError,
+  { id: number; data: BodyType<CreateRestaurant> },
+  TContext
+> => {
+  const mutationKey = ["updateRestaurant"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateRestaurant>>,
+    { id: number; data: BodyType<CreateRestaurant> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateRestaurant(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateRestaurantMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateRestaurant>>
+>;
+export type UpdateRestaurantMutationBody = BodyType<CreateRestaurant>;
+export type UpdateRestaurantMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update branch information
+ */
+export const useUpdateRestaurant = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateRestaurant>>,
+    TError,
+    { id: number; data: BodyType<CreateRestaurant> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateRestaurant>>,
+  TError,
+  { id: number; data: BodyType<CreateRestaurant> },
+  TContext
+> => {
+  return useMutation(getUpdateRestaurantMutationOptions(options));
+};
+
+/**
+ * @summary Soft-delete (archive) a restaurant
+ */
+export const getDeleteRestaurantUrl = (id: number) => {
+  return `/api/restaurants/${id}`;
+};
+
+export const deleteRestaurant = async (
+  id: number,
+  options?: RequestInit,
+): Promise<DeleteRestaurant200> => {
+  return customFetch<DeleteRestaurant200>(getDeleteRestaurantUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteRestaurantMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteRestaurant>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteRestaurant>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteRestaurant"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteRestaurant>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteRestaurant(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteRestaurantMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteRestaurant>>
+>;
+
+export type DeleteRestaurantMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Soft-delete (archive) a restaurant
+ */
+export const useDeleteRestaurant = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteRestaurant>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteRestaurant>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteRestaurantMutationOptions(options));
+};
+
+/**
+ * @summary Set restaurant status (active/inactive/archived)
+ */
+export const getSetRestaurantStatusUrl = (id: number) => {
+  return `/api/restaurants/${id}/status`;
+};
+
+export const setRestaurantStatus = async (
+  id: number,
+  setRestaurantStatusBody: SetRestaurantStatusBody,
+  options?: RequestInit,
+): Promise<Restaurant> => {
+  return customFetch<Restaurant>(getSetRestaurantStatusUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(setRestaurantStatusBody),
+  });
+};
+
+export const getSetRestaurantStatusMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setRestaurantStatus>>,
+    TError,
+    { id: number; data: BodyType<SetRestaurantStatusBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof setRestaurantStatus>>,
+  TError,
+  { id: number; data: BodyType<SetRestaurantStatusBody> },
+  TContext
+> => {
+  const mutationKey = ["setRestaurantStatus"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof setRestaurantStatus>>,
+    { id: number; data: BodyType<SetRestaurantStatusBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return setRestaurantStatus(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SetRestaurantStatusMutationResult = NonNullable<
+  Awaited<ReturnType<typeof setRestaurantStatus>>
+>;
+export type SetRestaurantStatusMutationBody = BodyType<SetRestaurantStatusBody>;
+export type SetRestaurantStatusMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Set restaurant status (active/inactive/archived)
+ */
+export const useSetRestaurantStatus = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setRestaurantStatus>>,
+    TError,
+    { id: number; data: BodyType<SetRestaurantStatusBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof setRestaurantStatus>>,
+  TError,
+  { id: number; data: BodyType<SetRestaurantStatusBody> },
+  TContext
+> => {
+  return useMutation(getSetRestaurantStatusMutationOptions(options));
+};
 
 /**
  * @summary List all sales records

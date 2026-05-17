@@ -1,0 +1,130 @@
+Additional Requirements for the Multi-Branch Consolidated Report System
+
+16. Branch Management Module
+Create a full Branch Management system.
+
+The admin must be able to:
+
+- Add new restaurants/branches
+- Edit branch information
+- Rename branches
+- Archive inactive branches
+- Delete inactive branches from the active list
+- Restore archived branches if needed
+
+Branch fields:
+- Branch Name
+- Brand Name
+- Branch Code
+- City
+- Address
+- Phone Number
+- Tax Number
+- Status:
+  - Active
+  - Inactive
+  - Archived
+
+17. Dynamic Multi-Brand Support
+The system must support:
+- Different restaurant names
+- Different brands
+- Different concepts
+
+Examples:
+- Shawarma restaurant
+- Burger restaurant
+- Coffee shop
+- Grill restaurant
+- Cloud kitchen
+
+All must operate under the SAME accounting and reporting engine.
+
+18. Smart Consolidation
+In the consolidated reports:
+- Allow selecting:
+  - One branch
+  - Multiple branches
+  - Entire group
+
+Add filters:
+- By Brand
+- By City
+- By Branch Type
+
+19. Hide Inactive Restaurants
+Inactive or archived restaurants should:
+- Not appear in normal operational dropdowns
+- Still remain accessible in historical financial reports
+
+20. Permissions & Security
+Only admin users can:
+- Add branches
+- Delete branches
+- Archive branches
+- Modify financial structures
+
+Normal users:
+- Can only access assigned branches.
+
+21. Branch Creation Wizard
+When creating a new restaurant:
+Automatically generate:
+- Default chart of accounts
+- Default expense categories
+- Default sales categories
+- Inventory structure
+- VAT settings
+- Financial report structure
+
+22. Multi-Tenant Ready Structure
+Build the database structure scalable for:
+- Unlimited restaurants
+- Unlimited branches
+- Future expansion
+
+23. Unified Dashboard
+Create a parent-company dashboard showing:
+- Total group revenue
+- Total group expenses
+- Total group profit
+- Best performing branch
+- Lowest performing branch
+- Consolidated cash flow
+- Consolidated liabilities and receivables
+
+24. Branch Status Controls
+Allow:
+- Disable branch temporarily
+- Freeze transactions
+- Close accounting period by branch
+- Lock branch after audit approval
+
+25. Automatic Consolidated Calculations
+All new branches added should automatically:
+- Appear in consolidated reports
+- Be included in KPIs
+- Be included in dashboards
+- Be included in exports
+
+No manual coding required when adding new branches.
+
+26. Data Integrity
+Deleting a branch should:
+- NEVER delete financial history
+- Only archive/hide operationally
+- Preserve all reports and transactions
+
+27. UI/UX
+Create a professional restaurant-group management experience similar to:
+- ERP systems
+- Enterprise restaurant management platforms
+- Hospitality financial dashboards
+
+Use modern responsive design with:
+- Sidebar navigation
+- Branch selector
+- Consolidated group selector
+- KPI cards
+- Advanced filters
+- Dark/light mode support

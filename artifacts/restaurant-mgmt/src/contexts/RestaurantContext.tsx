@@ -6,11 +6,19 @@ export interface Restaurant {
   id: number;
   name: string;
   nameAr?: string | null;
+  brandName?: string | null;
+  branchCode?: string | null;
+  city?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  taxNumber?: string | null;
+  status: string;
   createdAt: string;
 }
 
 interface RestaurantContextValue {
   restaurants: Restaurant[];
+  allRestaurants: Restaurant[];
   activeRestaurant: Restaurant | null;
   setActiveRestaurantId: (id: number) => void;
   isLoading: boolean;
@@ -18,6 +26,7 @@ interface RestaurantContextValue {
 
 const RestaurantContext = createContext<RestaurantContextValue>({
   restaurants: [],
+  allRestaurants: [],
   activeRestaurant: null,
   setActiveRestaurantId: () => {},
   isLoading: true,
@@ -27,7 +36,10 @@ const STORAGE_KEY = "active_restaurant_id";
 
 export function RestaurantProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
-  const { data: restaurants = [], isLoading } = useListRestaurants();
+  const { data: allRestaurantsRaw = [], isLoading } = useListRestaurants();
+
+  const allRestaurants = allRestaurantsRaw as Restaurant[];
+  const activeRestaurants = allRestaurants.filter(r => r.status === "active");
 
   const [activeId, setActiveId] = useState<number>(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -39,16 +51,16 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
   }, [activeId]);
 
   useEffect(() => {
-    if (!isLoading && restaurants.length > 0) {
-      const exists = restaurants.some((r) => r.id === activeId);
+    if (!isLoading && activeRestaurants.length > 0) {
+      const exists = activeRestaurants.some(r => r.id === activeId);
       if (!exists) {
-        const firstId = restaurants[0].id;
+        const firstId = activeRestaurants[0].id;
         setActiveId(firstId);
         setRestaurantId(firstId);
         localStorage.setItem(STORAGE_KEY, String(firstId));
       }
     }
-  }, [isLoading, restaurants, activeId]);
+  }, [isLoading, activeRestaurants, activeId]);
 
   const handleSetActiveId = (id: number) => {
     setActiveId(id);
@@ -57,12 +69,13 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     queryClient.invalidateQueries();
   };
 
-  const activeRestaurant = restaurants.find((r) => r.id === activeId) ?? null;
+  const activeRestaurant = allRestaurants.find(r => r.id === activeId) ?? null;
 
   return (
     <RestaurantContext.Provider
       value={{
-        restaurants: restaurants as Restaurant[],
+        restaurants: activeRestaurants,
+        allRestaurants,
         activeRestaurant,
         setActiveRestaurantId: handleSetActiveId,
         isLoading,

@@ -5,10 +5,9 @@
  * Restaurant Management & Accounting System API
  * OpenAPI spec version: 0.1.0
  */
-import type { RestaurantStatus } from "./restaurantStatus";
+import type { CreateRestaurantStatus } from "./createRestaurantStatus";
 
-export interface Restaurant {
-  id: number;
+export interface CreateRestaurant {
   name: string;
   nameAr?: string | null;
   brandName?: string | null;
@@ -17,6 +16,5 @@ export interface Restaurant {
   address?: string | null;
   phone?: string | null;
   taxNumber?: string | null;
-  status: RestaurantStatus;
-  createdAt: string;
+  status?: CreateRestaurantStatus;
 }
