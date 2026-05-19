@@ -240,12 +240,9 @@ function TransactionForm({
                 <span className="text-sm font-medium text-slate-700">خاضع لضريبة القيمة المضافة</span>
               </label>
               {form.isVatApplicable && (
-                <div className="flex items-center gap-1">
-                  <input type="number" value={form.vatRate} onChange={e => set("vatRate", parseFloat(e.target.value) || 15)}
-                    min="0" max="100" step="0.5"
-                    className="w-16 px-2 py-1 border border-slate-300 rounded-lg text-sm text-center focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none" />
-                  <Percent className="w-4 h-4 text-slate-400" />
-                </div>
+                <span className="text-sm font-semibold text-amber-600 flex items-center gap-1">
+                  15 <Percent className="w-3.5 h-3.5" />
+                </span>
               )}
             </div>
 
