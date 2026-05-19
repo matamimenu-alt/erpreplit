@@ -19,11 +19,13 @@ export default function VatReport() {
     transfersInCount?: number;
     netTransferVatImpact?: number;
     adjustedInputVat?: number;
+    fixedCostInputVat?: number;
     zatca?: {
       box1_taxableSupplies: number;
       box2_outputVat: number;
       box3_taxablePurchases: number;
       box4_inputVatGross: number;
+      box4_fixedCostInputVat: number;
       box4_vatTransferredOut: number;
       box4_vatReceivedIn: number;
       box4_inputVatNet: number;
@@ -36,6 +38,7 @@ export default function VatReport() {
 
   const hasTransfers =
     (r?.vatTransferredOut ?? 0) > 0 || (r?.vatReceivedIn ?? 0) > 0;
+  const hasFixedCostVat = (r?.fixedCostInputVat ?? 0) > 0;
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -111,6 +114,15 @@ export default function VatReport() {
               <span>Input VAT on Purchase Invoices</span>
               <span className="font-medium text-rose-500">{formatSAR(report?.inputVat)}</span>
             </div>
+            {hasFixedCostVat && (
+              <div className="flex justify-between items-center text-sm text-emerald-700 bg-emerald-50 px-3 py-2 rounded-lg">
+                <span className="flex items-center gap-1.5">
+                  <ArrowDownLeft className="w-3.5 h-3.5" />
+                  VAT on Fixed Costs (rent, utilities, subscriptions)
+                </span>
+                <span className="font-semibold">+ {formatSAR(r?.fixedCostInputVat)}</span>
+              </div>
+            )}
             {hasTransfers && (
               <>
                 {(r?.vatTransferredOut ?? 0) > 0 && (
@@ -134,9 +146,9 @@ export default function VatReport() {
               </>
             )}
             <div className="flex justify-between items-center text-lg font-bold text-slate-900 bg-slate-50 p-3 rounded-lg">
-              <span>{hasTransfers ? "Adjusted Input VAT" : "Input VAT Paid"}</span>
+              <span>{(hasTransfers || hasFixedCostVat) ? "Adjusted Input VAT" : "Input VAT Paid"}</span>
               <span className="text-rose-600">
-                {formatSAR(hasTransfers ? r?.adjustedInputVat : report?.inputVat)}
+                {formatSAR((hasTransfers || hasFixedCostVat) ? r?.adjustedInputVat : report?.inputVat)}
               </span>
             </div>
           </div>

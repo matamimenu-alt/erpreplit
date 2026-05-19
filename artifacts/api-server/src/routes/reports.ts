@@ -13,6 +13,18 @@ function pct(part: number, total: number): number {
 }
 function f2(n: number) { return +n.toFixed(2); }
 
+// VAT helper for fixed costs (same logic as in fixed-costs route)
+function computeFixedVat(amount: number, vatType: string, vatRate: number) {
+  const rate = (vatRate || 15) / 100;
+  if (!vatType || vatType === "none" || amount === 0) return { base: amount, vatAmount: 0 };
+  if (vatType === "included") {
+    const base = +(amount / (1 + rate)).toFixed(2);
+    return { base, vatAmount: +(amount - base).toFixed(2) };
+  }
+  const vatAmount = +(amount * rate).toFixed(2);
+  return { base: +amount.toFixed(2), vatAmount };
+}
+
 // ─── Legacy category normalisation ────────────────────────────────────────────
 const LEGACY_MAP: Record<string, string> = {
   "cost-food": "food-poultry", "food": "food-poultry", "food-meat": "food-poultry",
@@ -238,6 +250,7 @@ router.get("/pl", async (req, res) => {
     const fcTemplates = await db.select().from(fixedCostTemplatesTable)
       .where(and(eq(fixedCostTemplatesTable.restaurantId, restaurantId), eq(fixedCostTemplatesTable.isActive, true)));
     let totalDynamicFixedCosts = 0;
+    let totalDynamicFixedVat   = 0;
     const dynamicBreakdown: Record<string, number> = {};
     if (fcTemplates.length > 0) {
       const fcOverrides = month
@@ -246,11 +259,16 @@ router.get("/pl", async (req, res) => {
         : [];
       const overrideMap = new Map(fcOverrides.map(o => [o.templateId, toNum(o.amount)]));
       for (const t of fcTemplates) {
-        // DUPLICATE PREVENTION: skip 'staff-salaries' — these are accounted for in Payroll above
+        // DUPLICATE PREVENTION: skip 'staff-salaries' — accounted for in Payroll above
         if (t.category === "staff-salaries") continue;
-        const amt = overrideMap.has(t.id) ? overrideMap.get(t.id)! : toNum(t.defaultAmount);
-        totalDynamicFixedCosts += amt;
-        dynamicBreakdown[t.category] = (dynamicBreakdown[t.category] ?? 0) + amt;
+        const enteredAmt = overrideMap.has(t.id) ? overrideMap.get(t.id)! : toNum(t.defaultAmount);
+        const vatType = t.vatType ?? "none";
+        const vatRate = toNum(t.vatRate ?? "15.00");
+        const { base, vatAmount } = computeFixedVat(enteredAmt, vatType, vatRate);
+        // P&L expense = NET amount before VAT (VAT on fixed costs = reclaimable input VAT)
+        totalDynamicFixedCosts += base;
+        totalDynamicFixedVat   += vatAmount;
+        dynamicBreakdown[t.category] = (dynamicBreakdown[t.category] ?? 0) + base;
       }
     }
 
@@ -440,8 +458,10 @@ router.get("/pl", async (req, res) => {
 
       // ── Fixed Expenses ─────────────────────────────────────────────────────
       // SOURCE: Fixed Cost Templates (staff-salaries excluded to prevent double-count)
+      // P&L uses NET amounts (before VAT). VAT on fixed costs → input VAT in VAT report.
       totalFixedExpenses:      f2(totalFixedExpenses),     // legacy
-      totalDynamicFixedCosts:  f2(totalDynamicFixedCosts), // new templates (excl. staff-salaries)
+      totalDynamicFixedCosts:  f2(totalDynamicFixedCosts), // new templates NET (excl. staff-salaries, excl. VAT)
+      totalDynamicFixedVat:    f2(totalDynamicFixedVat),   // VAT portion (reclaimable input VAT)
       dynamicFixedBreakdown:   dynamicBreakdown,
 
       // ── App Commissions ────────────────────────────────────────────────────

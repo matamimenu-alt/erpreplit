@@ -20,6 +20,42 @@ function fmtAmt(v: number) {
   return String(v.toFixed(2));
 }
 
+// ─── VAT Computation ──────────────────────────────────────────────────────────
+// vatType: "none" | "included" | "excluded"
+// "none"     → amount is final cost, VAT = 0
+// "included" → amount already contains VAT (extract base and VAT from total)
+// "excluded" → amount is the base; VAT is added on top
+function computeVat(amount: number, vatType: string, vatRate: number) {
+  const rate = (vatRate || 15) / 100;
+  if (!vatType || vatType === "none" || amount === 0) {
+    return { base: amount, vatAmount: 0, total: amount };
+  }
+  if (vatType === "included") {
+    const base = +(amount / (1 + rate)).toFixed(2);
+    const vatAmount = +(amount - base).toFixed(2);
+    return { base, vatAmount, total: +amount.toFixed(2) };
+  }
+  // excluded
+  const vatAmount = +(amount * rate).toFixed(2);
+  return { base: +amount.toFixed(2), vatAmount, total: +(amount + vatAmount).toFixed(2) };
+}
+
+function fmtTemplate(t: typeof fixedCostTemplatesTable.$inferSelect) {
+  return {
+    id:            t.id,
+    category:      t.category,
+    name:          t.name,
+    defaultAmount: toNum(t.defaultAmount),
+    notes:         t.notes ?? undefined,
+    isActive:      t.isActive,
+    sortOrder:     t.sortOrder,
+    vatType:       t.vatType ?? "none",
+    vatRate:       toNum(t.vatRate ?? "15.00"),
+    createdAt:     t.createdAt.toISOString(),
+    updatedAt:     t.updatedAt.toISOString(),
+  };
+}
+
 // Helper: get effective amount for a template in a given month
 async function getEffectiveAmount(templateId: number, restaurantId: number, month: string) {
   const [override] = await db
@@ -80,17 +116,7 @@ router.get("/templates", async (req, res) => {
       .from(fixedCostTemplatesTable)
       .where(eq(fixedCostTemplatesTable.restaurantId, restaurantId))
       .orderBy(fixedCostTemplatesTable.sortOrder, fixedCostTemplatesTable.id);
-    res.json(templates.map(t => ({
-      id: t.id,
-      category: t.category,
-      name: t.name,
-      defaultAmount: toNum(t.defaultAmount),
-      notes: t.notes ?? undefined,
-      isActive: t.isActive,
-      sortOrder: t.sortOrder,
-      createdAt: t.createdAt.toISOString(),
-      updatedAt: t.updatedAt.toISOString(),
-    })));
+    res.json(templates.map(fmtTemplate));
   } catch (err) {
     req.log.error({ err }, "Error listing fixed cost templates");
     res.status(500).json({ error: "Internal server error" });
@@ -101,7 +127,7 @@ router.get("/templates", async (req, res) => {
 router.post("/templates", async (req, res) => {
   try {
     const restaurantId = getRestaurantId(req);
-    const { category, name, defaultAmount, notes, sortOrder } = req.body;
+    const { category, name, defaultAmount, notes, sortOrder, vatType, vatRate } = req.body;
     const [t] = await db
       .insert(fixedCostTemplatesTable)
       .values({
@@ -111,6 +137,8 @@ router.post("/templates", async (req, res) => {
         defaultAmount: fmtAmt(Number(defaultAmount) || 0),
         notes: notes || null,
         sortOrder: sortOrder ?? 0,
+        vatType: vatType ?? "none",
+        vatRate: fmtAmt(Number(vatRate) || 15),
       })
       .returning();
     await writeAudit({
@@ -120,12 +148,7 @@ router.post("/templates", async (req, res) => {
       action: "create_template",
       newAmount: toNum(t.defaultAmount),
     });
-    res.status(201).json({
-      id: t.id, category: t.category, name: t.name,
-      defaultAmount: toNum(t.defaultAmount), notes: t.notes ?? undefined,
-      isActive: t.isActive, sortOrder: t.sortOrder,
-      createdAt: t.createdAt.toISOString(), updatedAt: t.updatedAt.toISOString(),
-    });
+    res.status(201).json(fmtTemplate(t));
   } catch (err) {
     req.log.error({ err }, "Error creating fixed cost template");
     res.status(500).json({ error: "Internal server error" });
@@ -137,7 +160,7 @@ router.put("/templates/:id", async (req, res) => {
   try {
     const restaurantId = getRestaurantId(req);
     const id = parseInt(req.params.id);
-    const { category, name, defaultAmount, notes, isActive, sortOrder } = req.body;
+    const { category, name, defaultAmount, notes, isActive, sortOrder, vatType, vatRate } = req.body;
 
     const [existing] = await db
       .select()
@@ -146,18 +169,20 @@ router.put("/templates/:id", async (req, res) => {
     if (!existing) return res.status(404).json({ error: "Not found" });
 
     const oldAmt = toNum(existing.defaultAmount);
-    const newAmt = Number(defaultAmount) ?? oldAmt;
+    const newAmt = defaultAmount !== undefined ? Number(defaultAmount) : oldAmt;
 
     const [t] = await db
       .update(fixedCostTemplatesTable)
       .set({
-        category: category ?? existing.category,
-        name: name ?? existing.name,
+        category:      category ?? existing.category,
+        name:          name ?? existing.name,
         defaultAmount: fmtAmt(newAmt),
-        notes: notes !== undefined ? (notes || null) : existing.notes,
-        isActive: isActive !== undefined ? isActive : existing.isActive,
-        sortOrder: sortOrder !== undefined ? sortOrder : existing.sortOrder,
-        updatedAt: new Date(),
+        notes:         notes !== undefined ? (notes || null) : existing.notes,
+        isActive:      isActive !== undefined ? isActive : existing.isActive,
+        sortOrder:     sortOrder !== undefined ? sortOrder : existing.sortOrder,
+        vatType:       vatType !== undefined ? vatType : existing.vatType,
+        vatRate:       vatRate !== undefined ? fmtAmt(Number(vatRate)) : existing.vatRate,
+        updatedAt:     new Date(),
       })
       .where(and(eq(fixedCostTemplatesTable.id, id), eq(fixedCostTemplatesTable.restaurantId, restaurantId)))
       .returning();
@@ -169,12 +194,7 @@ router.put("/templates/:id", async (req, res) => {
       });
     }
 
-    res.json({
-      id: t.id, category: t.category, name: t.name,
-      defaultAmount: toNum(t.defaultAmount), notes: t.notes ?? undefined,
-      isActive: t.isActive, sortOrder: t.sortOrder,
-      createdAt: t.createdAt.toISOString(), updatedAt: t.updatedAt.toISOString(),
-    });
+    res.json(fmtTemplate(t));
   } catch (err) {
     req.log.error({ err }, "Error updating fixed cost template");
     res.status(500).json({ error: "Internal server error" });
@@ -238,29 +258,44 @@ router.get("/monthly", async (req, res) => {
     const overrideMap = new Map(overrides.map(o => [o.templateId, o]));
 
     const items = templates.map(t => {
-      const override = overrideMap.get(t.id);
-      const defaultAmt = toNum(t.defaultAmount);
+      const override    = overrideMap.get(t.id);
+      const defaultAmt  = toNum(t.defaultAmount);
       const effectiveAmt = override ? toNum(override.amount) : defaultAmt;
+      const vatType     = t.vatType ?? "none";
+      const vatRate     = toNum(t.vatRate ?? "15.00");
+      const vat         = computeVat(effectiveAmt, vatType, vatRate);
       return {
-        templateId: t.id,
-        category: t.category,
-        name: t.name,
-        defaultAmount: defaultAmt,
+        templateId:     t.id,
+        category:       t.category,
+        name:           t.name,
+        vatType,
+        vatRate,
+        defaultAmount:  defaultAmt,
         overrideAmount: override ? toNum(override.amount) : null,
         effectiveAmount: effectiveAmt,
-        hasOverride: !!override,
-        overrideNotes: override?.notes ?? null,
-        overrideId: override?.id ?? null,
-        notes: t.notes ?? null,
+        baseAmount:     vat.base,
+        vatAmount:      vat.vatAmount,
+        totalAmount:    vat.total,
+        hasOverride:    !!override,
+        overrideNotes:  override?.notes ?? null,
+        overrideId:     override?.id ?? null,
+        notes:          t.notes ?? null,
       };
     });
 
+    const totalBase  = +items.reduce((s, i) => s + i.baseAmount,  0).toFixed(2);
+    const totalVat   = +items.reduce((s, i) => s + i.vatAmount,   0).toFixed(2);
+    const totalGross = +items.reduce((s, i) => s + i.totalAmount, 0).toFixed(2);
+
     res.json({
       month,
-      isLocked: closingStatus?.isLocked ?? false,
-      lockedBy: closingStatus?.lockedBy ?? null,
-      lockedAt: closingStatus?.lockedAt?.toISOString() ?? null,
-      total: +items.reduce((s, i) => s + i.effectiveAmount, 0).toFixed(2),
+      isLocked:  closingStatus?.isLocked ?? false,
+      lockedBy:  closingStatus?.lockedBy ?? null,
+      lockedAt:  closingStatus?.lockedAt?.toISOString() ?? null,
+      total:     +items.reduce((s, i) => s + i.effectiveAmount, 0).toFixed(2),
+      totalBase,
+      totalVat,
+      totalGross,
       items,
     });
   } catch (err) {
@@ -289,7 +324,6 @@ router.post("/monthly", async (req, res) => {
     const oldAmt = existing ? toNum(existing.amount) : toNum(template.defaultAmount);
     const newAmt = Number(amount);
 
-    // Upsert
     let record;
     if (existing) {
       [record] = await db
@@ -314,12 +348,21 @@ router.post("/monthly", async (req, res) => {
       changedBy: changedBy || "admin", notes,
     });
 
+    const vatType = template.vatType ?? "none";
+    const vatRate = toNum(template.vatRate ?? "15.00");
+    const vat = computeVat(newAmt, vatType, vatRate);
+
     res.json({
-      id: record.id,
+      id:         record.id,
       templateId: record.templateId,
-      month: record.month,
-      amount: toNum(record.amount),
-      notes: record.notes ?? null,
+      month:      record.month,
+      amount:     toNum(record.amount),
+      baseAmount: vat.base,
+      vatAmount:  vat.vatAmount,
+      totalAmount: vat.total,
+      vatType,
+      vatRate,
+      notes:      record.notes ?? null,
     });
   } catch (err) {
     req.log.error({ err }, "Error setting monthly override");
@@ -379,7 +422,6 @@ router.get("/history", async (req, res) => {
     const restaurantId = getRestaurantId(req);
     const numMonths = parseInt((req.query.months as string) ?? "6");
 
-    // Build list of months (past N months including current)
     const months: string[] = [];
     const now = new Date();
     for (let i = numMonths - 1; i >= 0; i--) {
@@ -421,16 +463,35 @@ router.get("/history", async (req, res) => {
       const overrideMap = overrideIndex.get(month) ?? new Map<number, number>();
       const breakdown: Record<string, number> = {};
       let total = 0;
+      let totalBase = 0;
+      let totalVat = 0;
       const items = templates.map(t => {
-        const amt = overrideMap.has(t.id) ? overrideMap.get(t.id)! : toNum(t.defaultAmount);
-        breakdown[t.category] = (breakdown[t.category] ?? 0) + amt;
-        total += amt;
-        return { templateId: t.id, name: t.name, category: t.category, amount: +amt.toFixed(2), hasOverride: overrideMap.has(t.id) };
+        const enteredAmt = overrideMap.has(t.id) ? overrideMap.get(t.id)! : toNum(t.defaultAmount);
+        const vatType = t.vatType ?? "none";
+        const vatRate = toNum(t.vatRate ?? "15.00");
+        const vat = computeVat(enteredAmt, vatType, vatRate);
+        breakdown[t.category] = (breakdown[t.category] ?? 0) + vat.base;
+        total += enteredAmt;
+        totalBase += vat.base;
+        totalVat += vat.vatAmount;
+        return {
+          templateId: t.id,
+          name: t.name,
+          category: t.category,
+          vatType,
+          amount: +enteredAmt.toFixed(2),
+          baseAmount: vat.base,
+          vatAmount: vat.vatAmount,
+          totalAmount: vat.total,
+          hasOverride: overrideMap.has(t.id),
+        };
       });
       return {
         month,
-        isLocked: lockIndex.get(month) ?? false,
-        total: +total.toFixed(2),
+        isLocked:  lockIndex.get(month) ?? false,
+        total:     +total.toFixed(2),
+        totalBase: +totalBase.toFixed(2),
+        totalVat:  +totalVat.toFixed(2),
         breakdown: Object.fromEntries(Object.entries(breakdown).map(([k, v]) => [k, +v.toFixed(2)])),
         items,
       };
@@ -458,12 +519,10 @@ router.post("/monthly/batch", async (req, res) => {
     const locked = await isMonthLocked(restaurantId, month);
     if (locked) return res.status(403).json({ error: "Month is locked — unlock it first." });
 
-    // Load all templates for validation
     const templates = await db.select().from(fixedCostTemplatesTable)
       .where(and(eq(fixedCostTemplatesTable.restaurantId, restaurantId), eq(fixedCostTemplatesTable.isActive, true)));
     const templateMap = new Map(templates.map(t => [t.id, t]));
 
-    // Load existing monthly values
     const existing = await db.select().from(fixedCostMonthlyValuesTable)
       .where(and(
         eq(fixedCostMonthlyValuesTable.restaurantId, restaurantId),
@@ -497,7 +556,6 @@ router.post("/monthly/batch", async (req, res) => {
       }
       saved.push(record);
 
-      // Only audit if amount changed
       if (oldAmt === null || Math.abs(oldAmt - newAmt) > 0.001) {
         await writeAudit({
           restaurantId, templateId, templateName: template.name, month,
@@ -516,7 +574,6 @@ router.post("/monthly/batch", async (req, res) => {
 });
 
 // GET /api/fixed-costs/monthly/copy-prev?month=YYYY-MM
-// Returns previous month's values to use as a starting point
 router.get("/monthly/copy-prev", async (req, res) => {
   try {
     const restaurantId = getRestaurantId(req);
@@ -540,11 +597,13 @@ router.get("/monthly/copy-prev", async (req, res) => {
     const prevMap = new Map(prevValues.map(v => [v.templateId, toNum(v.amount)]));
 
     const items = templates.map(t => ({
-      templateId: t.id,
-      category: t.category,
-      name: t.name,
-      suggestedAmount: prevMap.has(t.id) ? prevMap.get(t.id)! : toNum(t.defaultAmount),
-      source: prevMap.has(t.id) ? "prev-month" : "default",
+      templateId:       t.id,
+      category:         t.category,
+      name:             t.name,
+      vatType:          t.vatType ?? "none",
+      vatRate:          toNum(t.vatRate ?? "15.00"),
+      suggestedAmount:  prevMap.has(t.id) ? prevMap.get(t.id)! : toNum(t.defaultAmount),
+      source:           prevMap.has(t.id) ? "prev-month" : "default",
     }));
 
     res.json({ sourceMonth: prevMonth, items });
@@ -555,7 +614,6 @@ router.get("/monthly/copy-prev", async (req, res) => {
 });
 
 // GET /api/fixed-costs/year-summary?year=YYYY
-// Returns all 12 months for a given year — for annual comparison table
 router.get("/year-summary", async (req, res) => {
   try {
     const restaurantId = getRestaurantId(req);
@@ -591,30 +649,51 @@ router.get("/year-summary", async (req, res) => {
     const result = months.map(month => {
       const vals = valIndex.get(month) ?? new Map<number, number>();
       let total = 0;
+      let totalBase = 0;
+      let totalVat = 0;
       const breakdown: Record<string, number> = {};
       const byTemplate: Record<number, number> = {};
 
       for (const t of templates) {
-        const amt = vals.has(t.id) ? vals.get(t.id)! : toNum(t.defaultAmount);
-        total += amt;
-        breakdown[t.category] = (breakdown[t.category] ?? 0) + amt;
-        byTemplate[t.id] = +amt.toFixed(2);
+        const enteredAmt = vals.has(t.id) ? vals.get(t.id)! : toNum(t.defaultAmount);
+        const vatType = t.vatType ?? "none";
+        const vatRate = toNum(t.vatRate ?? "15.00");
+        const vat = computeVat(enteredAmt, vatType, vatRate);
+        total += enteredAmt;
+        totalBase += vat.base;
+        totalVat += vat.vatAmount;
+        breakdown[t.category] = (breakdown[t.category] ?? 0) + vat.base;
+        byTemplate[t.id] = +vat.base.toFixed(2);
       }
 
       return {
         month,
-        isLocked: lockIndex.get(month) ?? false,
-        hasData: valIndex.has(month),
-        total: +total.toFixed(2),
+        isLocked:  lockIndex.get(month) ?? false,
+        hasData:   valIndex.has(month),
+        total:     +total.toFixed(2),
+        totalBase: +totalBase.toFixed(2),
+        totalVat:  +totalVat.toFixed(2),
         breakdown: Object.fromEntries(Object.entries(breakdown).map(([k, v]) => [k, +v.toFixed(2)])),
         byTemplate,
       };
     });
 
-    const yearTotal = result.reduce((s, m) => s + m.total, 0);
-    const templateList = templates.map(t => ({ id: t.id, name: t.name, category: t.category }));
+    const yearTotal     = result.reduce((s, m) => s + m.total, 0);
+    const yearTotalBase = result.reduce((s, m) => s + m.totalBase, 0);
+    const yearTotalVat  = result.reduce((s, m) => s + m.totalVat, 0);
+    const templateList  = templates.map(t => ({
+      id: t.id, name: t.name, category: t.category,
+      vatType: t.vatType ?? "none", vatRate: toNum(t.vatRate ?? "15.00"),
+    }));
 
-    res.json({ year, yearTotal: +yearTotal.toFixed(2), months: result, templates: templateList });
+    res.json({
+      year,
+      yearTotal:     +yearTotal.toFixed(2),
+      yearTotalBase: +yearTotalBase.toFixed(2),
+      yearTotalVat:  +yearTotalVat.toFixed(2),
+      months: result,
+      templates: templateList,
+    });
   } catch (err) {
     req.log.error({ err }, "Error fetching year summary");
     res.status(500).json({ error: "Internal server error" });
@@ -698,16 +777,16 @@ router.get("/audit-log", async (req, res) => {
       .limit(limit);
 
     res.json(logs.map(l => ({
-      id: l.id,
-      templateId: l.templateId ?? null,
+      id:           l.id,
+      templateId:   l.templateId ?? null,
       templateName: l.templateName ?? null,
-      month: l.month ?? null,
-      action: l.action,
-      oldAmount: l.oldAmount != null ? toNum(l.oldAmount) : null,
-      newAmount: l.newAmount != null ? toNum(l.newAmount) : null,
-      changedBy: l.changedBy ?? "admin",
-      changedAt: l.changedAt.toISOString(),
-      notes: l.notes ?? null,
+      month:        l.month ?? null,
+      action:       l.action,
+      oldAmount:    l.oldAmount != null ? toNum(l.oldAmount) : null,
+      newAmount:    l.newAmount != null ? toNum(l.newAmount) : null,
+      changedBy:    l.changedBy ?? "admin",
+      changedAt:    l.changedAt.toISOString(),
+      notes:        l.notes ?? null,
     })));
   } catch (err) {
     req.log.error({ err }, "Error fetching audit log");
@@ -715,47 +794,46 @@ router.get("/audit-log", async (req, res) => {
   }
 });
 
-// GET /api/fixed-costs/effective-total?month=YYYY-MM (for P&L integration)
+// GET /api/fixed-costs/effective-total?month=YYYY-MM
 router.get("/effective-total", async (req, res) => {
   try {
     const restaurantId = getRestaurantId(req);
-    const month = req.query.month as string | undefined;
+    const month = req.query.month as string;
+    if (!month) return res.status(400).json({ error: "month param required" });
 
-    const templates = await db
-      .select()
-      .from(fixedCostTemplatesTable)
+    const templates = await db.select().from(fixedCostTemplatesTable)
       .where(and(eq(fixedCostTemplatesTable.restaurantId, restaurantId), eq(fixedCostTemplatesTable.isActive, true)));
 
-    if (!month || templates.length === 0) {
-      const total = templates.reduce((s, t) => s + toNum(t.defaultAmount), 0);
-      const breakdown: Record<string, number> = {};
-      for (const t of templates) {
-        breakdown[t.category] = (breakdown[t.category] ?? 0) + toNum(t.defaultAmount);
-      }
-      return res.json({ total: +total.toFixed(2), breakdown, byTemplate: templates.map(t => ({ id: t.id, name: t.name, category: t.category, amount: toNum(t.defaultAmount) })) });
-    }
-
-    const overrides = await db
-      .select()
-      .from(fixedCostMonthlyValuesTable)
+    const overrides = await db.select().from(fixedCostMonthlyValuesTable)
       .where(and(
         eq(fixedCostMonthlyValuesTable.restaurantId, restaurantId),
         eq(fixedCostMonthlyValuesTable.month, month),
       ));
 
     const overrideMap = new Map(overrides.map(o => [o.templateId, toNum(o.amount)]));
-    let total = 0;
-    const breakdown: Record<string, number> = {};
-    const byTemplate = templates.map(t => {
-      const amt = overrideMap.has(t.id) ? overrideMap.get(t.id)! : toNum(t.defaultAmount);
-      breakdown[t.category] = (breakdown[t.category] ?? 0) + amt;
-      total += amt;
-      return { id: t.id, name: t.name, category: t.category, amount: +amt.toFixed(2) };
-    });
 
-    res.json({ total: +total.toFixed(2), breakdown: Object.fromEntries(Object.entries(breakdown).map(([k, v]) => [k, +v.toFixed(2)])), byTemplate });
+    let total = 0;
+    let totalBase = 0;
+    let totalVat = 0;
+    for (const t of templates) {
+      const enteredAmt = overrideMap.has(t.id) ? overrideMap.get(t.id)! : toNum(t.defaultAmount);
+      const vatType = t.vatType ?? "none";
+      const vatRate = toNum(t.vatRate ?? "15.00");
+      const vat = computeVat(enteredAmt, vatType, vatRate);
+      total += enteredAmt;
+      totalBase += vat.base;
+      totalVat += vat.vatAmount;
+    }
+
+    res.json({
+      month,
+      total:     +total.toFixed(2),
+      totalBase: +totalBase.toFixed(2),
+      totalVat:  +totalVat.toFixed(2),
+      totalGross: +(totalBase + totalVat).toFixed(2),
+    });
   } catch (err) {
-    req.log.error({ err }, "Error getting effective total");
+    req.log.error({ err }, "Error fetching effective total");
     res.status(500).json({ error: "Internal server error" });
   }
 });

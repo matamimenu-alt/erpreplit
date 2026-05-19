@@ -1,0 +1,242 @@
+يوجد حالياً تضارب بين نظام Fixed Costs و Expense Ledger، مما يؤدي إلى تكرار المصروفات واختلاط التصنيفات داخل الـ P&L، بالإضافة إلى عدم وجود منطق واضح لضريبة القيمة المضافة VAT داخل المصروفات الثابتة.
+
+المطلوب إعادة تنظيم العلاقة بين:
+
+* Fixed Costs
+* Expense Ledger
+* VAT Logic
+
+بشكل محاسبي احترافي ودقيق.
+
+---
+
+المشكلة الحالية:
+
+حالياً بعض البنود تظهر داخل:
+
+* Fixed Costs
+  وأيضاً داخل:
+* Expense Ledger
+
+مثل:
+
+* الكهرباء
+* الإيجارات
+* اشتراكات التطبيقات
+* الإنترنت
+* بعض الرواتب
+* مصاريف التشغيل
+
+وهذا يسبب:
+
+* Double Counting
+* تضخم المصروفات
+* أخطاء في EBITDA
+* أخطاء في الـ P&L
+
+---
+
+المطلوب:
+
+إعادة تعريف وظيفة كل Module بشكل واضح:
+
+---
+
+1- Fixed Costs
+
+يستخدم فقط لـ:
+Recurring Scheduled Expenses
+
+أي:
+المصاريف الشهرية أو الدورية الثابتة المتكررة.
+
+مثل:
+
+* إيجار الفرع
+* إيجار المستودع
+* اشتراكات البرامج
+* عقود الإنترنت
+* عقود الصيانة
+* رسوم الأنظمة
+* عقود الخدمات الشهرية
+
+---
+
+2- Expense Ledger
+
+يستخدم فقط لـ:
+Operational Variable Expenses
+
+أي:
+المصاريف التشغيلية اليومية والمتغيرة.
+
+مثل:
+
+* صيانة طارئة
+* تسويق
+* دعاية
+* قرطاسية
+* سفر
+* مصاريف حكومية
+* مصاريف بنكية
+* وقود إداري
+* مصروفات متنوعة
+
+---
+
+3- ممنوع التكرار بين النظامين
+
+أي مصروف:
+إذا كان مصدره:
+Fixed Costs
+
+لا يجوز أن يظهر داخل:
+Expense Ledger
+
+والعكس صحيح.
+
+---
+
+4- إنشاء Expense Source Ownership Logic
+
+كل بند يجب أن يكون له:
+Owner Module واحد فقط.
+
+مثال:
+
+إيجار الفرع
+→ Fixed Costs فقط
+
+كهرباء شهرية ثابتة
+→ Fixed Costs فقط
+
+صيانة طارئة
+→ Expense Ledger فقط
+
+رسوم حكومية
+→ Expense Ledger فقط
+
+---
+
+5- إضافة VAT Logic داخل Fixed Costs
+
+حالياً نظام Fixed Costs لا يدعم VAT بشكل احترافي.
+
+المطلوب إضافة خيارات ضريبية لكل بند:
+
+VAT Type:
+
+* شامل ضريبة Included VAT
+* غير شامل Excluded VAT
+* بدون ضريبة No VAT
+
+---
+
+6- المطلوب عند تسجيل أي Fixed Cost
+
+يجب أن يحتوي على:
+
+* Base Amount
+* VAT Amount
+* Total Amount
+* VAT Rate
+* VAT Type
+
+---
+
+7- أمثلة مطلوبة:
+
+A) Included VAT
+
+إيجار:
+SAR 11,500
+
+يشمل VAT 15%
+
+النظام يجب أن:
+
+* يستخرج صافي المبلغ
+* يستخرج VAT تلقائياً
+
+---
+
+B) Excluded VAT
+
+اشتراك برامج:
+SAR 5,000
+
+* VAT 15%
+
+النظام يحسب:
+SAR 750 VAT
+
+الإجمالي:
+SAR 5,750
+
+---
+
+C) No VAT
+
+رسوم حكومية:
+SAR 2,000
+
+بدون VAT
+
+---
+
+8- المطلوب داخل التقارير
+
+تحديث:
+
+* P&L
+* VAT Report
+* Expense Reports
+* Fixed Cost Reports
+
+بحيث يظهر:
+
+* صافي المصروف
+* الضريبة
+* الإجمالي
+* نوع الضريبة
+
+---
+
+9- المطلوب داخل الـ P&L
+
+يجب فصل:
+
+Fixed Costs
+عن:
+Operating Expenses
+
+بدون دمج أو تكرار.
+
+---
+
+10- المطلوب تقنياً
+
+إنشاء:
+
+* Fixed Cost VAT Engine
+* Expense Ownership Rules
+* Duplicate Prevention Logic
+* Smart Expense Classification
+* VAT Calculation Service
+* Scheduled Fixed Cost Processor
+
+---
+
+11- المطلوب النهائي
+
+* منع أي تضارب بين Fixed Costs و Expense Ledger
+* كل مصروف يظهر مرة واحدة فقط
+* دعم VAT بشكل كامل داخل Fixed Costs
+* دعم:
+
+  * Included VAT
+  * Excluded VAT
+  * No VAT
+* دقة كاملة في P&L
+* دقة كاملة في VAT Reports
+* الحفاظ الكامل على النظام الحالي بدون كسر أي Module أو API.

@@ -100,22 +100,37 @@ function TemplateModal({ mode, template, onClose }: { mode: "add" | "edit"; temp
   const updateTpl = useUpdateFixedCostTemplate();
 
   const [form, setForm] = useState({
-    category: template?.category ?? "rent",
-    name: template?.name ?? "",
+    category:      template?.category ?? "rent",
+    name:          template?.name ?? "",
     defaultAmount: String(template?.defaultAmount ?? ""),
-    notes: template?.notes ?? "",
+    notes:         template?.notes ?? "",
+    vatType:       template?.vatType ?? "none",
+    vatRate:       String(template?.vatRate ?? "15"),
   });
+
+  const vatPreview = (() => {
+    const amt = parseFloat(form.defaultAmount) || 0;
+    const rate = (parseFloat(form.vatRate) || 15) / 100;
+    if (form.vatType === "none" || !amt) return null;
+    if (form.vatType === "included") {
+      const base = +(amt / (1 + rate)).toFixed(2);
+      return { base, vat: +(amt - base).toFixed(2), total: amt };
+    }
+    const vat = +(amt * rate).toFixed(2);
+    return { base: amt, vat, total: +(amt + vat).toFixed(2) };
+  })();
 
   async function handleSubmit() {
     if (!form.name.trim()) { toast({ title: "Name is required", variant: "destructive" }); return; }
     const amt = parseFloat(form.defaultAmount);
     if (isNaN(amt) || amt < 0) { toast({ title: "Invalid amount", variant: "destructive" }); return; }
+    const vatRate = parseFloat(form.vatRate) || 15;
     try {
       if (mode === "edit" && template) {
-        await updateTpl.mutateAsync({ id: template.id, data: { category: form.category, name: form.name, defaultAmount: amt, notes: form.notes || null } });
+        await updateTpl.mutateAsync({ id: template.id, data: { category: form.category, name: form.name, defaultAmount: amt, notes: form.notes || null, vatType: form.vatType, vatRate } });
         toast({ title: "Updated successfully" });
       } else {
-        await createTpl.mutateAsync({ data: { category: form.category, name: form.name, defaultAmount: amt, notes: form.notes || null } });
+        await createTpl.mutateAsync({ data: { category: form.category, name: form.name, defaultAmount: amt, notes: form.notes || null, vatType: form.vatType, vatRate } });
         toast({ title: "Cost item added" });
       }
       await qc.invalidateQueries({ queryKey: getListFixedCostTemplatesQueryKey() });
@@ -163,6 +178,46 @@ function TemplateModal({ mode, template, onClose }: { mode: "add" | "edit"; temp
               className="w-full px-3 py-2.5 border rounded-xl text-sm focus:outline-none focus:border-primary" />
             <p className="text-xs text-slate-400 mt-1">Used as a starting point when entering new months — can be changed for each month</p>
           </div>
+
+          {/* VAT Type */}
+          <div>
+            <label className="block text-sm font-semibold mb-1.5">VAT Treatment <span className="text-slate-400 font-normal">(الضريبة)</span></label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { key: "none",     label: "No VAT",        labelAr: "بدون ضريبة",      desc: "Amount is final cost" },
+                { key: "included", label: "VAT Included",  labelAr: "الضريبة مشمولة",  desc: "Extract VAT from total" },
+                { key: "excluded", label: "VAT Excluded",  labelAr: "الضريبة تُضاف",   desc: "Add VAT on top" },
+              ].map(v => (
+                <button key={v.key} type="button"
+                  onClick={() => setForm(f => ({ ...f, vatType: v.key }))}
+                  className={`text-left px-3 py-2.5 rounded-xl border-2 text-xs font-semibold transition-all ${
+                    form.vatType === v.key
+                      ? "bg-primary text-white border-primary"
+                      : "border-transparent bg-slate-50 text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  <div>{v.label}</div>
+                  <div className={`font-normal mt-0.5 ${form.vatType === v.key ? "opacity-80" : "opacity-50"}`}>{v.labelAr}</div>
+                </button>
+              ))}
+            </div>
+            {form.vatType !== "none" && (
+              <div className="mt-2 flex items-center gap-2">
+                <label className="text-xs text-slate-500 shrink-0">VAT Rate (%)</label>
+                <input type="number" min="0" max="100" step="0.5" value={form.vatRate}
+                  onChange={e => setForm(f => ({ ...f, vatRate: e.target.value }))}
+                  className="w-24 px-2 py-1.5 border rounded-lg text-xs text-center focus:outline-none focus:border-primary" />
+                {vatPreview && (
+                  <div className="flex-1 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5 text-xs text-emerald-700 space-y-0.5">
+                    <div className="flex justify-between"><span>Base (net):</span><span className="font-bold">{vatPreview.base.toFixed(2)} SAR</span></div>
+                    <div className="flex justify-between"><span>VAT ({form.vatRate}%):</span><span className="font-bold">{vatPreview.vat.toFixed(2)} SAR</span></div>
+                    <div className="flex justify-between border-t border-emerald-200 pt-0.5 mt-0.5"><span>Total (gross):</span><span className="font-extrabold">{vatPreview.total.toFixed(2)} SAR</span></div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           <div>
             <label className="block text-sm font-semibold mb-1.5">Notes (optional)</label>
             <input type="text" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
@@ -358,28 +413,47 @@ function MonthlyEntryTab({ month, setMonth }: { month: string; setMonth: (m: str
       </div>
 
       {/* Summary bar */}
-      <div className="bg-white border rounded-2xl px-5 py-4 mb-5 flex items-center justify-between shadow-sm">
-        <div>
-          <p className="text-xs text-slate-400 uppercase font-semibold mb-1">Total — {fmtMonth(month)}</p>
-          <p className="text-3xl font-extrabold text-slate-900">
-            {editMode ? formatSAR(editTotal) : formatSAR(monthData?.total ?? 0)}
-          </p>
-          {editMode && Math.abs(editTotal - (monthData?.total ?? 0)) > 0.01 && (
-            <p className="text-xs mt-1">
-              <span className={editTotal > (monthData?.total ?? 0) ? "text-rose-600" : "text-emerald-600"}>
-                {editTotal > (monthData?.total ?? 0) ? "▲" : "▼"} {formatSAR(Math.abs(editTotal - (monthData?.total ?? 0)))} vs current
-              </span>
+      <div className="bg-white border rounded-2xl px-5 py-4 mb-5 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs text-slate-400 uppercase font-semibold mb-1">Total — {fmtMonth(month)}</p>
+            <p className="text-3xl font-extrabold text-slate-900">
+              {editMode ? formatSAR(editTotal) : formatSAR(monthData?.totalGross ?? monthData?.total ?? 0)}
             </p>
-          )}
+            {editMode && Math.abs(editTotal - (monthData?.total ?? 0)) > 0.01 && (
+              <p className="text-xs mt-1">
+                <span className={editTotal > (monthData?.total ?? 0) ? "text-rose-600" : "text-emerald-600"}>
+                  {editTotal > (monthData?.total ?? 0) ? "▲" : "▼"} {formatSAR(Math.abs(editTotal - (monthData?.total ?? 0)))} vs current
+                </span>
+              </p>
+            )}
+          </div>
+          {/* Category breakdown pills */}
+          <div className="flex flex-wrap gap-2 justify-end max-w-[55%]">
+            {grouped.map(({ cat, subtotal }) => (
+              <div key={cat.key} className={`px-3 py-1 rounded-full text-xs font-semibold ${cat.badge}`}>
+                {cat.label}: {formatSAR(subtotal)}
+              </div>
+            ))}
+          </div>
         </div>
-        {/* Category breakdown pills */}
-        <div className="flex flex-wrap gap-2 justify-end max-w-[55%]">
-          {grouped.map(({ cat, subtotal }) => (
-            <div key={cat.key} className={`px-3 py-1 rounded-full text-xs font-semibold ${cat.badge}`}>
-              {cat.label}: {formatSAR(subtotal)}
+        {/* VAT Summary (only shown when any items have VAT) */}
+        {!editMode && (monthData?.totalVat ?? 0) > 0 && (
+          <div className="mt-3 pt-3 border-t flex gap-4 text-xs">
+            <div className="flex-1 flex justify-between items-center bg-slate-50 rounded-lg px-3 py-2">
+              <span className="text-slate-500 font-medium">Net (excl. VAT)</span>
+              <span className="font-bold text-slate-800">{formatSAR(monthData?.totalBase ?? 0)}</span>
             </div>
-          ))}
-        </div>
+            <div className="flex-1 flex justify-between items-center bg-emerald-50 rounded-lg px-3 py-2">
+              <span className="text-emerald-600 font-medium">VAT (Input)</span>
+              <span className="font-bold text-emerald-700">{formatSAR(monthData?.totalVat ?? 0)}</span>
+            </div>
+            <div className="flex-1 flex justify-between items-center bg-slate-800 rounded-lg px-3 py-2">
+              <span className="text-slate-300 font-medium">Total (incl. VAT)</span>
+              <span className="font-bold text-white">{formatSAR(monthData?.totalGross ?? 0)}</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Edit Mode Controls */}
@@ -484,15 +558,30 @@ function MonthlyEntryTab({ month, setMonth }: { month: string; setMonth: (m: str
                 {catItems.map(item => (
                   <div key={item.templateId} className="flex items-center justify-between px-5 py-3.5">
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-800">{item.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-slate-800">{item.name}</p>
+                        {item.vatType && item.vatType !== "none" && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 shrink-0">
+                            VAT {item.vatType === "included" ? "incl." : "excl."}
+                          </span>
+                        )}
+                      </div>
                       {item.overrideNotes && (
                         <p className="text-xs text-slate-400 mt-0.5">{item.overrideNotes}</p>
+                      )}
+                      {item.vatType && item.vatType !== "none" && item.vatAmount > 0 && (
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          Net: {formatSAR(item.baseAmount)} + VAT: {formatSAR(item.vatAmount)}
+                        </p>
                       )}
                     </div>
                     <div className="text-right shrink-0 ml-4">
                       <p className={`text-base font-bold ${item.hasOverride ? cat.text : "text-slate-900"}`}>
-                        {formatSAR(item.effectiveAmount)}
+                        {item.vatType && item.vatType !== "none" ? formatSAR(item.totalAmount) : formatSAR(item.effectiveAmount)}
                       </p>
+                      {item.vatType && item.vatType !== "none" && (
+                        <p className="text-[10px] text-slate-400">incl. VAT</p>
+                      )}
                       {item.hasOverride && item.effectiveAmount !== item.defaultAmount && (
                         <p className="text-[10px] text-slate-400">ref: {formatSAR(item.defaultAmount)}</p>
                       )}
@@ -592,7 +681,14 @@ function TemplatesTab() {
                 {items.map(t => (
                   <div key={t.id} className="flex items-center justify-between px-5 py-3.5 group hover:bg-slate-50">
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-800">{t.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-slate-800">{t.name}</p>
+                        {t.vatType && t.vatType !== "none" && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 shrink-0">
+                            VAT {t.vatType === "included" ? "incl." : "excl."} {t.vatRate}%
+                          </span>
+                        )}
+                      </div>
                       {t.notes && <p className="text-xs text-slate-400">{t.notes}</p>}
                     </div>
                     <div className="flex items-center gap-4 shrink-0">

@@ -850,6 +850,10 @@ export interface FixedCostTemplate {
   notes?: string | null;
   isActive: boolean;
   sortOrder: number;
+  /** VAT treatment for this fixed cost: "none" | "included" | "excluded" */
+  vatType: string;
+  /** VAT rate in percent (default 15) */
+  vatRate: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -860,15 +864,25 @@ export interface CreateFixedCostTemplate {
   defaultAmount: number;
   notes?: string | null;
   sortOrder?: number;
+  vatType?: string;
+  vatRate?: number;
 }
 
 export interface MonthlyFixedCostItem {
   templateId: number;
   category: string;
   name: string;
+  vatType: string;
+  vatRate: number;
   defaultAmount: number;
   overrideAmount?: number | null;
   effectiveAmount: number;
+  /** Net amount before VAT — used in P&L */
+  baseAmount: number;
+  /** VAT component */
+  vatAmount: number;
+  /** Total including VAT */
+  totalAmount: number;
   hasOverride: boolean;
   overrideNotes?: string | null;
   overrideId?: number | null;
@@ -881,6 +895,12 @@ export interface MonthlyFixedCosts {
   lockedBy?: string | null;
   lockedAt?: string | null;
   total: number;
+  /** Sum of baseAmount (net before VAT) across all items */
+  totalBase: number;
+  /** Sum of VAT portions across all items */
+  totalVat: number;
+  /** Sum of totalAmount (base + VAT) across all items */
+  totalGross: number;
   items: MonthlyFixedCostItem[];
 }
 

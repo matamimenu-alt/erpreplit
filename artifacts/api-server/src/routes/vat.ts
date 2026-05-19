@@ -1,13 +1,27 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { salesTable, purchasesTable, branchTransfersTable } from "@workspace/db/schema";
-import { eq, or } from "drizzle-orm";
+import {
+  salesTable,
+  purchasesTable,
+  branchTransfersTable,
+  fixedCostTemplatesTable,
+  fixedCostMonthlyValuesTable,
+} from "@workspace/db/schema";
+import { eq, or, and } from "drizzle-orm";
 import { getRestaurantId } from "../lib/restaurant";
 
 const router: IRouter = Router();
 
 function toNum(v: unknown) { return parseFloat(String(v)) || 0; }
 function f2(n: number)     { return +n.toFixed(2); }
+
+// VAT helper for fixed costs
+function computeFixedVat(amount: number, vatType: string, vatRate: number) {
+  const rate = (vatRate || 15) / 100;
+  if (!vatType || vatType === "none" || amount === 0) return 0;
+  if (vatType === "included") return +(amount - amount / (1 + rate)).toFixed(2);
+  return +(amount * rate).toFixed(2);
+}
 
 // ─── GET /api/vat/report ──────────────────────────────────────────────────────
 router.get("/report", async (req, res) => {
@@ -34,10 +48,6 @@ router.get("/report", async (req, res) => {
     const inputVatRaw   = purchaseRecords.reduce((s, r) => s + toNum(r.vatAmount), 0);
 
     // ── Inter-Branch Transfer VAT ─────────────────────────────────────────────
-    // Rule: VAT TRAVELS WITH THE GOODS — it is not copied.
-    //   Sending branch  → Input VAT is REDUCED by the VAT portion that left with the goods
-    //   Receiving branch → Input VAT is INCREASED by the VAT portion received with the goods
-    // Only INTERNAL transfers (toRestaurantId is set) carry VAT — external/warehouse transfers don't
     let allTransfers = await db.select().from(branchTransfersTable)
       .where(or(
         eq(branchTransfersTable.fromRestaurantId, restaurantId),
@@ -45,22 +55,50 @@ router.get("/report", async (req, res) => {
       ));
     if (month) allTransfers = allTransfers.filter(t => t.transferDate.startsWith(month));
 
-    // Transfers OUT to another internal branch — VAT leaves this branch
     const outTransfers = allTransfers.filter(
       t => t.fromRestaurantId === restaurantId && t.toRestaurantId !== null
     );
     const vatTransferredOut      = outTransfers.reduce((s, t) => s + toNum(t.vatAmount), 0);
     const netAmountTransferredOut = outTransfers.reduce((s, t) => s + toNum(t.quantity) * toNum(t.unitPrice), 0);
 
-    // Transfers IN from another branch — VAT arrives at this branch
     const inTransfers = allTransfers.filter(t => t.toRestaurantId === restaurantId);
     const vatReceivedIn          = inTransfers.reduce((s, t) => s + toNum(t.vatAmount), 0);
     const netAmountReceivedIn    = inTransfers.reduce((s, t) => s + toNum(t.quantity) * toNum(t.unitPrice), 0);
 
-    // Adjusted input VAT after inter-branch VAT allocation
-    const adjustedInputVat = inputVatRaw - vatTransferredOut + vatReceivedIn;
+    // ── Fixed Costs Input VAT ─────────────────────────────────────────────────
+    // VAT paid on fixed cost invoices (rent, utilities, subscriptions, etc.) is
+    // reclaimable input VAT under ZATCA rules when supported by a valid tax invoice.
+    const fcTemplates = await db.select().from(fixedCostTemplatesTable)
+      .where(and(
+        eq(fixedCostTemplatesTable.restaurantId, restaurantId),
+        eq(fixedCostTemplatesTable.isActive, true),
+      ));
 
-    // Net VAT payable / reclaimable
+    let fixedCostInputVat = 0;
+    if (fcTemplates.some(t => t.vatType !== "none")) {
+      const fcOverrides = month
+        ? await db.select().from(fixedCostMonthlyValuesTable)
+            .where(and(
+              eq(fixedCostMonthlyValuesTable.restaurantId, restaurantId),
+              eq(fixedCostMonthlyValuesTable.month, month),
+            ))
+        : [];
+      const overrideMap = new Map(fcOverrides.map(o => [o.templateId, toNum(o.amount)]));
+      for (const t of fcTemplates) {
+        if (t.category === "staff-salaries") continue; // salaries are not VAT-eligible
+        const enteredAmt = overrideMap.has(t.id) ? overrideMap.get(t.id)! : toNum(t.defaultAmount);
+        fixedCostInputVat += computeFixedVat(enteredAmt, t.vatType ?? "none", toNum(t.vatRate ?? "15.00"));
+      }
+      fixedCostInputVat = +fixedCostInputVat.toFixed(2);
+    }
+
+    // ── Adjusted Input VAT ───────────────────────────────────────────────────
+    // inputVatRaw         = VAT from purchase invoices
+    // - vatTransferredOut = VAT that left with goods sent to other branches
+    // + vatReceivedIn     = VAT that arrived with goods from other branches
+    // + fixedCostInputVat = VAT on rent, utilities, subscriptions, etc.
+    const adjustedInputVat = inputVatRaw - vatTransferredOut + vatReceivedIn + fixedCostInputVat;
+
     const vatPayable = f2(outputVat - adjustedInputVat);
 
     res.json({
@@ -70,40 +108,41 @@ router.get("/report", async (req, res) => {
       totalSales:     f2(totalSales),
       outputVat:      f2(outputVat),
 
-      // ── Input VAT (from purchases — before transfer adjustment) ──
+      // ── Input VAT (from purchases — before adjustments) ──
       totalPurchases: f2(totalPurchases),
-      inputVat:       f2(inputVatRaw),         // raw from purchase invoices
+      inputVat:       f2(inputVatRaw),          // raw from purchase invoices
+
+      // ── Fixed Costs Input VAT ──
+      fixedCostInputVat: f2(fixedCostInputVat), // VAT on rent/utilities/subscriptions
 
       // ── Inter-Branch Transfer VAT Allocation ──
-      // Sending side: VAT that left with transferred goods (reduces this branch's input VAT)
       vatTransferredOut:       f2(vatTransferredOut),
       netAmountTransferredOut: f2(netAmountTransferredOut),
       transfersOutCount:       outTransfers.length,
 
-      // Receiving side: VAT that arrived with received goods (increases this branch's input VAT)
       vatReceivedIn:           f2(vatReceivedIn),
       netAmountReceivedIn:     f2(netAmountReceivedIn),
       transfersInCount:        inTransfers.length,
 
-      // Net VAT impact from transfers (positive = net gain, negative = net loss)
       netTransferVatImpact:    f2(vatReceivedIn - vatTransferredOut),
 
-      // ── Adjusted Input VAT (after transfer allocation) ──
+      // ── Adjusted Input VAT (after all adjustments) ──
       adjustedInputVat:        f2(adjustedInputVat),
 
-      // ── Net VAT Payable (using ADJUSTED input VAT) ──
+      // ── Net VAT Payable ──
       vatPayable,
 
       // ── Breakdown for ZATCA filing ──
       zatca: {
-        box1_taxableSupplies:     f2(totalSales),       // Standard rated supplies
-        box2_outputVat:           f2(outputVat),         // VAT on sales (15%)
-        box3_taxablePurchases:    f2(totalPurchases),    // Standard rated purchases
-        box4_inputVatGross:       f2(inputVatRaw),       // Input VAT before transfers
-        box4_vatTransferredOut:   f2(-vatTransferredOut), // Deduct: VAT that left branch
-        box4_vatReceivedIn:       f2(vatReceivedIn),     // Add: VAT that arrived at branch
-        box4_inputVatNet:         f2(adjustedInputVat),  // Net input VAT after allocation
-        box5_vatPayable:          vatPayable,             // Net VAT to pay / reclaim
+        box1_taxableSupplies:     f2(totalSales),
+        box2_outputVat:           f2(outputVat),
+        box3_taxablePurchases:    f2(totalPurchases),
+        box4_inputVatGross:       f2(inputVatRaw),
+        box4_fixedCostInputVat:   f2(fixedCostInputVat),
+        box4_vatTransferredOut:   f2(-vatTransferredOut),
+        box4_vatReceivedIn:       f2(vatReceivedIn),
+        box4_inputVatNet:         f2(adjustedInputVat),
+        box5_vatPayable:          vatPayable,
       },
     });
   } catch (err) {

@@ -10,6 +10,8 @@ export const fixedCostTemplatesTable = pgTable("fixed_cost_templates", {
   notes: text("notes"),
   isActive: boolean("is_active").notNull().default(true),
   sortOrder: integer("sort_order").notNull().default(0),
+  vatType: text("vat_type").notNull().default("none"),
+  vatRate: numeric("vat_rate", { precision: 5, scale: 2 }).notNull().default("15.00"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
