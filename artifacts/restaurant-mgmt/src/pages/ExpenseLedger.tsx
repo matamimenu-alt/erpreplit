@@ -16,8 +16,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import {
   Plus, Pencil, Trash2, X, Check, ChevronDown, ChevronRight,
-  Search, Filter, BarChart2, Table2, FileText, TrendingDown,
-  Building2, Tag, Calendar, Percent, AlertTriangle,
+  Search, BarChart2, Table2, FileText, TrendingDown,
+  Percent, AlertTriangle, Flame, ShieldAlert, Info,
 } from "lucide-react";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -27,7 +27,41 @@ function currentMonth() {
 }
 function toNum(v: unknown) { return parseFloat(String(v)) || 0; }
 function today() { return new Date().toISOString().split("T")[0]; }
+function pct(part: number, total: number) { return total > 0 ? (part / total) * 100 : 0; }
 
+// ─── VAT Mode ────────────────────────────────────────────────────────────────
+type VatMode = "none" | "exclusive" | "inclusive";
+
+function computeVat(inputAmount: number, mode: VatMode) {
+  const VAT_RATE = 15;
+  if (mode === "none")      return { net: inputAmount, vat: 0,                                     total: inputAmount };
+  if (mode === "exclusive") return { net: inputAmount, vat: +(inputAmount * VAT_RATE / 100).toFixed(2), total: +(inputAmount * (1 + VAT_RATE / 100)).toFixed(2) };
+  // inclusive: user entered total-including-VAT
+  const net = +(inputAmount / (1 + VAT_RATE / 100)).toFixed(2);
+  return { net, vat: +(inputAmount - net).toFixed(2), total: inputAmount };
+}
+
+// ─── Warning thresholds ───────────────────────────────────────────────────────
+// "critical" if item ≥ 30% of total, "warning" if ≥ 15%
+type Risk = "critical" | "warning" | "ok";
+function getRisk(itemNet: number, totalNet: number): Risk {
+  const p = pct(itemNet, totalNet);
+  if (p >= 30) return "critical";
+  if (p >= 15) return "warning";
+  return "ok";
+}
+const RISK_ROW: Record<Risk, string> = {
+  critical: "bg-red-50/70 border-l-4 border-l-red-500",
+  warning:  "bg-amber-50/50 border-l-4 border-l-amber-400",
+  ok:       "",
+};
+const RISK_BADGE: Record<Risk, { icon: typeof Flame; cls: string; label: string }> = {
+  critical: { icon: Flame,        cls: "text-red-600",   label: "مرتفع جداً"  },
+  warning:  { icon: ShieldAlert,  cls: "text-amber-500", label: "مرتفع"       },
+  ok:       { icon: Info,         cls: "text-slate-300", label: ""            },
+};
+
+// ─── Category colours ────────────────────────────────────────────────────────
 const MAIN_COLORS: Record<string, string> = {
   "5-1": "text-blue-700 bg-blue-50 border-blue-200",
   "5-2": "text-purple-700 bg-purple-50 border-purple-200",
@@ -39,134 +73,152 @@ const MAIN_COLORS: Record<string, string> = {
   "5-8": "text-slate-700 bg-slate-50 border-slate-200",
 };
 function getCatColor(code: string) {
-  const mainCode = code.split("-").slice(0, 2).join("-");
-  return MAIN_COLORS[mainCode] ?? "text-slate-700 bg-slate-50 border-slate-200";
+  return MAIN_COLORS[code.split("-").slice(0, 2).join("-")] ?? "text-slate-700 bg-slate-50 border-slate-200";
 }
 
 // ─── Category Picker ──────────────────────────────────────────────────────────
-function CategoryPicker({
-  categories, value, onChange,
-}: { categories: ExpenseCategory[]; value: string; onChange: (code: string) => void }) {
+function CategoryPicker({ categories, value, onChange }: {
+  categories: ExpenseCategory[]; value: string; onChange: (code: string) => void;
+}) {
   const [open, setOpen] = useState(false);
-  const mains = categories.filter(c => c.level === 1);
   const selected = categories.find(c => c.code === value);
-
   return (
     <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 border border-slate-300 rounded-xl text-sm bg-white hover:border-slate-400 transition-colors"
-      >
-        {selected ? (
-          <span className={`px-2 py-0.5 rounded-lg text-xs font-semibold border ${getCatColor(selected.code)}`}>
-            {selected.code} — {selected.nameAr}
-          </span>
-        ) : (
-          <span className="text-slate-400">اختر التصنيف...</span>
-        )}
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 border border-slate-300 rounded-xl text-sm bg-white hover:border-slate-400 transition-colors">
+        {selected
+          ? <span className={`px-2 py-0.5 rounded-lg text-xs font-semibold border ${getCatColor(selected.code)}`}>{selected.code} — {selected.nameAr}</span>
+          : <span className="text-slate-400">اختر التصنيف...</span>}
         <ChevronDown className="w-4 h-4 opacity-50 flex-shrink-0" />
       </button>
-
       {open && (
         <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-white border border-slate-200 rounded-xl shadow-xl max-h-72 overflow-y-auto">
-          {mains.map(main => {
-            const subs = categories.filter(c => c.parentCode === main.code);
-            return (
-              <div key={main.code}>
-                <button
-                  type="button"
-                  onClick={() => { onChange(main.code); setOpen(false); }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 transition-colors text-left"
-                >
-                  <span className="text-xs text-slate-500 font-mono">{main.code}</span>
-                  <span>{main.nameAr}</span>
+          {categories.filter(c => c.level === 1).map(main => (
+            <div key={main.code}>
+              <button type="button" onClick={() => { onChange(main.code); setOpen(false); }}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 transition-colors text-left">
+                <span className="text-xs text-slate-500 font-mono">{main.code}</span>
+                <span>{main.nameAr}</span>
+              </button>
+              {categories.filter(s => s.parentCode === main.code).map(sub => (
+                <button key={sub.code} type="button" onClick={() => { onChange(sub.code); setOpen(false); }}
+                  className={`w-full flex items-center gap-2 px-6 py-2 text-sm hover:bg-slate-50 transition-colors text-left ${value === sub.code ? "bg-primary/10 text-primary font-semibold" : "text-slate-600"}`}>
+                  <span className="text-xs opacity-60 font-mono">{sub.code}</span>
+                  <span>{sub.nameAr}</span>
                 </button>
-                {subs.map(sub => (
-                  <button
-                    key={sub.code}
-                    type="button"
-                    onClick={() => { onChange(sub.code); setOpen(false); }}
-                    className={`w-full flex items-center gap-2 px-6 py-2 text-sm hover:bg-slate-50 transition-colors text-left ${value === sub.code ? "bg-primary/10 text-primary font-semibold" : "text-slate-600"}`}
-                  >
-                    <span className="text-xs opacity-60 font-mono">{sub.code}</span>
-                    <span>{sub.nameAr}</span>
-                  </button>
-                ))}
-              </div>
-            );
-          })}
+              ))}
+            </div>
+          ))}
         </div>
       )}
     </div>
   );
 }
 
+// ─── VAT Mode Selector ────────────────────────────────────────────────────────
+function VatModeSelector({ value, onChange }: { value: VatMode; onChange: (m: VatMode) => void }) {
+  const opts: { key: VatMode; label: string; sub: string }[] = [
+    { key: "none",      label: "بدون ضريبة",      sub: "المبلغ صافي"               },
+    { key: "exclusive", label: "يُضاف 15%",        sub: "الضريبة تُضاف على السعر"   },
+    { key: "inclusive", label: "شامل الضريبة 15%", sub: "المبلغ المُدخَل يشمل الضريبة" },
+  ];
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {opts.map(o => (
+        <button key={o.key} type="button" onClick={() => onChange(o.key)}
+          className={`flex flex-col items-center text-center px-2 py-2.5 rounded-xl border-2 text-xs font-medium transition-all ${
+            value === o.key
+              ? o.key === "none"      ? "border-slate-500 bg-slate-50 text-slate-700"
+              : o.key === "exclusive" ? "border-amber-500 bg-amber-50 text-amber-700"
+              :                         "border-emerald-500 bg-emerald-50 text-emerald-700"
+              : "border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50"
+          }`}>
+          <Percent className={`w-4 h-4 mb-1 ${value === o.key ? "" : "opacity-40"}`} />
+          <span className="font-semibold leading-tight">{o.label}</span>
+          <span className="text-[10px] opacity-70 mt-0.5 leading-tight">{o.sub}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // ─── Transaction Form ─────────────────────────────────────────────────────────
-const EMPTY_FORM: CreateExpenseTransaction = {
-  date: today(),
-  categoryCode: "",
-  description: "",
-  amount: 0,
-  isVatApplicable: false,
-  vatRate: 15,
+const EMPTY: { date: string; categoryCode: string; description: string; inputAmount: string; vatMode: VatMode; costCenter: string; referenceNo: string; notes: string } = {
+  date: today(), categoryCode: "", description: "", inputAmount: "",
+  vatMode: "none", costCenter: "", referenceNo: "", notes: "",
 };
 
-function TransactionForm({
-  categories, initial, onClose, onSave, isPending,
-}: {
+function deriveVatMode(txn: ExpenseTransaction): VatMode {
+  if (!txn.isVatApplicable) return "none";
+  // If net × 1.15 ≈ total  → exclusive; if net + vat ≈ total and vat < net → could be either
+  // We distinguish by checking if total ≈ stored amount × 1.15 (exclusive saved net as amount)
+  // vs total ≈ amount (inclusive saved total as input, net as amount)
+  // In our system we always store the NET in amount, so exclusive and inclusive both store net.
+  // We can't reliably distinguish without an extra field, so default to exclusive.
+  return "exclusive";
+}
+
+function TransactionForm({ categories, initial, onClose, onSave, isPending }: {
   categories: ExpenseCategory[];
   initial?: ExpenseTransaction;
   onClose: () => void;
   onSave: (data: CreateExpenseTransaction) => void;
   isPending: boolean;
 }) {
-  const [form, setForm] = useState<CreateExpenseTransaction>(
-    initial ? {
+  const [form, setForm] = useState(() => {
+    if (!initial) return { ...EMPTY };
+    return {
       date: initial.date,
       categoryCode: initial.categoryCode,
       description: initial.description,
-      descriptionAr: initial.descriptionAr ?? undefined,
-      amount: toNum(initial.amount),
-      isVatApplicable: initial.isVatApplicable,
-      vatRate: toNum(initial.vatRate),
-      costCenter: initial.costCenter ?? undefined,
-      referenceNo: initial.referenceNo ?? undefined,
-      notes: initial.notes ?? undefined,
-    } : { ...EMPTY_FORM }
-  );
-
-  const net   = toNum(form.amount);
-  const rate  = form.isVatApplicable ? toNum(form.vatRate) : 0;
-  const vat   = form.isVatApplicable ? +(net * rate / 100).toFixed(2) : 0;
-  const total = +(net + vat).toFixed(2);
-
+      inputAmount: String(toNum(initial.amount)),
+      vatMode: deriveVatMode(initial),
+      costCenter: initial.costCenter ?? "",
+      referenceNo: initial.referenceNo ?? "",
+      notes: initial.notes ?? "",
+    };
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  function set<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
+    setForm(f => ({ ...f, [k]: v }));
+    setErrors(e => { const n = { ...e }; delete n[k]; return n; });
+  }
+
+  const inputAmt = parseFloat(form.inputAmount) || 0;
+  const { net, vat, total } = computeVat(inputAmt, form.vatMode);
 
   function validate() {
     const e: Record<string, string> = {};
-    if (!form.date) e.date = "التاريخ مطلوب";
-    if (!form.categoryCode) e.categoryCode = "التصنيف مطلوب";
-    if (!form.description?.trim()) e.description = "الوصف مطلوب";
-    if (!form.amount || toNum(form.amount) <= 0) e.amount = "المبلغ يجب أن يكون أكبر من صفر";
+    if (!form.date)             e.date = "التاريخ مطلوب";
+    if (!form.categoryCode)     e.categoryCode = "التصنيف مطلوب";
+    if (!form.description.trim()) e.description = "الوصف مطلوب";
+    if (!inputAmt || inputAmt <= 0) e.inputAmount = "أدخل مبلغاً صحيحاً";
     setErrors(e);
     return Object.keys(e).length === 0;
   }
 
-  function set(key: keyof CreateExpenseTransaction, val: unknown) {
-    setForm(f => ({ ...f, [key]: val }));
-    setErrors(e => { const n = { ...e }; delete n[key]; return n; });
-  }
-
   function handleSubmit() {
     if (!validate()) return;
-    onSave({ ...form, amount: net });
+    onSave({
+      date: form.date,
+      categoryCode: form.categoryCode,
+      description: form.description,
+      amount: net,
+      isVatApplicable: form.vatMode !== "none",
+      vatRate: 15,
+      costCenter: form.costCenter || undefined,
+      referenceNo: form.referenceNo || undefined,
+      notes: form.notes || undefined,
+    });
   }
+
+  const amtLabel = form.vatMode === "inclusive" ? "المبلغ الإجمالي (شامل الضريبة)" :
+                   form.vatMode === "exclusive" ? "المبلغ قبل الضريبة (صافي)"    : "المبلغ";
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl flex flex-col max-h-[90vh]">
-        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
           <div>
             <h2 className="text-lg font-bold text-slate-900">{initial ? "تعديل مصروف" : "إضافة مصروف جديد"}</h2>
@@ -175,9 +227,7 @@ function TransactionForm({
           <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl"><X className="w-5 h-5" /></button>
         </div>
 
-        {/* Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
-
           {/* Date + Ref */}
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -188,7 +238,7 @@ function TransactionForm({
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">رقم المرجع</label>
-              <input type="text" value={form.referenceNo ?? ""} onChange={e => set("referenceNo", e.target.value)}
+              <input type="text" value={form.referenceNo} onChange={e => set("referenceNo", e.target.value)}
                 placeholder="اختياري" className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none" />
             </div>
           </div>
@@ -208,59 +258,49 @@ function TransactionForm({
             {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
           </div>
 
-          {/* Amount + VAT */}
+          {/* VAT Mode */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">وضع ضريبة القيمة المضافة</label>
+            <VatModeSelector value={form.vatMode} onChange={v => set("vatMode", v)} />
+          </div>
+
+          {/* Amount box */}
           <div className="bg-slate-50 rounded-xl p-4 space-y-3 border border-slate-200">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">المبلغ (صافي) *</label>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">{amtLabel} *</label>
                 <div className="relative">
-                  <input type="number" value={form.amount || ""} onChange={e => set("amount", parseFloat(e.target.value) || 0)}
+                  <input type="number" value={form.inputAmount} onChange={e => set("inputAmount", e.target.value)}
                     min="0" step="0.01" placeholder="0.00"
                     className="w-full pl-12 pr-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none" />
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">SAR</span>
                 </div>
-                {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount}</p>}
+                {errors.inputAmount && <p className="text-red-500 text-xs mt-1">{errors.inputAmount}</p>}
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">مركز التكلفة</label>
-                <input type="text" value={form.costCenter ?? ""} onChange={e => set("costCenter", e.target.value)}
+                <input type="text" value={form.costCenter} onChange={e => set("costCenter", e.target.value)}
                   placeholder="اختياري" className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none" />
               </div>
             </div>
 
-            {/* VAT toggle */}
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <div
-                  onClick={() => set("isVatApplicable", !form.isVatApplicable)}
-                  className={`relative w-10 h-5 rounded-full transition-colors cursor-pointer ${form.isVatApplicable ? "bg-primary" : "bg-slate-300"}`}
-                >
-                  <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.isVatApplicable ? "translate-x-5" : "translate-x-0"}`} />
-                </div>
-                <span className="text-sm font-medium text-slate-700">خاضع لضريبة القيمة المضافة</span>
-              </label>
-              {form.isVatApplicable && (
-                <span className="text-sm font-semibold text-amber-600 flex items-center gap-1">
-                  15 <Percent className="w-3.5 h-3.5" />
-                </span>
-              )}
-            </div>
-
-            {/* Live VAT breakdown */}
-            {form.isVatApplicable && (
-              <div className="grid grid-cols-3 gap-2 text-center text-xs border-t border-slate-200 pt-3">
+            {/* Breakdown */}
+            {inputAmt > 0 && (
+              <div className={`grid gap-2 text-center text-xs border-t border-slate-200 pt-3 ${form.vatMode === "none" ? "grid-cols-1" : "grid-cols-3"}`}>
                 <div>
                   <div className="text-slate-500 mb-0.5">صافي المبلغ</div>
-                  <div className="font-bold text-slate-900">{formatSAR(net)}</div>
+                  <div className="font-bold text-slate-900 text-sm">{formatSAR(net)}</div>
                 </div>
-                <div>
-                  <div className="text-slate-500 mb-0.5">ضريبة {rate}%</div>
-                  <div className="font-bold text-amber-600">{formatSAR(vat)}</div>
-                </div>
-                <div>
-                  <div className="text-slate-500 mb-0.5">الإجمالي</div>
-                  <div className="font-bold text-primary">{formatSAR(total)}</div>
-                </div>
+                {form.vatMode !== "none" && <>
+                  <div>
+                    <div className="text-slate-500 mb-0.5">ضريبة 15%</div>
+                    <div className="font-bold text-amber-600 text-sm">{formatSAR(vat)}</div>
+                  </div>
+                  <div className="bg-primary/5 rounded-lg py-1">
+                    <div className="text-slate-500 mb-0.5">الإجمالي</div>
+                    <div className="font-bold text-primary text-sm">{formatSAR(total)}</div>
+                  </div>
+                </>}
               </div>
             )}
           </div>
@@ -268,13 +308,12 @@ function TransactionForm({
           {/* Notes */}
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">ملاحظات</label>
-            <textarea value={form.notes ?? ""} onChange={e => set("notes", e.target.value)}
+            <textarea value={form.notes} onChange={e => set("notes", e.target.value)}
               rows={2} placeholder="ملاحظات إضافية (اختياري)"
               className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none resize-none" />
           </div>
         </div>
 
-        {/* Footer */}
         <div className="flex items-center justify-between gap-3 p-6 border-t bg-slate-50 rounded-b-2xl">
           <div className="text-sm">
             <span className="text-slate-500">الإجمالي: </span>
@@ -282,9 +321,7 @@ function TransactionForm({
           </div>
           <div className="flex gap-2">
             <button onClick={onClose} disabled={isPending}
-              className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-sm font-medium transition-colors">
-              إلغاء
-            </button>
+              className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-sm font-medium transition-colors">إلغاء</button>
             <button onClick={handleSubmit} disabled={isPending}
               className="px-4 py-2 rounded-xl bg-primary text-white hover:bg-primary/90 text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-2">
               {isPending ? "جاري الحفظ..." : <><Check className="w-4 h-4" />{initial ? "تحديث" : "حفظ"}</>}
@@ -296,35 +333,49 @@ function TransactionForm({
   );
 }
 
-// ─── Summary Tree Node ────────────────────────────────────────────────────────
+// ─── Summary Tree ─────────────────────────────────────────────────────────────
 type SummaryNode = {
   code: string; name: string; nameAr: string; level: number;
   net: number; vat: number; total: number; count: number;
   children: SummaryNode[];
 };
 
-function SummaryTreeNode({ node, depth = 0 }: { node: SummaryNode; depth?: number }) {
-  const [open, setOpen] = useState(depth < 1 || node.total > 0);
+function SummaryTreeNode({ node, grandTotal, depth = 0 }: { node: SummaryNode; grandTotal: number; depth?: number }) {
+  const [open, setOpen] = useState(depth < 2);
   const hasChildren = node.children.length > 0;
   const colorCls = getCatColor(node.code);
+  const share = pct(node.net, grandTotal);
+  const risk: Risk = share >= 40 ? "critical" : share >= 25 ? "warning" : "ok";
+  const RiskIcon = RISK_BADGE[risk].icon;
 
   return (
     <div>
       <div
-        className={`flex items-center gap-2 px-4 py-2.5 hover:bg-slate-50 transition-colors cursor-pointer ${depth === 0 ? "border-b border-slate-100" : ""}`}
-        style={{ paddingLeft: `${16 + depth * 20}px` }}
+        className={`flex items-center gap-2 py-2.5 hover:bg-slate-50 transition-colors cursor-pointer
+          ${depth === 1 ? "border-b border-slate-100 font-semibold" : ""}
+          ${risk === "critical" ? "bg-red-50/40" : risk === "warning" ? "bg-amber-50/30" : ""}
+        `}
+        style={{ paddingLeft: `${16 + depth * 20}px`, paddingRight: "16px" }}
         onClick={() => hasChildren && setOpen(o => !o)}
       >
         <div className="w-4 flex-shrink-0">
           {hasChildren && (open ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />)}
         </div>
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold border ${colorCls} flex-shrink-0`}>
-          {node.code}
-        </span>
-        <span className={`text-sm font-medium flex-1 ${depth === 1 ? "font-bold text-slate-800" : "text-slate-700"}`}>{node.nameAr}</span>
+        <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold border ${colorCls} flex-shrink-0`}>{node.code}</span>
+        <span className={`text-sm flex-1 ${depth <= 1 ? "font-bold text-slate-800" : "text-slate-700"}`}>{node.nameAr}</span>
         {node.total > 0 && (
-          <div className="flex items-center gap-4 text-right flex-shrink-0">
-            {node.vat > 0 && <span className="text-xs text-amber-600">ضريبة {formatSAR(node.vat)}</span>}
+          <div className="flex items-center gap-3 text-right flex-shrink-0">
+            {node.vat > 0 && <span className="text-xs text-amber-600 hidden sm:block">ض.ق.م {formatSAR(node.vat)}</span>}
+            {share > 0 && depth >= 1 && (
+              <span className={`text-xs font-bold px-1.5 py-0.5 rounded-lg ${
+                risk === "critical" ? "bg-red-100 text-red-700" :
+                risk === "warning"  ? "bg-amber-100 text-amber-700" :
+                                      "bg-slate-100 text-slate-500"
+              }`}>
+                {share.toFixed(1)}%
+              </span>
+            )}
+            {risk !== "ok" && <RiskIcon className={`w-4 h-4 ${RISK_BADGE[risk].cls}`} />}
             <span className={`font-bold ${depth <= 1 ? "text-base text-slate-900" : "text-sm text-slate-700"}`}>
               {formatSAR(node.net)}
             </span>
@@ -332,13 +383,13 @@ function SummaryTreeNode({ node, depth = 0 }: { node: SummaryNode; depth?: numbe
         )}
       </div>
       {open && node.children.map(child => (
-        <SummaryTreeNode key={child.code} node={child} depth={depth + 1} />
+        <SummaryTreeNode key={child.code} node={child} grandTotal={grandTotal} depth={depth + 1} />
       ))}
     </div>
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// ─── Main ─────────────────────────────────────────────────────────────────────
 export default function ExpenseLedger() {
   const { activeRestaurant } = useRestaurant();
   const queryClient = useQueryClient();
@@ -351,44 +402,20 @@ export default function ExpenseLedger() {
   const [formOpen, setFormOpen] = useState(false);
   const [editTxn, setEditTxn] = useState<ExpenseTransaction | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set(["5-1","5-2","5-3","5-4","5-5","5-6","5-7","5-8"]));
 
-  // ── Queries ────────────────────────────────────────────────────────────────
   const { data: categories = [] } = useListExpenseCategories<ExpenseCategory[]>({});
   const { data: transactions = [], isLoading } = useListExpenseTransactions<ExpenseTransaction[]>({ month, categoryCode: filterCat || undefined });
   const { data: summary } = useGetExpenseSummary<{ tree: SummaryNode[] }>({ month });
 
-  // ── Mutations ──────────────────────────────────────────────────────────────
-  const invalidate = () => {
-    queryClient.invalidateQueries({ predicate: q => String(q.queryKey[0]).includes("expense") });
-  };
+  const invalidate = () => queryClient.invalidateQueries({ predicate: q => String(q.queryKey[0]).includes("expense") });
 
-  const createMut = useCreateExpenseTransaction({
-    mutation: {
-      onSuccess: () => { toast({ title: "تم حفظ المصروف" }); setFormOpen(false); invalidate(); },
-      onError: () => toast({ title: "خطأ في الحفظ", variant: "destructive" }),
-    }
-  });
-  const updateMut = useUpdateExpenseTransaction({
-    mutation: {
-      onSuccess: () => { toast({ title: "تم التحديث" }); setEditTxn(null); invalidate(); },
-      onError: () => toast({ title: "خطأ في التحديث", variant: "destructive" }),
-    }
-  });
-  const deleteMut = useDeleteExpenseTransaction({
-    mutation: {
-      onSuccess: () => { toast({ title: "تم الحذف" }); setDeleteId(null); invalidate(); },
-      onError: () => toast({ title: "خطأ في الحذف", variant: "destructive" }),
-    }
-  });
+  const createMut = useCreateExpenseTransaction({ mutation: { onSuccess: () => { toast({ title: "تم حفظ المصروف" }); setFormOpen(false); invalidate(); }, onError: () => toast({ title: "خطأ في الحفظ", variant: "destructive" }) } });
+  const updateMut = useUpdateExpenseTransaction({ mutation: { onSuccess: () => { toast({ title: "تم التحديث" }); setEditTxn(null); invalidate(); }, onError: () => toast({ title: "خطأ في التحديث", variant: "destructive" }) } });
+  const deleteMut = useDeleteExpenseTransaction({ mutation: { onSuccess: () => { toast({ title: "تم الحذف" }); setDeleteId(null); invalidate(); }, onError: () => toast({ title: "خطأ في الحذف", variant: "destructive" }) } });
 
-  // ── Derived data ──────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
     let list = [...transactions];
-    if (searchQ) {
-      const q = searchQ.toLowerCase();
-      list = list.filter(t => t.description.toLowerCase().includes(q) || (t.descriptionAr ?? "").includes(q) || t.categoryCode.includes(q));
-    }
+    if (searchQ) { const q = searchQ.toLowerCase(); list = list.filter(t => t.description.toLowerCase().includes(q) || t.categoryCode.includes(q)); }
     return list;
   }, [transactions, searchQ]);
 
@@ -396,9 +423,11 @@ export default function ExpenseLedger() {
   const totalVat   = filtered.reduce((s, t) => s + toNum(t.vatAmount), 0);
   const totalGross = filtered.reduce((s, t) => s + toNum(t.totalAmount), 0);
 
+  // Warnings: items ≥ 15% of total
+  const riskItems = filtered.filter(t => pct(toNum(t.amount), totalNet) >= 15);
+
   const getCatLabel = (code: string) => categories.find(c => c.code === code);
 
-  // ── Month helpers ─────────────────────────────────────────────────────────
   function shiftMonth(delta: number) {
     const [y, m] = month.split("-").map(Number);
     const d = new Date(y, m - 1 + delta, 1);
@@ -408,9 +437,10 @@ export default function ExpenseLedger() {
   const [my, mm] = month.split("-").map(Number);
   const monthLabel = `${MONTHS[mm - 1]} ${my}`;
 
+  const grandTotal = (summary?.tree ?? []).reduce((s: number, n: SummaryNode) => s + n.net, 0);
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <PageHeader
         title="دفتر المصروفات"
         description={`شجرة المصروفات المحاسبية — ${activeRestaurant?.name ?? ""}`}
@@ -425,7 +455,7 @@ export default function ExpenseLedger() {
         }
       />
 
-      {/* Month Nav + View Toggle */}
+      {/* Month + View Toggle */}
       <div className="bg-white rounded-2xl border border-slate-200 px-6 py-4 flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-3">
           <button onClick={() => setMonth(shiftMonth(-1))} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
@@ -439,25 +469,18 @@ export default function ExpenseLedger() {
             <ChevronDown className="w-5 h-5 rotate-90" />
           </button>
         </div>
-
-        <div className="flex items-center gap-3">
-          <div className="flex bg-slate-100 rounded-xl p-1">
-            <button onClick={() => setView("table")} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${view === "table" ? "bg-white shadow text-slate-900" : "text-slate-500"}`}>
-              <Table2 className="w-4 h-4" />
-            </button>
-            <button onClick={() => setView("tree")} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${view === "tree" ? "bg-white shadow text-slate-900" : "text-slate-500"}`}>
-              <BarChart2 className="w-4 h-4" />
-            </button>
-          </div>
+        <div className="flex bg-slate-100 rounded-xl p-1">
+          <button onClick={() => setView("table")} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${view === "table" ? "bg-white shadow text-slate-900" : "text-slate-500"}`}><Table2 className="w-4 h-4" /></button>
+          <button onClick={() => setView("tree")} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${view === "tree" ? "bg-white shadow text-slate-900" : "text-slate-500"}`}><BarChart2 className="w-4 h-4" /></button>
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label: "إجمالي المصروفات (صافي)", value: totalNet, color: "text-slate-900" },
-          { label: "ضريبة القيمة المضافة", value: totalVat, color: "text-amber-600" },
-          { label: "الإجمالي شامل الضريبة", value: totalGross, color: "text-primary" },
+          { label: "ضريبة القيمة المضافة",    value: totalVat, color: "text-amber-600" },
+          { label: "الإجمالي شامل الضريبة",   value: totalGross, color: "text-primary" },
         ].map(k => (
           <div key={k.label} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
             <div className="text-sm text-slate-500 mb-1">{k.label}</div>
@@ -466,22 +489,60 @@ export default function ExpenseLedger() {
         ))}
       </div>
 
-      {/* Tree View */}
+      {/* ── Warning Panel ────────────────────────────────────────────────────── */}
+      {riskItems.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-3">
+          <div className="flex items-center gap-2 text-amber-800 font-bold text-sm">
+            <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />
+            تنبيهات — مصروفات تستحق المراجعة ({riskItems.length})
+          </div>
+          <div className="space-y-2">
+            {riskItems.map(t => {
+              const share = pct(toNum(t.amount), totalNet);
+              const isCritical = share >= 30;
+              const cat = getCatLabel(t.categoryCode);
+              return (
+                <div key={t.id} className={`flex items-center gap-3 p-3 rounded-xl border ${isCritical ? "bg-red-50 border-red-200" : "bg-white border-amber-200"}`}>
+                  {isCritical
+                    ? <Flame className="w-4 h-4 text-red-500 flex-shrink-0" />
+                    : <ShieldAlert className="w-4 h-4 text-amber-500 flex-shrink-0" />}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-slate-800 truncate">{t.description}</div>
+                    <div className="text-xs text-slate-500">{cat?.nameAr ?? t.categoryCode} · {t.date}</div>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <div className={`text-sm font-bold ${isCritical ? "text-red-700" : "text-amber-700"}`}>{formatSAR(toNum(t.amount))}</div>
+                    <div className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${isCritical ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-600"}`}>
+                      {share.toFixed(1)}% من الإجمالي
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-xs text-amber-600 flex items-center gap-1">
+            <Info className="w-3.5 h-3.5" />
+            مصروف يتجاوز 15% من إجمالي المصروفات يستحق المراجعة · أكثر من 30% يُعدّ تهديداً مالياً
+          </p>
+        </div>
+      )}
+
+      {/* ── Tree View ──────────────────────────────────────────────────────── */}
       {view === "tree" && (
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
             <div>
               <h3 className="font-bold text-slate-900">شجرة المصروفات المحاسبية</h3>
-              <p className="text-sm text-slate-500 mt-0.5">تجميع الأرقام حسب التصنيف المحاسبي</p>
+              <p className="text-sm text-slate-500 mt-0.5">تجميع الأرقام حسب التصنيف المحاسبي — الإشارات الحمراء تعني نسبة مرتفعة</p>
             </div>
             <div className="text-right">
               <div className="text-xs text-slate-500">الإجمالي</div>
-              <div className="text-lg font-bold text-slate-900">{formatSAR(totalNet)}</div>
+              <div className="text-lg font-bold text-slate-900">{formatSAR(grandTotal)}</div>
             </div>
           </div>
           <div className="divide-y divide-slate-100">
             {(summary?.tree ?? []).map((node: SummaryNode) => (
-              <SummaryTreeNode key={node.code} node={node} depth={0} />
+              <SummaryTreeNode key={node.code} node={node} grandTotal={grandTotal} depth={0} />
             ))}
             {(!summary?.tree || summary.tree.length === 0) && (
               <div className="py-12 text-center text-slate-400">لا توجد بيانات لهذا الشهر</div>
@@ -490,10 +551,9 @@ export default function ExpenseLedger() {
         </div>
       )}
 
-      {/* Table View */}
+      {/* ── Table View ──────────────────────────────────────────────────────── */}
       {view === "table" && (
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-          {/* Search + Filter */}
           <div className="px-6 py-4 border-b border-slate-100 flex flex-wrap items-center gap-3">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -512,10 +572,12 @@ export default function ExpenseLedger() {
                 </optgroup>
               ))}
             </select>
-            <div className="text-sm text-slate-500">{filtered.length} قيد</div>
+            <div className="flex items-center gap-3 text-xs text-slate-500">
+              <span className="flex items-center gap-1"><Flame className="w-3.5 h-3.5 text-red-500" /> &gt;30% تهديد</span>
+              <span className="flex items-center gap-1"><ShieldAlert className="w-3.5 h-3.5 text-amber-400" /> &gt;15% مرتفع</span>
+            </div>
           </div>
 
-          {/* Table */}
           {isLoading ? (
             <div className="py-16 text-center text-slate-400">جاري التحميل...</div>
           ) : filtered.length === 0 ? (
@@ -529,26 +591,33 @@ export default function ExpenseLedger() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100 text-right">
-                    <th className="px-4 py-3 font-semibold text-slate-600 text-right">التاريخ</th>
-                    <th className="px-4 py-3 font-semibold text-slate-600 text-right">التصنيف</th>
-                    <th className="px-4 py-3 font-semibold text-slate-600 text-right">الوصف</th>
-                    <th className="px-4 py-3 font-semibold text-slate-600 text-right">مركز التكلفة</th>
-                    <th className="px-4 py-3 font-semibold text-slate-600 text-right">صافي</th>
-                    <th className="px-4 py-3 font-semibold text-slate-600 text-right">ضريبة</th>
-                    <th className="px-4 py-3 font-semibold text-slate-600 text-right">الإجمالي</th>
+                    <th className="px-4 py-3 font-semibold text-slate-600 w-8"></th>
+                    <th className="px-4 py-3 font-semibold text-slate-600">التاريخ</th>
+                    <th className="px-4 py-3 font-semibold text-slate-600">التصنيف</th>
+                    <th className="px-4 py-3 font-semibold text-slate-600">الوصف</th>
+                    <th className="px-4 py-3 font-semibold text-slate-600">مركز التكلفة</th>
+                    <th className="px-4 py-3 font-semibold text-slate-600">صافي</th>
+                    <th className="px-4 py-3 font-semibold text-slate-600">ضريبة</th>
+                    <th className="px-4 py-3 font-semibold text-slate-600">الإجمالي</th>
+                    <th className="px-4 py-3 font-semibold text-slate-600">النسبة</th>
                     <th className="px-4 py-3 w-16"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {filtered.map(txn => {
+                    const net = toNum(txn.amount);
+                    const share = pct(net, totalNet);
+                    const risk = getRisk(net, totalNet);
                     const cat = getCatLabel(txn.categoryCode);
+                    const RiskIcon = RISK_BADGE[risk].icon;
                     return (
-                      <tr key={txn.id} className="hover:bg-slate-50/50 transition-colors">
+                      <tr key={txn.id} className={`transition-colors hover:brightness-95 ${RISK_ROW[risk]}`}>
+                        <td className="px-3 py-3">
+                          {risk !== "ok" && <RiskIcon className={`w-4 h-4 ${RISK_BADGE[risk].cls}`} />}
+                        </td>
                         <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{txn.date}</td>
                         <td className="px-4 py-3">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold border ${getCatColor(txn.categoryCode)}`}>
-                            {txn.categoryCode}
-                          </span>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold border ${getCatColor(txn.categoryCode)}`}>{txn.categoryCode}</span>
                           {cat && <div className="text-xs text-slate-500 mt-0.5">{cat.nameAr}</div>}
                         </td>
                         <td className="px-4 py-3">
@@ -556,19 +625,27 @@ export default function ExpenseLedger() {
                           {txn.notes && <div className="text-xs text-slate-400">{txn.notes}</div>}
                         </td>
                         <td className="px-4 py-3 text-slate-500 text-xs">{txn.costCenter ?? "—"}</td>
-                        <td className="px-4 py-3 font-medium text-slate-900 whitespace-nowrap">{formatSAR(toNum(txn.amount))}</td>
-                        <td className="px-4 py-3 text-amber-600 text-xs whitespace-nowrap">
-                          {txn.isVatApplicable ? <>{formatSAR(toNum(txn.vatAmount))}<br /><span className="text-slate-400">{toNum(txn.vatRate)}%</span></> : "—"}
+                        <td className="px-4 py-3 font-medium text-slate-900 whitespace-nowrap">{formatSAR(net)}</td>
+                        <td className="px-4 py-3 text-xs whitespace-nowrap">
+                          {txn.isVatApplicable
+                            ? <><span className="text-amber-600 font-medium">{formatSAR(toNum(txn.vatAmount))}</span><br /><span className="text-slate-400">15%</span></>
+                            : <span className="text-slate-300">—</span>}
                         </td>
                         <td className="px-4 py-3 font-bold text-primary whitespace-nowrap">{formatSAR(toNum(txn.totalAmount))}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1">
-                            <button onClick={() => setEditTxn(txn)} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-500 hover:text-slate-700">
-                              <Pencil className="w-3.5 h-3.5" />
-                            </button>
-                            <button onClick={() => setDeleteId(txn.id)} className="p-1.5 hover:bg-red-50 rounded-lg transition-colors text-slate-400 hover:text-red-600">
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            <div className="w-14 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                              <div className={`h-full rounded-full ${risk === "critical" ? "bg-red-500" : risk === "warning" ? "bg-amber-400" : "bg-emerald-400"}`} style={{ width: `${Math.min(share, 100)}%` }} />
+                            </div>
+                            <span className={`text-xs font-semibold ${risk === "critical" ? "text-red-600" : risk === "warning" ? "text-amber-600" : "text-slate-500"}`}>
+                              {share.toFixed(0)}%
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1">
+                            <button onClick={() => setEditTxn(txn)} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-slate-700"><Pencil className="w-3.5 h-3.5" /></button>
+                            <button onClick={() => setDeleteId(txn.id)} className="p-1.5 hover:bg-red-50 rounded-lg transition-colors text-slate-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
                           </div>
                         </td>
                       </tr>
@@ -577,11 +654,11 @@ export default function ExpenseLedger() {
                 </tbody>
                 <tfoot>
                   <tr className="bg-slate-50 border-t-2 border-slate-200 font-bold">
-                    <td colSpan={4} className="px-4 py-3 text-slate-700 text-right">الإجمالي ({filtered.length} قيد)</td>
+                    <td colSpan={5} className="px-4 py-3 text-slate-700 text-right">الإجمالي ({filtered.length} قيد)</td>
                     <td className="px-4 py-3 text-slate-900">{formatSAR(totalNet)}</td>
                     <td className="px-4 py-3 text-amber-600">{formatSAR(totalVat)}</td>
                     <td className="px-4 py-3 text-primary">{formatSAR(totalGross)}</td>
-                    <td></td>
+                    <td colSpan={2}></td>
                   </tr>
                 </tfoot>
               </table>
@@ -590,18 +667,15 @@ export default function ExpenseLedger() {
         </div>
       )}
 
-      {/* Modals */}
+      {/* Form Modal */}
       {(formOpen || editTxn) && (
         <TransactionForm
           categories={categories.filter(c => c.level >= 1)}
           initial={editTxn ?? undefined}
           onClose={() => { setFormOpen(false); setEditTxn(null); }}
           onSave={data => {
-            if (editTxn) {
-              updateMut.mutate({ id: editTxn.id, data });
-            } else {
-              createMut.mutate({ data });
-            }
+            if (editTxn) updateMut.mutate({ id: editTxn.id, data });
+            else         createMut.mutate({ data });
           }}
           isPending={createMut.isPending || updateMut.isPending}
         />
@@ -620,9 +694,7 @@ export default function ExpenseLedger() {
             </div>
             <div className="flex gap-3">
               <button onClick={() => setDeleteId(null)} className="flex-1 py-2.5 border border-slate-300 rounded-xl text-sm font-medium hover:bg-slate-50">إلغاء</button>
-              <button
-                onClick={() => deleteMut.mutate({ id: deleteId })}
-                disabled={deleteMut.isPending}
+              <button onClick={() => deleteMut.mutate({ id: deleteId })} disabled={deleteMut.isPending}
                 className="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 disabled:opacity-50">
                 {deleteMut.isPending ? "جاري الحذف..." : "حذف"}
               </button>
