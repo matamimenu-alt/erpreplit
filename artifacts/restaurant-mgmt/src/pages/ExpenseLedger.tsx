@@ -16,8 +16,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import {
   Plus, Pencil, Trash2, X, Check, ChevronDown, ChevronRight,
-  Search, BarChart2, Table2, FileText, TrendingDown,
+  Search, BarChart2, Table2, FileText,
   Percent, AlertTriangle, Flame, ShieldAlert, Info,
+  RefreshCw, ShoppingCart, Users, ListChecks, Link2, Lock,
 } from "lucide-react";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -389,6 +390,86 @@ function SummaryTreeNode({ node, grandTotal, depth = 0 }: { node: SummaryNode; g
   );
 }
 
+// ─── Source badge helper ──────────────────────────────────────────────────────
+const SOURCE_META: Record<string, { label: string; icon: typeof ShoppingCart; cls: string }> = {
+  purchase:    { label: "مشتريات",   icon: ShoppingCart, cls: "bg-blue-50 text-blue-700 border-blue-200"   },
+  payroll:     { label: "رواتب",     icon: Users,        cls: "bg-purple-50 text-purple-700 border-purple-200" },
+  "fixed-cost":{ label: "ثابت",      icon: ListChecks,   cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+};
+
+function SourceBadge({ sourceType }: { sourceType?: string | null }) {
+  if (!sourceType) return null;
+  const meta = SOURCE_META[sourceType];
+  if (!meta) return null;
+  const Icon = meta.icon;
+  return (
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[10px] font-semibold border ${meta.cls}`}>
+      <Icon className="w-3 h-3" />{meta.label}
+    </span>
+  );
+}
+
+// ─── Sync Panel ───────────────────────────────────────────────────────────────
+function SyncPanel({ month, restaurantId, onDone }: { month: string; restaurantId: number; onDone: () => void }) {
+  const [syncing, setSyncing] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const API = import.meta.env.BASE_URL?.replace(/\/$/, "") + "/api";
+
+  async function doSync(endpoint: string, label: string) {
+    setSyncing(endpoint);
+    try {
+      const res = await fetch(`${API}/expense-integrations/${endpoint}?month=${month}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-restaurant-id": String(restaurantId) },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast({ title: `✓ ${label}`, description: data.message ?? `تم بنجاح` });
+        onDone();
+      } else {
+        toast({ title: "خطأ", description: data.error ?? "فشلت المزامنة", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "خطأ في الاتصال", variant: "destructive" });
+    } finally {
+      setSyncing(null);
+    }
+  }
+
+  const btns = [
+    { key: "sync-payroll",     icon: Users,        label: "مزامنة الرواتب",         color: "border-purple-200 text-purple-700 hover:bg-purple-50" },
+    { key: "sync-fixed-costs", icon: ListChecks,   label: "مزامنة المصروفات الثابتة", color: "border-emerald-200 text-emerald-700 hover:bg-emerald-50" },
+  ];
+
+  return (
+    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Link2 className="w-4 h-4 text-blue-600" />
+        <span className="text-sm font-bold text-blue-800">مزامنة تلقائية مع الأنظمة الأخرى</span>
+        <span className="text-xs text-blue-500 mr-auto">المشتريات تُرحَّل تلقائياً · الرواتب والمصروفات الثابتة يدوية</span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {btns.map(b => {
+          const Icon = b.icon;
+          const loading = syncing === b.key;
+          return (
+            <button key={b.key} onClick={() => doSync(b.key, b.label)} disabled={!!syncing}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition-colors disabled:opacity-50 bg-white ${b.color}`}>
+              {loading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Icon className="w-3.5 h-3.5" />}
+              {b.label}
+            </button>
+          );
+        })}
+        <div className="flex items-center gap-1.5 text-xs text-blue-600 mr-2">
+          <ShoppingCart className="w-3.5 h-3.5" />
+          المشتريات تُرحَّل تلقائياً عند الإدخال
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function ExpenseLedger() {
   const { activeRestaurant } = useRestaurant();
@@ -399,6 +480,7 @@ export default function ExpenseLedger() {
   const [view, setView] = useState<"table" | "tree">("table");
   const [searchQ, setSearchQ] = useState("");
   const [filterCat, setFilterCat] = useState("");
+  const [filterSource, setFilterSource] = useState<"all" | "manual" | "auto">("all");
   const [formOpen, setFormOpen] = useState(false);
   const [editTxn, setEditTxn] = useState<ExpenseTransaction | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -416,8 +498,10 @@ export default function ExpenseLedger() {
   const filtered = useMemo(() => {
     let list = [...transactions];
     if (searchQ) { const q = searchQ.toLowerCase(); list = list.filter(t => t.description.toLowerCase().includes(q) || t.categoryCode.includes(q)); }
+    if (filterSource === "manual") list = list.filter(t => !(t as any).isAutoGenerated);
+    if (filterSource === "auto")   list = list.filter(t => !!(t as any).isAutoGenerated);
     return list;
-  }, [transactions, searchQ]);
+  }, [transactions, searchQ, filterSource]);
 
   const totalNet   = filtered.reduce((s, t) => s + toNum(t.amount), 0);
   const totalVat   = filtered.reduce((s, t) => s + toNum(t.vatAmount), 0);
@@ -474,6 +558,11 @@ export default function ExpenseLedger() {
           <button onClick={() => setView("tree")} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${view === "tree" ? "bg-white shadow text-slate-900" : "text-slate-500"}`}><BarChart2 className="w-4 h-4" /></button>
         </div>
       </div>
+
+      {/* Sync Panel */}
+      {activeRestaurant && (
+        <SyncPanel month={month} restaurantId={activeRestaurant.id} onDone={invalidate} />
+      )}
 
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -572,9 +661,15 @@ export default function ExpenseLedger() {
                 </optgroup>
               ))}
             </select>
-            <div className="flex items-center gap-3 text-xs text-slate-500">
-              <span className="flex items-center gap-1"><Flame className="w-3.5 h-3.5 text-red-500" /> &gt;30% تهديد</span>
-              <span className="flex items-center gap-1"><ShieldAlert className="w-3.5 h-3.5 text-amber-400" /> &gt;15% مرتفع</span>
+            <select value={filterSource} onChange={e => setFilterSource(e.target.value as typeof filterSource)}
+              className="px-3 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-700 focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none">
+              <option value="all">كل المصادر</option>
+              <option value="manual">يدوي فقط</option>
+              <option value="auto">تلقائي فقط</option>
+            </select>
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <span className="flex items-center gap-1"><Flame className="w-3.5 h-3.5 text-red-500" /> &gt;30%</span>
+              <span className="flex items-center gap-1"><ShieldAlert className="w-3.5 h-3.5 text-amber-400" /> &gt;15%</span>
             </div>
           </div>
 
@@ -621,8 +716,14 @@ export default function ExpenseLedger() {
                           {cat && <div className="text-xs text-slate-500 mt-0.5">{cat.nameAr}</div>}
                         </td>
                         <td className="px-4 py-3">
-                          <div className="font-medium text-slate-800">{txn.description}</div>
-                          {txn.notes && <div className="text-xs text-slate-400">{txn.notes}</div>}
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className="font-medium text-slate-800">{txn.description}</span>
+                            {(txn as any).isAutoGenerated && <Lock className="w-3 h-3 text-slate-300 flex-shrink-0" />}
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <SourceBadge sourceType={(txn as any).sourceType} />
+                            {txn.notes && <span className="text-xs text-slate-400">{txn.notes}</span>}
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-slate-500 text-xs">{txn.costCenter ?? "—"}</td>
                         <td className="px-4 py-3 font-medium text-slate-900 whitespace-nowrap">{formatSAR(net)}</td>

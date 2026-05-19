@@ -14,6 +14,7 @@ import { restaurantsRouter, seedRestaurants } from "./restaurants";
 import dishesRouter from "./dishes";
 import fixedCostsRouter from "./fixed-costs";
 import expenseAccountingRouter, { seedExpenseCategories } from "./expense-accounting";
+import expenseIntegrationsRouter from "./expense-integrations";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use("/reports", reportsRouter);
 router.use("/dishes", dishesRouter);
 router.use("/fixed-costs", fixedCostsRouter);
 router.use("/expense-categories", expenseAccountingRouter);
+router.use("/expense-integrations", expenseIntegrationsRouter);
 
 export default router;

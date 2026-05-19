@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { purchasesTable, stockMovementsTable } from "@workspace/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { getRestaurantId } from "../lib/restaurant";
+import { upsertExpenseFromPurchase, deleteExpenseBySourceId, sourceId as expSrcId } from "../lib/expense-integration";
 
 async function upsertStockMovementForPurchase(
   restaurantId: number,
@@ -157,6 +158,12 @@ router.post("/batch", async (req, res) => {
         amountBeforeVat,
       });
       created.push(toRecord(record));
+      // Accounting mirror (non-blocking)
+      upsertExpenseFromPurchase(restaurantId, {
+        id: record.id, date, productName: item.productName, supplierName: supplierName || "",
+        category: item.category || "others", amountBeforeVat, vatAmount,
+        invoiceType: invType, invoiceId: batchInvoiceId,
+      }).catch(() => {});
     }
     res.status(201).json({ invoiceId: batchInvoiceId, items: created });
   } catch (err) {
@@ -239,6 +246,13 @@ router.post("/", async (req, res) => {
       amountBeforeVat,
     });
 
+    // Accounting mirror — create expense entry (non-blocking)
+    upsertExpenseFromPurchase(restaurantId, {
+      id: record.id, date, productName, supplierName: supplierName || "",
+      category: category || "others", amountBeforeVat, vatAmount,
+      invoiceType: invType, invoiceId: record.invoiceId ?? undefined,
+    }).catch(() => {});
+
     res.status(201).json(toRecord(record));
   } catch (err) {
     req.log.error({ err }, "Error creating purchase");
@@ -292,6 +306,13 @@ router.put("/:id", async (req, res) => {
       amountBeforeVat,
     });
 
+    // Update accounting mirror
+    upsertExpenseFromPurchase(restaurantId, {
+      id, date, productName, supplierName: supplierName || "",
+      category: category || "others", amountBeforeVat, vatAmount,
+      invoiceType: invType, invoiceId: record.invoiceId ?? undefined,
+    }).catch(() => {});
+
     res.json(toRecord(record));
   } catch (err) {
     req.log.error({ err }, "Error updating purchase");
@@ -309,6 +330,10 @@ router.delete("/:id", async (req, res) => {
       and(eq(stockMovementsTable.referenceType, "purchase"), eq(stockMovementsTable.referenceId, id))
     );
     await db.delete(purchasesTable).where(and(eq(purchasesTable.id, id), eq(purchasesTable.restaurantId, restaurantId)));
+
+    // Remove accounting mirror
+    deleteExpenseBySourceId(restaurantId, expSrcId.purchase(id)).catch(() => {});
+
     res.status(204).send();
   } catch (err) {
     req.log.error({ err }, "Error deleting purchase");
