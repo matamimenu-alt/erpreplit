@@ -169,14 +169,33 @@ router.get("/pl", async (req, res) => {
     const adjustedOtherCost    = Math.max(0, otherCost - closingGeneralInventory);
     const adjustedCOGSBeforeTransfers = openingInventory + adjustedFoodCost + adjustedBeverageCost + adjustedOtherCost + cookingFuelCost;
 
-    // ── Internal Branch Transfers impact on COGS ────────────────────────────
+    // ── Internal Branch Transfers impact on COGS & VAT ──────────────────────
+    // COGS uses NET cost (before VAT) — VAT is tracked separately per branch
+    // Rule: VAT travels WITH the goods — it is NOT copied.
+    //   Sender: COGS decreases by net cost transferred; Input VAT decreases by VAT transferred
+    //   Receiver: COGS increases by net cost received; Input VAT increases by VAT received
     let allTransfers = await db.select().from(branchTransfersTable)
       .where(or(eq(branchTransfersTable.fromRestaurantId, restaurantId), eq(branchTransfersTable.toRestaurantId, restaurantId)));
     if (month) allTransfers = allTransfers.filter(t => t.transferDate.startsWith(month));
-    const transfersInCost  = allTransfers.filter(t => t.toRestaurantId === restaurantId).reduce((s, t) => s + toNum(t.quantity) * toNum(t.unitPrice), 0);
-    const transfersOutCost = allTransfers.filter(t => t.fromRestaurantId === restaurantId && t.toRestaurantId !== null && t.toRestaurantId !== restaurantId).reduce((s, t) => s + toNum(t.quantity) * toNum(t.unitPrice), 0);
-    const netTransferCOGS  = transfersInCost - transfersOutCost;
-    const adjustedCOGS     = adjustedCOGSBeforeTransfers + netTransferCOGS;
+
+    const inboundTransfers  = allTransfers.filter(t => t.toRestaurantId === restaurantId);
+    const outboundTransfers = allTransfers.filter(t => t.fromRestaurantId === restaurantId && t.toRestaurantId !== null && t.toRestaurantId !== restaurantId);
+
+    // NET cost transfers (for COGS adjustment — VAT excluded, same as before)
+    const transfersInCost   = inboundTransfers.reduce((s, t) => s + toNum(t.quantity) * toNum(t.unitPrice), 0);
+    const transfersOutCost  = outboundTransfers.reduce((s, t) => s + toNum(t.quantity) * toNum(t.unitPrice), 0);
+    const netTransferCOGS   = transfersInCost - transfersOutCost;
+
+    // VAT allocation per branch (for VAT report accuracy)
+    const transfersVatOut   = outboundTransfers.reduce((s, t) => s + toNum(t.vatAmount), 0);
+    const transfersVatIn    = inboundTransfers.reduce((s, t) => s + toNum(t.vatAmount), 0);
+    const netTransferVat    = transfersVatIn - transfersVatOut;
+
+    // Gross (net + VAT) transfer values — for full-cost transparency
+    const transfersInGross  = transfersInCost  + transfersVatIn;
+    const transfersOutGross = transfersOutCost + transfersVatOut;
+
+    const adjustedCOGS      = adjustedCOGSBeforeTransfers + netTransferCOGS;
 
     // ── GROSS PROFIT ────────────────────────────────────────────────────────
     const grossProfit = totalRevenue - adjustedCOGS;
@@ -344,10 +363,17 @@ router.get("/pl", async (req, res) => {
       adjustedBeverageCost:       f2(adjustedBeverageCost),
       adjustedOtherCost:          f2(adjustedOtherCost),
 
-      // Branch transfers
-      transfersInCost:  f2(transfersInCost),
-      transfersOutCost: f2(transfersOutCost),
-      netTransferCOGS:  f2(netTransferCOGS),
+      // Branch transfers — COGS (net cost only, VAT tracked separately)
+      transfersInCost:   f2(transfersInCost),
+      transfersOutCost:  f2(transfersOutCost),
+      netTransferCOGS:   f2(netTransferCOGS),
+      // Branch transfers — VAT allocation (VAT travels WITH the goods)
+      transfersVatOut:   f2(transfersVatOut),   // VAT that left this branch
+      transfersVatIn:    f2(transfersVatIn),    // VAT that arrived at this branch
+      netTransferVat:    f2(netTransferVat),    // net VAT impact
+      // Gross (cost + VAT) for full-cost transparency in Purchase Report
+      transfersOutGross: f2(transfersOutGross),
+      transfersInGross:  f2(transfersInGross),
 
       // Final COGS
       adjustedCOGS:    f2(adjustedCOGS),

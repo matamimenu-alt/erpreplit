@@ -98,6 +98,12 @@ type PLExtra = {
     laborOffice: number; passport: number; sponsorship: number; other: number; total: number;
   };
   dynamicFixedBreakdown?: Record<string, number>;
+  // Branch transfer VAT allocation
+  transfersVatOut?: number;
+  transfersVatIn?: number;
+  netTransferVat?: number;
+  transfersOutGross?: number;
+  transfersInGross?: number;
 };
 
 export default function Reports() {
@@ -323,8 +329,23 @@ export default function Reports() {
                     </>}
                     {((pl?.transfersInCost ?? 0) > 0 || (pl?.transfersOutCost ?? 0) > 0) && <>
                       <Div />
-                      {(pl?.transfersInCost ?? 0) > 0  && <Row label="Received from Other Branches (+)" value={pl?.transfersInCost ?? 0}   indent />}
-                      {(pl?.transfersOutCost ?? 0) > 0 && <Row label="Sent to Other Branches (−)"        value={-(pl?.transfersOutCost ?? 0)} indent />}
+                      <div className="px-4 py-1 text-[10px] font-semibold uppercase tracking-widest text-blue-500 bg-blue-50 rounded-lg mx-1 mb-1">
+                        Inter-Branch Transfers — Net Cost (VAT travels with goods)
+                      </div>
+                      {(pl?.transfersInCost ?? 0) > 0 && (
+                        <Row label={`Received from Other Branches — Net (+)${(pl?.transfersVatIn ?? 0) > 0 ? ` · VAT In: +${(pl?.transfersVatIn ?? 0).toLocaleString("en-SA", { minimumFractionDigits: 2 })}` : ""}`}
+                          value={pl?.transfersInCost ?? 0} indent />
+                      )}
+                      {(pl?.transfersOutCost ?? 0) > 0 && (
+                        <Row label={`Sent to Other Branches — Net (−)${(pl?.transfersVatOut ?? 0) > 0 ? ` · VAT Out: −${(pl?.transfersVatOut ?? 0).toLocaleString("en-SA", { minimumFractionDigits: 2 })}` : ""}`}
+                          value={-(pl?.transfersOutCost ?? 0)} indent />
+                      )}
+                      {((pl?.transfersVatOut ?? 0) > 0 || (pl?.transfersVatIn ?? 0) > 0) && (
+                        <div className="flex justify-between px-6 py-1 text-[11px] text-blue-600 italic">
+                          <span>VAT impact: see ZATCA VAT Report for per-branch VAT allocation</span>
+                          <span>{(pl?.netTransferVat ?? 0) >= 0 ? "+" : ""}{(pl?.netTransferVat ?? 0).toLocaleString("en-SA", { minimumFractionDigits: 2 })} SAR input VAT</span>
+                        </div>
+                      )}
                     </>}
                     <Div />
                     <Row label="Adjusted COGS" value={adjCOGS} bold highlight="neutral" percent={pctOf(adjCOGS, R)} />
