@@ -1,0 +1,292 @@
+يوجد حالياً تضارب وازدواجية في تسجيل المصروفات داخل النظام بسبب وجود أكثر من مصدر لنفس المصروف، مما يؤدي إلى تكرار الأرقام داخل الـ P&L وتشويه النتائج المالية.
+
+المطلوب إعادة هيكلة منطق المصروفات Accounting Logic بشكل احترافي وربط جميع الموديولات المحاسبية مع منع التكرار المحاسبي نهائياً.
+
+---
+
+المشكلة الحالية:
+
+يوجد مصروفات يتم تسجيلها من أكثر من Module:
+
+* Purchases
+* Fixed Expenses
+* Expense Ledger
+* Payroll
+* Sales Channels
+
+وهذا يؤدي إلى:
+
+* Double Counting
+* تضخم المصروفات
+* أخطاء في Gross Profit
+* أخطاء في EBITDA
+* تقارير P&L غير دقيقة
+
+---
+
+أمثلة على المشاكل الحالية:
+
+1- المحروقات:
+
+* تُسجل ضمن المشتريات
+* وتُسجل مرة أخرى ضمن Operating Expenses
+
+2- عمولات التطبيقات:
+
+* تظهر ضمن App Commissions
+* وأيضاً ضمن Fixed Expenses
+
+3- الرواتب:
+
+* تظهر ضمن Payroll
+* وأيضاً ضمن Fixed Expenses
+
+4- الإيجارات:
+
+* تظهر ضمن Fixed Expenses
+* وأيضاً ضمن Expense Ledger
+
+5- المصاريف الحكومية:
+مثل:
+
+* رسوم مكتب العمل
+* رسوم الجوازات
+* نقل الكفالة
+* رسوم البلدية
+* رسوم الرخص
+
+تظهر أحياناً:
+
+* ضمن المصروفات الإدارية
+* وأحياناً ضمن المصروفات الثابتة
+* أو داخل Expense Ledger بشكل مكرر
+
+---
+
+المطلوب الأساسي:
+
+إنشاء:
+Single Source of Truth
+
+أي:
+كل نوع مصروف يجب أن يكون له مصدر محاسبي واحد فقط.
+
+---
+
+قواعد الربط الصحيحة:
+
+A) Purchases / Inventory / COGS
+
+أي بند مرتبط بالمخزون أو التشغيل المباشر أو المواد الخام:
+
+مثل:
+
+* مواد غذائية
+* فحم
+* غاز
+* بنزين تشغيل
+* مواد تعبئة
+* مواد تنظيف تشغيلية
+* مواد إنتاج
+* مواد استهلاكية للمطبخ
+
+يجب أن:
+
+* يُحتسب فقط داخل:
+
+  * Purchases
+  * Inventory Consumption
+  * COGS
+
+* ولا يظهر داخل Operating Expenses نهائياً.
+
+---
+
+B) Operating Expenses
+
+المصاريف التشغيلية الحقيقية فقط:
+
+مثل:
+
+* كهرباء
+* مياه
+* إنترنت
+* صيانة
+* اشتراكات
+* دعاية وإعلان
+* تأمين سيارات
+* قرطاسية
+* برامج وأنظمة
+* استشارات
+
+تظهر فقط داخل:
+Expense Ledger → Operating Expenses
+
+---
+
+C) Payroll
+
+جميع البنود المتعلقة بالموظفين:
+
+* رواتب
+* بدل سكن
+* سكن موظفين
+* تأمين طبي
+* تأمينات اجتماعية
+* مكافأة نهاية خدمة
+* رواتب إجازات
+
+يجب أن تُقرأ فقط من:
+Payroll Module
+
+ولا يجوز تسجيلها داخل:
+
+* Fixed Expenses
+* Expense Ledger
+
+---
+
+D) Fixed Expenses
+
+تستخدم فقط للمصاريف الشهرية الثابتة غير المرتبطة بالرواتب:
+
+مثل:
+
+* إيجار الفرع
+* إيجار المستودع
+* اشتراكات البرامج
+* عقود الصيانة الشهرية
+* عقود الإنترنت الثابتة
+
+ولا يجب أن تحتوي:
+
+* رواتب
+* عمولات تطبيقات
+* مصاريف مشتريات
+* مواد تشغيل
+
+---
+
+E) App Commissions
+
+عمولات التطبيقات:
+
+* HungerStation
+* Jahez
+* Talabat
+* ToYou
+* The Chefz
+
+يجب أن تُقرأ مباشرة من:
+Sales Channels / Delivery Integration
+
+وتظهر فقط داخل:
+App Commissions
+
+ولا يتم احتسابها داخل:
+
+* Fixed Expenses
+* Marketing
+* Other Expenses
+
+---
+
+F) Government Expenses
+
+إنشاء قسم مستقل باسم:
+
+Government Expenses
+
+ويشمل:
+
+* رسوم مكتب العمل
+* رسوم الجوازات
+* رسوم البلدية
+* نقل كفالة
+* إقامة
+* رخص
+* شهادات صحية
+* رسوم حكومية أخرى
+
+ويظهر فقط داخل:
+Operating Expenses → Government Expenses
+
+بدون أي تكرار مع:
+
+* Administrative Expenses
+* Fixed Expenses
+
+---
+
+المطلوب داخل الـ P&L:
+
+تنظيم التقرير ليصبح:
+
+1- Revenue
+2- Net Sales
+3- COGS
+4- Gross Profit
+5- Operating Expenses
+
+* Utilities
+* Maintenance
+* Marketing
+* Government Expenses
+* Administrative Expenses
+* IT & Systems
+  6- Payroll Expenses
+  7- Fixed Expenses
+  8- App Commissions
+  9- EBITDA
+  10- VAT Summary
+  11- Net Profit
+
+---
+
+المطلوب تقنياً:
+
+إنشاء:
+
+1- Expense Mapping Rules Engine
+2- Duplicate Prevention Engine
+3- Source Priority Logic
+4- Expense Classification System
+5- Module Ownership Rules
+6- Smart P&L Aggregator
+
+---
+
+Source Ownership Rules:
+
+Purchases Module
+= Inventory + COGS only
+
+Expense Ledger
+= Operating Expenses only
+
+Payroll Module
+= HR Expenses only
+
+Fixed Expenses
+= Recurring Non-Payroll Costs only
+
+Sales Channels
+= App Commissions only
+
+Government Expenses
+= Government Fees only
+
+---
+
+المطلوب النهائي:
+
+* إزالة أي Double Counting
+* منع تكرار البنود بين الموديولات
+* كل مصروف يظهر مرة واحدة فقط
+* تنظيف كامل لشجرة المصروفات
+* تحسين دقة الـ P&L
+* تحسين Gross Profit و EBITDA
+* دعم Multi-Branch Accounting
+* دعم Cost Centers
+* دعم VAT Logic
+* الحفاظ الكامل على النظام الحالي بدون كسر أي Module أو API.
