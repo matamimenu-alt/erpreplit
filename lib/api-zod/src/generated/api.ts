@@ -1863,3 +1863,150 @@ export const DeleteDishParams = zod.object({
 export const DeleteDishResponse = zod.object({
   success: zod.boolean(),
 });
+
+/**
+ * @summary Get the full expense category tree
+ */
+export const ListExpenseCategoriesResponseItem = zod.object({
+  id: zod.number(),
+  code: zod.string(),
+  name: zod.string(),
+  nameAr: zod.string(),
+  parentCode: zod.string().nullish(),
+  level: zod.number(),
+  sortOrder: zod.number(),
+  isActive: zod.boolean(),
+});
+export const ListExpenseCategoriesResponse = zod.array(
+  ListExpenseCategoriesResponseItem,
+);
+
+/**
+ * @summary Expense totals grouped by category tree
+ */
+export const GetExpenseSummaryQueryParams = zod.object({
+  month: zod.coerce.string().optional(),
+  fromDate: zod.coerce.string().optional(),
+  toDate: zod.coerce.string().optional(),
+});
+
+export const GetExpenseSummaryResponse = zod.object({
+  month: zod.string().nullish(),
+  fromDate: zod.string().nullish(),
+  toDate: zod.string().nullish(),
+  tree: zod.array(
+    zod.object({
+      code: zod.string(),
+      name: zod.string(),
+      nameAr: zod.string(),
+      level: zod.number(),
+      net: zod.number(),
+      vat: zod.number(),
+      total: zod.number(),
+      count: zod.number(),
+      children: zod.array(zod.unknown()),
+    }),
+  ),
+});
+
+/**
+ * @summary List expense transactions with optional filters
+ */
+export const ListExpenseTransactionsQueryParams = zod.object({
+  month: zod.coerce.string().optional(),
+  fromDate: zod.coerce.string().optional(),
+  toDate: zod.coerce.string().optional(),
+  categoryCode: zod.coerce.string().optional(),
+  costCenter: zod.coerce.string().optional(),
+});
+
+export const ListExpenseTransactionsResponseItem = zod.object({
+  id: zod.number(),
+  restaurantId: zod.number(),
+  date: zod.string(),
+  month: zod.string(),
+  categoryCode: zod.string(),
+  description: zod.string(),
+  descriptionAr: zod.string().nullish(),
+  amount: zod.number(),
+  isVatApplicable: zod.boolean(),
+  vatRate: zod.number(),
+  vatAmount: zod.number(),
+  totalAmount: zod.number(),
+  costCenter: zod.string().nullish(),
+  referenceNo: zod.string().nullish(),
+  notes: zod.string().nullish(),
+  createdAt: zod.string().optional(),
+  updatedAt: zod.string().optional(),
+});
+export const ListExpenseTransactionsResponse = zod.array(
+  ListExpenseTransactionsResponseItem,
+);
+
+/**
+ * @summary Create a new expense transaction
+ */
+export const CreateExpenseTransactionBody = zod.object({
+  date: zod.string(),
+  categoryCode: zod.string(),
+  description: zod.string(),
+  descriptionAr: zod.string().nullish(),
+  amount: zod.number(),
+  isVatApplicable: zod.boolean().optional(),
+  vatRate: zod.number().optional(),
+  costCenter: zod.string().nullish(),
+  referenceNo: zod.string().nullish(),
+  notes: zod.string().nullish(),
+});
+
+/**
+ * @summary Update an expense transaction
+ */
+export const UpdateExpenseTransactionParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateExpenseTransactionBody = zod.object({
+  date: zod.string(),
+  categoryCode: zod.string(),
+  description: zod.string(),
+  descriptionAr: zod.string().nullish(),
+  amount: zod.number(),
+  isVatApplicable: zod.boolean().optional(),
+  vatRate: zod.number().optional(),
+  costCenter: zod.string().nullish(),
+  referenceNo: zod.string().nullish(),
+  notes: zod.string().nullish(),
+});
+
+export const UpdateExpenseTransactionResponse = zod.object({
+  id: zod.number(),
+  restaurantId: zod.number(),
+  date: zod.string(),
+  month: zod.string(),
+  categoryCode: zod.string(),
+  description: zod.string(),
+  descriptionAr: zod.string().nullish(),
+  amount: zod.number(),
+  isVatApplicable: zod.boolean(),
+  vatRate: zod.number(),
+  vatAmount: zod.number(),
+  totalAmount: zod.number(),
+  costCenter: zod.string().nullish(),
+  referenceNo: zod.string().nullish(),
+  notes: zod.string().nullish(),
+  createdAt: zod.string().optional(),
+  updatedAt: zod.string().optional(),
+});
+
+/**
+ * @summary Delete an expense transaction
+ */
+export const DeleteExpenseTransactionParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeleteExpenseTransactionResponse = zod.object({
+  success: zod.boolean(),
+  id: zod.number(),
+});

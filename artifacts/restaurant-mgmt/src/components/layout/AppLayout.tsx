@@ -37,6 +37,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/food-cost": "Food Cost & Pricing",
   "/vat-report": "ZATCA VAT Report",
   "/reports": "Financial Reports",
+  "/expense-ledger": "Expense Ledger",
 };
 
 function cn(...inputs: ClassValue[]) {
@@ -56,6 +57,7 @@ const branchNavItems = [
   { name: "Price Comparison", href: "/supplier-prices", icon: TrendingDown },
   { name: "HR & Employees", href: "/employees", icon: Users },
   { name: "Fixed Expenses", href: "/expenses", icon: FileBarChart },
+  { name: "Expense Ledger", href: "/expense-ledger", icon: TrendingDown },
   { name: "Inventory", href: "/inventory", icon: Warehouse },
   { name: "Food Cost & Pricing", href: "/food-cost", icon: ChefHat },
   { name: "ZATCA VAT Report", href: "/vat-report", icon: Calculator },

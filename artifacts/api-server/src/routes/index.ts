@@ -13,10 +13,12 @@ import reportsRouter from "./reports";
 import { restaurantsRouter, seedRestaurants } from "./restaurants";
 import dishesRouter from "./dishes";
 import fixedCostsRouter from "./fixed-costs";
+import expenseAccountingRouter, { seedExpenseCategories } from "./expense-accounting";
 
 const router: IRouter = Router();
 
 seedRestaurants().catch(console.error);
+seedExpenseCategories().catch(console.error);
 
 router.use(healthRouter);
 router.use("/restaurants", restaurantsRouter);
@@ -33,5 +35,6 @@ router.use("/dashboard", dashboardRouter);
 router.use("/reports", reportsRouter);
 router.use("/dishes", dishesRouter);
 router.use("/fixed-costs", fixedCostsRouter);
+router.use("/expense-categories", expenseAccountingRouter);
 
 export default router;

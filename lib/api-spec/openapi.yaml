@@ -1528,6 +1528,115 @@ paths:
                     type: boolean
                 required: [success]
 
+  # ── Expense Accounting ─────────────────────────────────────────────────────
+  /expense-categories:
+    get:
+      operationId: listExpenseCategories
+      tags: [expenses]
+      summary: Get the full expense category tree
+      responses:
+        "200":
+          description: Category list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExpenseCategory"
+
+  /expense-categories/summary:
+    get:
+      operationId: getExpenseSummary
+      tags: [expenses]
+      summary: Expense totals grouped by category tree
+      parameters:
+        - { name: month,    in: query, schema: { type: string } }
+        - { name: fromDate, in: query, schema: { type: string } }
+        - { name: toDate,   in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Expense summary tree
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpenseSummary"
+
+  /expense-categories/transactions:
+    get:
+      operationId: listExpenseTransactions
+      tags: [expenses]
+      summary: List expense transactions with optional filters
+      parameters:
+        - { name: month,        in: query, schema: { type: string } }
+        - { name: fromDate,     in: query, schema: { type: string } }
+        - { name: toDate,       in: query, schema: { type: string } }
+        - { name: categoryCode, in: query, schema: { type: string } }
+        - { name: costCenter,   in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Expense transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExpenseTransaction"
+    post:
+      operationId: createExpenseTransaction
+      tags: [expenses]
+      summary: Create a new expense transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExpenseTransaction"
+      responses:
+        "201":
+          description: Created transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpenseTransaction"
+
+  /expense-categories/transactions/{id}:
+    put:
+      operationId: updateExpenseTransaction
+      tags: [expenses]
+      summary: Update an expense transaction
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExpenseTransaction"
+      responses:
+        "200":
+          description: Updated transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpenseTransaction"
+    delete:
+      operationId: deleteExpenseTransaction
+      tags: [expenses]
+      summary: Delete an expense transaction
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  id:      { type: integer }
+                required: [success, id]
+
 components:
   schemas:
     HealthStatus:
@@ -3437,3 +3546,83 @@ components:
           items:
             $ref: "#/components/schemas/DishPricingItem"
       required: [config, fixedCostSummary, dishes]
+
+    # ── Expense Accounting ──────────────────────────────────────────────────
+    ExpenseCategory:
+      type: object
+      properties:
+        id:         { type: integer }
+        code:       { type: string }
+        name:       { type: string }
+        nameAr:     { type: string }
+        parentCode: { type: string, nullable: true }
+        level:      { type: integer }
+        sortOrder:  { type: integer }
+        isActive:   { type: boolean }
+      required: [id, code, name, nameAr, level, sortOrder, isActive]
+
+    ExpenseTransaction:
+      type: object
+      properties:
+        id:              { type: integer }
+        restaurantId:    { type: integer }
+        date:            { type: string }
+        month:           { type: string }
+        categoryCode:    { type: string }
+        description:     { type: string }
+        descriptionAr:   { type: string, nullable: true }
+        amount:          { type: number }
+        isVatApplicable: { type: boolean }
+        vatRate:         { type: number }
+        vatAmount:       { type: number }
+        totalAmount:     { type: number }
+        costCenter:      { type: string, nullable: true }
+        referenceNo:     { type: string, nullable: true }
+        notes:           { type: string, nullable: true }
+        createdAt:       { type: string }
+        updatedAt:       { type: string }
+      required: [id, restaurantId, date, month, categoryCode, description, amount, isVatApplicable, vatRate, vatAmount, totalAmount]
+
+    CreateExpenseTransaction:
+      type: object
+      properties:
+        date:            { type: string }
+        categoryCode:    { type: string }
+        description:     { type: string }
+        descriptionAr:   { type: string, nullable: true }
+        amount:          { type: number }
+        isVatApplicable: { type: boolean }
+        vatRate:         { type: number }
+        costCenter:      { type: string, nullable: true }
+        referenceNo:     { type: string, nullable: true }
+        notes:           { type: string, nullable: true }
+      required: [date, categoryCode, description, amount]
+
+    ExpenseSummaryNode:
+      type: object
+      properties:
+        code:     { type: string }
+        name:     { type: string }
+        nameAr:   { type: string }
+        level:    { type: integer }
+        net:      { type: number }
+        vat:      { type: number }
+        total:    { type: number }
+        count:    { type: integer }
+        children:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExpenseSummaryNode"
+      required: [code, name, nameAr, level, net, vat, total, count, children]
+
+    ExpenseSummary:
+      type: object
+      properties:
+        month:    { type: string, nullable: true }
+        fromDate: { type: string, nullable: true }
+        toDate:   { type: string, nullable: true }
+        tree:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExpenseSummaryNode"
+      required: [tree]

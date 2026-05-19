@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { salesTable, purchasesTable, employeesTable, expensesTable, inventoryTable, branchTransfersTable, fixedCostTemplatesTable, fixedCostMonthlyValuesTable } from "@workspace/db/schema";
+import { salesTable, purchasesTable, employeesTable, expensesTable, inventoryTable, branchTransfersTable, fixedCostTemplatesTable, fixedCostMonthlyValuesTable, expenseTransactionsTable } from "@workspace/db/schema";
 import { eq, and, or, isNotNull } from "drizzle-orm";
 import { getRestaurantId } from "../lib/restaurant";
 
@@ -231,6 +231,33 @@ router.get("/pl", async (req, res) => {
     const totalStaffExpenses  = expenses.filter(e => e.category === "staff-expenses").reduce((s, e) => s + toNum(e.monthlyCost), 0);
     const totalAppCommissions = expenses.filter(e => e.category === "app-commission").reduce((s, e) => s + toNum(e.monthlyCost), 0);
 
+    // ── Expense Accounting Transactions (new structured expense tree) ─────────
+    let expTxns = await db.select().from(expenseTransactionsTable)
+      .where(eq(expenseTransactionsTable.restaurantId, restaurantId));
+    if (month) expTxns = expTxns.filter(t => t.month === month);
+
+    // Totals from new expense system
+    const totalExpenseTxnNet    = expTxns.reduce((s, t) => s + toNum(t.amount), 0);
+    const totalExpenseTxnVat    = expTxns.reduce((s, t) => s + toNum(t.vatAmount), 0);
+    const totalExpenseTxnTotal  = expTxns.reduce((s, t) => s + toNum(t.totalAmount), 0);
+
+    // HR breakdown (5-2-x codes)
+    const hrExpenses     = expTxns.filter(t => t.categoryCode.startsWith("5-2")).reduce((s,t) => s+toNum(t.amount),0);
+    // Operational breakdown (5-1-x codes)
+    const opExpenses     = expTxns.filter(t => t.categoryCode.startsWith("5-1")).reduce((s,t) => s+toNum(t.amount),0);
+    // Government (5-3-x)
+    const govExpenses    = expTxns.filter(t => t.categoryCode.startsWith("5-3")).reduce((s,t) => s+toNum(t.amount),0);
+    // Admin (5-4-x)
+    const adminExpenses  = expTxns.filter(t => t.categoryCode.startsWith("5-4")).reduce((s,t) => s+toNum(t.amount),0);
+    // Financial (5-5-x)
+    const finExpenses    = expTxns.filter(t => t.categoryCode.startsWith("5-5")).reduce((s,t) => s+toNum(t.amount),0);
+    // Transport (5-6-x)
+    const transExpenses  = expTxns.filter(t => t.categoryCode.startsWith("5-6")).reduce((s,t) => s+toNum(t.amount),0);
+    // Rent (5-7-x)
+    const rentExpenses   = expTxns.filter(t => t.categoryCode.startsWith("5-7")).reduce((s,t) => s+toNum(t.amount),0);
+    // Other (5-8-x)
+    const otherExpenses  = expTxns.filter(t => t.categoryCode.startsWith("5-8")).reduce((s,t) => s+toNum(t.amount),0);
+
     // Dynamic Monthly Fixed Costs (new system) — uses monthly override if exists, else default
     const fcTemplates = await db.select().from(fixedCostTemplatesTable)
       .where(and(eq(fixedCostTemplatesTable.restaurantId, restaurantId), eq(fixedCostTemplatesTable.isActive, true)));
@@ -282,7 +309,7 @@ router.get("/pl", async (req, res) => {
 
     const grossProfit = totalRevenue - finalAdjustedCOGS;
 
-    const totalOperatingExpenses = totalLaborCost + totalPurchaseOpex + totalFixedExpenses + totalStaffExpenses + totalAppCommissions + totalDynamicFixedCosts;
+    const totalOperatingExpenses = totalLaborCost + totalPurchaseOpex + totalFixedExpenses + totalStaffExpenses + totalAppCommissions + totalDynamicFixedCosts + totalExpenseTxnNet;
     const operatingProfit = grossProfit - totalOperatingExpenses;
     const vatPayable = outputVat - inputVat;
     const netProfit  = operatingProfit - vatPayable;
@@ -348,6 +375,22 @@ router.get("/pl", async (req, res) => {
       vatPayable: +vatPayable.toFixed(2),
       netProfit: +netProfit.toFixed(2),
       netMarginPercent: pct(netProfit, totalRevenue),
+      // ── New structured expense accounting breakdown ────────────────────────
+      expenseAccounting: {
+        totalNet:   +totalExpenseTxnNet.toFixed(2),
+        totalVat:   +totalExpenseTxnVat.toFixed(2),
+        totalGross: +totalExpenseTxnTotal.toFixed(2),
+        byCategory: {
+          operational:    +opExpenses.toFixed(2),      // 5-1
+          humanResources: +hrExpenses.toFixed(2),      // 5-2
+          government:     +govExpenses.toFixed(2),     // 5-3
+          administrative: +adminExpenses.toFixed(2),   // 5-4
+          financial:      +finExpenses.toFixed(2),     // 5-5
+          transport:      +transExpenses.toFixed(2),   // 5-6
+          rent:           +rentExpenses.toFixed(2),    // 5-7
+          other:          +otherExpenses.toFixed(2),   // 5-8
+        },
+      },
     });
   } catch (err) {
     req.log.error({ err }, "Error getting P&L report");

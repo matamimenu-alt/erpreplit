@@ -18,6 +18,7 @@ import VatReport from "@/pages/VatReport";
 import Reports from "@/pages/Reports";
 import Branches from "@/pages/Branches";
 import GroupDashboard from "@/pages/GroupDashboard";
+import ExpenseLedger from "@/pages/ExpenseLedger";
 import { RestaurantProvider } from "@/contexts/RestaurantContext";
 
 const queryClient = new QueryClient({
@@ -42,6 +43,7 @@ function Router() {
         <Route path="/supplier-prices" component={SupplierPrices} />
         <Route path="/employees" component={Employees} />
         <Route path="/expenses" component={Expenses} />
+        <Route path="/expense-ledger" component={ExpenseLedger} />
         <Route path="/inventory" component={Inventory} />
         <Route path="/food-cost" component={FoodCost} />
         <Route path="/vat-report" component={VatReport} />

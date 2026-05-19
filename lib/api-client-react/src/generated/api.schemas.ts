@@ -912,6 +912,69 @@ export interface DishPricingResult {
   dishes: DishPricingItem[];
 }
 
+export interface ExpenseCategory {
+  id: number;
+  code: string;
+  name: string;
+  nameAr: string;
+  parentCode?: string | null;
+  level: number;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+export interface ExpenseTransaction {
+  id: number;
+  restaurantId: number;
+  date: string;
+  month: string;
+  categoryCode: string;
+  description: string;
+  descriptionAr?: string | null;
+  amount: number;
+  isVatApplicable: boolean;
+  vatRate: number;
+  vatAmount: number;
+  totalAmount: number;
+  costCenter?: string | null;
+  referenceNo?: string | null;
+  notes?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreateExpenseTransaction {
+  date: string;
+  categoryCode: string;
+  description: string;
+  descriptionAr?: string | null;
+  amount: number;
+  isVatApplicable?: boolean;
+  vatRate?: number;
+  costCenter?: string | null;
+  referenceNo?: string | null;
+  notes?: string | null;
+}
+
+export interface ExpenseSummaryNode {
+  code: string;
+  name: string;
+  nameAr: string;
+  level: number;
+  net: number;
+  vat: number;
+  total: number;
+  count: number;
+  children: ExpenseSummaryNode[];
+}
+
+export interface ExpenseSummary {
+  month?: string | null;
+  fromDate?: string | null;
+  toDate?: string | null;
+  tree: ExpenseSummaryNode[];
+}
+
 export type ListRestaurantsParams = {
   /**
    * Pass "true" to include archived branches
@@ -1104,4 +1167,23 @@ export type UpdateDish200 = {
 
 export type DeleteDish200 = {
   success: boolean;
+};
+
+export type GetExpenseSummaryParams = {
+  month?: string;
+  fromDate?: string;
+  toDate?: string;
+};
+
+export type ListExpenseTransactionsParams = {
+  month?: string;
+  fromDate?: string;
+  toDate?: string;
+  categoryCode?: string;
+  costCenter?: string;
+};
+
+export type DeleteExpenseTransaction200 = {
+  success: boolean;
+  id: number;
 };

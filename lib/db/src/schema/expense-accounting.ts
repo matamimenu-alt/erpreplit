@@ -1,0 +1,46 @@
+import { pgTable, serial, text, numeric, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { restaurantsTable } from "./restaurants";
+
+/**
+ * Expense Category Tree
+ * Codes: "5", "5-1", "5-1-1", etc.
+ * Level 0 = root (5), Level 1 = main (5-1), Level 2 = sub (5-1-1)
+ */
+export const expenseCategoriesTable = pgTable("expense_categories", {
+  id:         serial("id").primaryKey(),
+  code:       text("code").notNull().unique(),          // e.g. "5-1", "5-1-1"
+  name:       text("name").notNull(),                   // English name
+  nameAr:     text("name_ar").notNull(),                // Arabic name
+  parentCode: text("parent_code"),                      // null for root, "5" for level-1, "5-1" for level-2
+  level:      integer("level").notNull().default(0),    // 0=root, 1=main, 2=sub
+  sortOrder:  integer("sort_order").notNull().default(0),
+  isActive:   boolean("is_active").notNull().default(true),
+  createdAt:  timestamp("created_at").defaultNow().notNull(),
+});
+
+/**
+ * Expense Transactions — individual expense entries linked to the category tree
+ */
+export const expenseTransactionsTable = pgTable("expense_transactions", {
+  id:              serial("id").primaryKey(),
+  restaurantId:    integer("restaurant_id").notNull().references(() => restaurantsTable.id),
+  date:            text("date").notNull(),               // YYYY-MM-DD
+  month:           text("month").notNull(),              // YYYY-MM (denormalised for fast filtering)
+  categoryCode:    text("category_code").notNull(),      // references expense_categories.code (level-1 or level-2)
+  description:     text("description").notNull(),
+  descriptionAr:   text("description_ar"),
+  amount:          numeric("amount",    { precision: 14, scale: 2 }).notNull(),  // net before VAT
+  isVatApplicable: boolean("is_vat_applicable").notNull().default(false),
+  vatRate:         numeric("vat_rate",  { precision: 5,  scale: 2 }).notNull().default("15"),
+  vatAmount:       numeric("vat_amount",{ precision: 14, scale: 2 }).notNull().default("0"),
+  totalAmount:     numeric("total_amount",{ precision: 14, scale: 2 }).notNull(),
+  costCenter:      text("cost_center"),                  // optional tagging
+  referenceNo:     text("reference_no"),
+  notes:           text("notes"),
+  createdAt:       timestamp("created_at").defaultNow().notNull(),
+  updatedAt:       timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type ExpenseCategory    = typeof expenseCategoriesTable.$inferSelect;
+export type ExpenseTransaction = typeof expenseTransactionsTable.$inferSelect;
+export type NewExpenseTransaction = typeof expenseTransactionsTable.$inferInsert;
