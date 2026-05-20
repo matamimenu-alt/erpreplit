@@ -1,0 +1,127 @@
+Perform a full audit and rebuild of the Financial Reporting Integration layer across the system.
+
+Critical Issue:
+Many Expense Ledger entries and financial transactions are NOT properly connected to reports. Data is being entered successfully, but several reports are either missing transactions or not updating correctly.
+
+Current Problems:
+
+* Expense Ledger entries do not always appear in reports.
+* Some expenses affect neither P&L nor VAT reports.
+* Added amounts and journal entries sometimes do not reflect anywhere.
+* Reports appear partially disconnected from the accounting engine.
+* Some transactions require manual refresh before appearing.
+
+Required Actions:
+
+1. FULL REPORTING ENGINE AUDIT
+   Review and validate all financial data pipelines between:
+
+* Expense Ledger
+* Purchases
+* Fixed Costs
+* Operating Expenses
+* Journal Entries
+* Transfers
+* Sales
+* VAT Engine
+* Dashboard KPIs
+
+2. ENSURE EVERY TRANSACTION IS LINKED
+   Every financial action must instantly affect:
+
+* Profit & Loss
+* VAT Report
+* Expense Reports
+* Purchase Reports
+* Cash Flow
+* Financial Summary
+* Branch Reports
+* Dashboard totals
+
+3. REALTIME SYNCHRONIZATION
+   After any:
+
+* Add
+* Edit
+* Delete
+* Transfer
+* Adjustment
+* Journal Entry
+
+All reports must refresh instantly without page reload.
+
+4. VALIDATE LEDGER MAPPING
+   Check all ledger accounts and ensure:
+
+* Every account is mapped to a reporting category
+* Every account has VAT behavior configured
+* No orphan accounts exist
+* No transactions are excluded silently
+
+5. ADD DEBUG & VALIDATION SYSTEM
+   Add temporary validation logs:
+
+* Transactions created
+* Transactions included in reports
+* Transactions excluded and why
+* Ledger mapping status
+* VAT calculation sources
+
+6. EXPENSE LEDGER INTEGRATION
+   Ensure all Expense Ledger entries properly affect:
+
+* Input VAT
+* Operating Expenses
+* Fixed Costs
+* Net Profit
+* Branch financials
+
+Including entries such as:
+
+* Insurance
+* Government Fees
+* Contracts
+* Maintenance
+* Services
+* Utilities
+* Administrative costs
+
+7. ADD PROFESSIONAL MANAGEMENT REPORTS
+   Create or improve these reports:
+
+* Profit & Loss Statement
+* VAT Report
+* Expense Report
+* Purchase Report
+* Cash Flow Report
+* Branch Performance Report
+* Monthly Financial Summary
+* Fixed Cost Report
+* Operating Expense Report
+* Payment Method Report
+* Daily Sales Report
+* Net Profit Summary
+* Taxable vs Non-Taxable Expenses
+
+8. REPORT FEATURES
+   All reports must support:
+
+* Branch Filters
+* Date Range Filters
+* Month Selection
+* Export to PDF
+* Export to Excel
+* Summary Cards
+* Drill-down Details
+
+9. CONSISTENCY CHECK
+   Ensure:
+
+* Ledger totals match report totals
+* VAT totals match accounting entries
+* P&L values match transaction data
+* No duplicate VAT calculations
+* Inter-branch transfers excluded from VAT
+
+10. EXPECTED RESULT
+    The system must become fully accounting-integrated where every financial transaction is reflected immediately and accurately across all reports and financial statements used by management and ownership.
