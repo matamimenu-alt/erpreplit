@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { salesTable, purchasesTable, employeesTable, expensesTable, inventoryTable, branchTransfersTable, fixedCostTemplatesTable, fixedCostMonthlyValuesTable, expenseTransactionsTable } from "@workspace/db/schema";
+import { salesTable, purchasesTable, employeesTable, expensesTable, inventoryTable, branchTransfersTable, fixedCostTemplatesTable, fixedCostMonthlyValuesTable, expenseTransactionsTable, expenseCategoriesTable } from "@workspace/db/schema";
 import { eq, and, or } from "drizzle-orm";
 import { getRestaurantId } from "../lib/restaurant";
 
@@ -317,8 +317,145 @@ router.get("/pl", async (req, res) => {
     // 5-8-x Other
     const ledgerOther        = ledgerByCode("5-8");
 
-    // Total from Expense Ledger (EXCLUDING 5-2-x HR — payroll owns that)
-    const totalExpenseTxnNet = ledgerOperational + totalGovernmentFees + ledgerAdmin + ledgerFinancial + ledgerTransport + ledgerRent + ledgerOther;
+    // Total from Expense Ledger (EXCLUDING 5-2-x HR — payroll owns that).
+    // Sum every non-HR ledger row directly so that any ad-hoc code outside
+    // 5-1..5-8 is still represented in the ledger totals and reconciles with
+    // the Fixed-vs-Variable grand total (anything unmapped surfaces in the
+    // `unclassified` bucket rather than being silently dropped).
+    const totalExpenseTxnNet = expTxns
+      .filter(t => !t.categoryCode.startsWith("5-2"))
+      .reduce((s, t) => s + toNum(t.amount), 0);
+    // Residual = any 5-x ledger amount not covered by the 5-1..5-8 named slots above.
+    // Kept as a derived value so the UI can show a "Other / uncategorised ledger" row
+    // when present, and reconciles with fixedVsVariable.
+    const ledgerNamedTotal = ledgerOperational + totalGovernmentFees + ledgerAdmin
+      + ledgerFinancial + ledgerTransport + ledgerRent + ledgerOther;
+    const ledgerResidual = totalExpenseTxnNet - ledgerNamedTotal;
+
+    // ── Fixed vs Variable classification (single source of truth) ─────────────
+    // Every leaf category in `expense_categories` has a `nature` of 'fixed' or
+    // 'variable'. We split the ledger totals along that axis, then add the
+    // fixed-cost templates (each with their own nature, default 'fixed') and
+    // payroll (always fixed). Unmapped rows fall into "unclassified" and
+    // raise a diagnostic warning rather than being silently dropped.
+    const allCats = await db.select().from(expenseCategoriesTable);
+    const natureByCode = new Map<string, "fixed" | "variable">();
+    for (const c of allCats) {
+      if (c.nature === "fixed" || c.nature === "variable") natureByCode.set(c.code, c.nature);
+    }
+    const findNature = (code: string): "fixed" | "variable" | null => {
+      // Try exact, then walk up the tree (5-1-1 → 5-1 → 5)
+      if (natureByCode.has(code)) return natureByCode.get(code)!;
+      const parts = code.split("-");
+      while (parts.length > 1) {
+        parts.pop();
+        const parent = parts.join("-");
+        if (natureByCode.has(parent)) return natureByCode.get(parent)!;
+      }
+      return null;
+    };
+
+    type NatureBucket = {
+      total: number;
+      bySubcategory: Array<{ code: string; label: string; amount: number; nature: "fixed" | "variable" }>;
+    };
+    const fixedBucket: NatureBucket    = { total: 0, bySubcategory: [] };
+    const variableBucket: NatureBucket = { total: 0, bySubcategory: [] };
+    const unclassified: Array<{ code: string; label: string; amount: number }> = [];
+
+    // Aggregate ledger by code → nature
+    const ledgerAggByCode = new Map<string, number>();
+    for (const t of expTxns) {
+      if (t.categoryCode.startsWith("5-2")) continue; // HR owned by payroll
+      ledgerAggByCode.set(t.categoryCode, (ledgerAggByCode.get(t.categoryCode) ?? 0) + toNum(t.amount));
+    }
+    for (const [code, amt] of ledgerAggByCode) {
+      const nature = findNature(code);
+      const label = allCats.find(c => c.code === code)?.name ?? code;
+      if (nature === "fixed") {
+        fixedBucket.total += amt;
+        fixedBucket.bySubcategory.push({ code, label, amount: amt, nature });
+      } else if (nature === "variable") {
+        variableBucket.total += amt;
+        variableBucket.bySubcategory.push({ code, label, amount: amt, nature });
+      } else {
+        unclassified.push({ code, label, amount: amt });
+      }
+    }
+
+    // Fixed-cost templates — use already-computed dynamicBreakdown for the
+    // VAT-exclusive base, and read each template's `nature` (default 'fixed').
+    {
+      const fcOverridesForNature = month
+        ? await db.select().from(fixedCostMonthlyValuesTable)
+            .where(and(eq(fixedCostMonthlyValuesTable.restaurantId, restaurantId), eq(fixedCostMonthlyValuesTable.month, month)))
+        : [];
+      const ovMap = new Map(fcOverridesForNature.map(o => [o.templateId, toNum(o.amount)]));
+      for (const t of fcTemplates) {
+        if (t.category === "staff-salaries") continue;
+        const enteredAmt = ovMap.has(t.id) ? ovMap.get(t.id)! : toNum(t.defaultAmount);
+        const { base } = computeFixedVat(enteredAmt, t.vatType ?? "none", toNum(t.vatRate ?? "15.00"));
+        if (base === 0) continue;
+        const nature = (t.nature === "variable" ? "variable" : "fixed") as "fixed" | "variable";
+        const bucket = nature === "fixed" ? fixedBucket : variableBucket;
+        bucket.total += base;
+        bucket.bySubcategory.push({
+          code: `fixed-cost:${t.id}`,
+          label: `${t.name} (${t.category})`,
+          amount: base,
+          nature,
+        });
+      }
+    }
+
+    // Payroll — always fixed
+    if (payrollExpenses > 0) {
+      fixedBucket.total += payrollExpenses;
+      fixedBucket.bySubcategory.push({ code: "payroll", label: "Payroll (HR Module)", amount: payrollExpenses, nature: "fixed" });
+    }
+    // Staff expenses (legacy iqama/visa) — fixed
+    if (totalStaffExpenses > 0) {
+      fixedBucket.total += totalStaffExpenses;
+      fixedBucket.bySubcategory.push({ code: "legacy-staff", label: "Staff Expenses (legacy)", amount: totalStaffExpenses, nature: "fixed" });
+    }
+    // Legacy fixed expenses table — fixed
+    if (totalFixedExpenses > 0) {
+      fixedBucket.total += totalFixedExpenses;
+      fixedBucket.bySubcategory.push({ code: "legacy-fixed", label: "Fixed Costs (legacy table)", amount: totalFixedExpenses, nature: "fixed" });
+    }
+    // Purchase OpEx (vehicle fuel/maintenance/IT/marketing/others) — variable
+    if (totalPurchaseOpex > 0) {
+      variableBucket.total += totalPurchaseOpex;
+      variableBucket.bySubcategory.push({ code: "purchase-opex", label: "Purchase OpEx (vehicle, IT, marketing, …)", amount: totalPurchaseOpex, nature: "variable" });
+    }
+    // App commissions — variable (depends on order volume)
+    if (totalAppCommissions > 0) {
+      variableBucket.total += totalAppCommissions;
+      variableBucket.bySubcategory.push({ code: "app-commissions", label: "App Commissions", amount: totalAppCommissions, nature: "variable" });
+    }
+
+    fixedBucket.bySubcategory.sort((a, b) => b.amount - a.amount);
+    variableBucket.bySubcategory.sort((a, b) => b.amount - a.amount);
+
+    const fixedVsVariable = {
+      fixedTotal:      f2(fixedBucket.total),
+      variableTotal:   f2(variableBucket.total),
+      unclassifiedTotal: f2(unclassified.reduce((s, u) => s + u.amount, 0)),
+      grandTotal:      f2(fixedBucket.total + variableBucket.total + unclassified.reduce((s, u) => s + u.amount, 0)),
+      fixedRatio:      0,
+      variableRatio:   0,
+      fixed:    fixedBucket.bySubcategory.map(b => ({ ...b, amount: f2(b.amount) })),
+      variable: variableBucket.bySubcategory.map(b => ({ ...b, amount: f2(b.amount) })),
+      unclassified: unclassified.map(u => ({ ...u, amount: f2(u.amount) })),
+    };
+    const totalOpExForRatio = fixedBucket.total + variableBucket.total;
+    if (totalOpExForRatio > 0) {
+      fixedVsVariable.fixedRatio    = +((fixedBucket.total    / totalOpExForRatio) * 100).toFixed(1);
+      fixedVsVariable.variableRatio = +((variableBucket.total / totalOpExForRatio) * 100).toFixed(1);
+    }
+    if (unclassified.length > 0) {
+      req.log.warn({ unclassified }, "P&L: expense entries with unmapped nature — falling outside Fixed/Variable totals");
+    }
     const totalExpenseTxnVat   = expTxns.filter(t => !t.categoryCode.startsWith("5-2")).reduce((s, t) => s + toNum(t.vatAmount), 0);
     const totalExpenseTxnTotal = expTxns.filter(t => !t.categoryCode.startsWith("5-2")).reduce((s, t) => s + toNum(t.totalAmount), 0);
 
@@ -437,7 +574,17 @@ router.get("/pl", async (req, res) => {
         hrExcluded:  f2(ledgerHR),
         // Grand total from ledger (excl. HR)
         total:       f2(totalExpenseTxnNet),
+        // Residual: any 5-x ledger amount outside the named 5-1..5-8 slots
+        // (e.g. user-defined codes). Already INCLUDED in `total` above and in
+        // fixedVsVariable. Surface separately so the UI can reconcile.
+        residual:    f2(ledgerResidual),
       },
+
+      // ── Fixed vs Variable classification (single source of truth) ──────────
+      // Splits ALL operating expenses by `nature` from expense_categories.
+      // Includes payroll/legacy/purchase-opex/app-commissions in the right bucket.
+      // `unclassified` length > 0 means a category is missing its `nature` mapping.
+      fixedVsVariable,
 
       // ── Government Fees (dedicated section) ────────────────────────────────
       // SOURCE: Expense Ledger 5-3-x ONLY

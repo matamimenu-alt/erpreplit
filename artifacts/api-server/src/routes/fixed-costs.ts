@@ -51,6 +51,10 @@ function fmtTemplate(t: typeof fixedCostTemplatesTable.$inferSelect) {
     sortOrder:     t.sortOrder,
     vatType:       t.vatType ?? "none",
     vatRate:       toNum(t.vatRate ?? "15.00"),
+    // Fixed vs Variable nature — drives the unified P&L Fixed/Variable bucket.
+    // Defaults to 'fixed' (table-level default) but may be overridden per
+    // template for variable-by-nature costs (e.g., variable utilities).
+    nature:        (t.nature === "variable" ? "variable" : "fixed") as "fixed" | "variable",
     createdAt:     t.createdAt.toISOString(),
     updatedAt:     t.updatedAt.toISOString(),
   };
@@ -127,7 +131,8 @@ router.get("/templates", async (req, res) => {
 router.post("/templates", async (req, res) => {
   try {
     const restaurantId = getRestaurantId(req);
-    const { category, name, defaultAmount, notes, sortOrder, vatType, vatRate } = req.body;
+    const { category, name, defaultAmount, notes, sortOrder, vatType, vatRate, nature } = req.body;
+    const safeNature = nature === "variable" ? "variable" : "fixed";
     const [t] = await db
       .insert(fixedCostTemplatesTable)
       .values({
@@ -139,6 +144,7 @@ router.post("/templates", async (req, res) => {
         sortOrder: sortOrder ?? 0,
         vatType: vatType ?? "none",
         vatRate: fmtAmt(Number(vatRate) || 15),
+        nature: safeNature,
       })
       .returning();
     await writeAudit({
@@ -160,7 +166,7 @@ router.put("/templates/:id", async (req, res) => {
   try {
     const restaurantId = getRestaurantId(req);
     const id = parseInt(req.params.id);
-    const { category, name, defaultAmount, notes, isActive, sortOrder, vatType, vatRate } = req.body;
+    const { category, name, defaultAmount, notes, isActive, sortOrder, vatType, vatRate, nature } = req.body;
 
     const [existing] = await db
       .select()
@@ -182,6 +188,9 @@ router.put("/templates/:id", async (req, res) => {
         sortOrder:     sortOrder !== undefined ? sortOrder : existing.sortOrder,
         vatType:       vatType !== undefined ? vatType : existing.vatType,
         vatRate:       vatRate !== undefined ? fmtAmt(Number(vatRate)) : existing.vatRate,
+        nature:        nature !== undefined
+          ? (nature === "variable" ? "variable" : "fixed")
+          : existing.nature,
         updatedAt:     new Date(),
       })
       .where(and(eq(fixedCostTemplatesTable.id, id), eq(fixedCostTemplatesTable.restaurantId, restaurantId)))

@@ -94,11 +94,23 @@ type PLExtra = {
     tools: number; marketing: number; totalOperational: number;
     government: number; administrative: number; financial: number;
     transport: number; rent: number; other: number; hrExcluded: number; total: number;
+    residual?: number;
   };
   governmentFees?: {
     laborOffice: number; passport: number; sponsorship: number; other: number; total: number;
   };
   dynamicFixedBreakdown?: Record<string, number>;
+  fixedVsVariable?: {
+    fixedTotal: number;
+    variableTotal: number;
+    unclassifiedTotal: number;
+    grandTotal: number;
+    fixedRatio: number;
+    variableRatio: number;
+    fixed:    Array<{ code: string; label: string; amount: number; nature: "fixed" }>;
+    variable: Array<{ code: string; label: string; amount: number; nature: "variable" }>;
+    unclassified: Array<{ code: string; label: string; amount: number }>;
+  };
   // Branch transfer VAT allocation
   transfersVatOut?: number;
   transfersVatIn?: number;
@@ -417,6 +429,7 @@ export default function Reports() {
                       {(ledger?.transport ?? 0) > 0   && <Row label="Transport & Vehicles (5-6)"      value={ledger.transport}   indent percent={pctOf(ledger.transport, R)} />}
                       {(ledger?.rent ?? 0) > 0        && <Row label="Rent — Manual (5-7)"             value={ledger.rent}        indent percent={pctOf(ledger.rent, R)} />}
                       {(ledger?.other ?? 0) > 0       && <Row label="Other Expenses (5-8)"            value={ledger.other}       indent percent={pctOf(ledger.other, R)} />}
+                      {(ledger?.residual ?? 0) > 0    && <Row label="Other / uncategorised ledger"  value={ledger.residual ?? 0} indent percent={pctOf(ledger.residual ?? 0, R)} />}
                       {(ledger?.hrExcluded ?? 0) > 0  && (
                         <tr className="border-b border-slate-100">
                           <td colSpan={3} className="pl-10 py-2 text-xs text-slate-400 flex items-center gap-1">
@@ -460,10 +473,112 @@ export default function Reports() {
                           ))
                         : fixedDyn > 0 && <Row label="Fixed Costs (Templates)" value={fixedDyn} indent percent={pctOf(fixedDyn, R)} />
                       }
-                      {fixedLegacy > 0 && fixedDyn === 0 && <Row label="Fixed Costs (Legacy)" value={fixedLegacy} indent percent={pctOf(fixedLegacy, R)} />}
-                      <Row label="Total Fixed Expenses" value={fixedDyn || fixedLegacy} bold highlight="neutral" percent={pctOf(fixedDyn || fixedLegacy, R)} />
+                      {fixedLegacy > 0 && <Row label="Fixed Costs (Legacy)" value={fixedLegacy} indent percent={pctOf(fixedLegacy, R)} />}
+                      <Row label="Total Fixed Expenses" value={fixedDyn + fixedLegacy} bold highlight="neutral" percent={pctOf(fixedDyn + fixedLegacy, R)} />
                       <Div />
                     </>}
+
+                    {/* ── [7.5] FIXED vs VARIABLE BREAKDOWN ─────────────────────────── */}
+                    {pl?.fixedVsVariable && pl.fixedVsVariable.grandTotal > 0 && (() => {
+                      const fv = pl.fixedVsVariable!;
+                      return (
+                        <>
+                          <SH title="Fixed vs Variable Expenses" icon={<Building2 className="w-3.5 h-3.5" />} />
+                          <OwnershipNote
+                            icon={<Info className="w-3 h-3" />}
+                            text="Single source of truth — every operating expense (ledger + payroll + templates + commissions) classified by its nature field"
+                          />
+                          <tr className="border-b border-slate-100">
+                            <td colSpan={3} className="pl-6 py-2">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="flex-1 h-3 rounded-full bg-slate-100 overflow-hidden flex">
+                                  <div
+                                    className="h-full bg-blue-500"
+                                    style={{ width: `${fv.fixedRatio}%` }}
+                                    title={`Fixed ${fv.fixedRatio}%`}
+                                  />
+                                  <div
+                                    className="h-full bg-amber-500"
+                                    style={{ width: `${fv.variableRatio}%` }}
+                                    title={`Variable ${fv.variableRatio}%`}
+                                  />
+                                </div>
+                                <span className="text-xs text-slate-500 whitespace-nowrap">
+                                  {fv.fixedRatio}% / {fv.variableRatio}%
+                                </span>
+                              </div>
+                            </td>
+                          </tr>
+                          <Row
+                            label={`Fixed Expenses (${fv.fixed.length} sources)`}
+                            value={fv.fixedTotal}
+                            indent
+                            percent={pctOf(fv.fixedTotal, R)}
+                          />
+                          <tr className="border-b border-slate-100">
+                            <td colSpan={3} className="pl-12 py-1">
+                              <details className="text-xs">
+                                <summary className="cursor-pointer text-slate-500 hover:text-slate-700">
+                                  Show fixed breakdown
+                                </summary>
+                                <table className="w-full mt-1">
+                                  <tbody>
+                                    {fv.fixed.map(b => (
+                                      <tr key={b.code} className="text-slate-600">
+                                        <td className="py-0.5">{b.code} — {b.label}</td>
+                                        <td className="py-0.5 text-right tabular-nums">{formatSAR(b.amount)}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </details>
+                            </td>
+                          </tr>
+                          <Row
+                            label={`Variable Expenses (${fv.variable.length} sources)`}
+                            value={fv.variableTotal}
+                            indent
+                            percent={pctOf(fv.variableTotal, R)}
+                          />
+                          <tr className="border-b border-slate-100">
+                            <td colSpan={3} className="pl-12 py-1">
+                              <details className="text-xs">
+                                <summary className="cursor-pointer text-slate-500 hover:text-slate-700">
+                                  Show variable breakdown
+                                </summary>
+                                <table className="w-full mt-1">
+                                  <tbody>
+                                    {fv.variable.map(b => (
+                                      <tr key={b.code} className="text-slate-600">
+                                        <td className="py-0.5">{b.code} — {b.label}</td>
+                                        <td className="py-0.5 text-right tabular-nums">{formatSAR(b.amount)}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </details>
+                            </td>
+                          </tr>
+                          {fv.unclassified.length > 0 && (
+                            <tr className="border-b border-red-200 bg-red-50">
+                              <td colSpan={3} className="pl-6 py-2 text-xs text-red-700">
+                                <Info className="w-3 h-3 inline mr-1" />
+                                <strong>{fv.unclassified.length} unclassified expense(s)</strong> totaling {formatSAR(fv.unclassifiedTotal)} —
+                                missing Fixed/Variable nature. Check /api/diagnostics/reporting.
+                              </td>
+                            </tr>
+                          )}
+                          <Row
+                            label="Total Operating Expenses (Fixed + Variable)"
+                            value={fv.grandTotal}
+                            bold
+                            highlight="neutral"
+                            percent={pctOf(fv.grandTotal, R)}
+                          />
+                          <Div />
+                        </>
+                      );
+                    })()}
 
                     {/* ── [8] APP COMMISSIONS ───────────────────────────────────────── */}
                     {appCommissions > 0 && <>

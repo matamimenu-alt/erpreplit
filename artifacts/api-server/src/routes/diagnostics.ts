@@ -195,6 +195,38 @@ router.get("/reporting", async (req, res) => {
       }))
       .sort((a, b) => b.totalNet - a.totalNet);
 
+    // ── Nature mapping audit (Fixed vs Variable classification) ─────────────
+    // Every leaf expense category MUST have a nature ('fixed' | 'variable').
+    // Anything else falls through to "unclassified" in P&L and silently distorts
+    // the Fixed/Variable totals — flag it so it can be mapped.
+    const unmappedCategories = allCategories
+      .filter(c => c.level === 2 && c.isActive && !c.nature)
+      .map(c => ({ code: c.code, name: c.name, nameAr: c.nameAr }));
+    if (unmappedCategories.length > 0) {
+      issues.push(`${unmappedCategories.length} leaf expense category/ies have no nature (fixed/variable) — entries against them won't appear in Fixed-vs-Variable totals.`);
+    }
+    // Also flag transactions whose category resolves to no nature
+    const codesWithoutNature = new Set(
+      allCategories.filter(c => !c.nature).map(c => c.code),
+    );
+    const unclassifiedTxns = manualExpenses.filter(e => {
+      if (e.categoryCode.startsWith("5-2")) return false; // HR excluded by design
+      // walk up parent chain to see if any ancestor has nature
+      const cat = allCategories.find(c => c.code === e.categoryCode);
+      if (!cat) return true; // orphan — already flagged
+      if (cat.nature) return false;
+      const parts = e.categoryCode.split("-");
+      while (parts.length > 1) {
+        parts.pop();
+        const parent = allCategories.find(c => c.code === parts.join("-"));
+        if (parent?.nature) return false;
+      }
+      return true;
+    });
+    if (unclassifiedTxns.length > 0) {
+      issues.push(`${unclassifiedTxns.length} expense_transactions row(s) belong to a category with no nature mapping.`);
+    }
+
     // Health-check: every category with VAT recorded should have isVatApplicable consistent
     const inconsistent = manualExpenses.filter(e =>
       (n(e.vatAmount) > 0 && (e.vatType === "none" || !e.isVatApplicable)) ||
@@ -232,6 +264,13 @@ router.get("/reporting", async (req, res) => {
         amount: f2(n(e.amount)), vatAmount: f2(n(e.vatAmount)),
       })),
       ledgerMapping,
+      natureMapping: {
+        unmappedCategories,
+        unclassifiedTransactions: unclassifiedTxns.map(e => ({
+          id: e.id, date: e.date, categoryCode: e.categoryCode,
+          description: e.description, amount: f2(n(e.amount)),
+        })),
+      },
       issues,
       healthy: issues.length === 0,
     });

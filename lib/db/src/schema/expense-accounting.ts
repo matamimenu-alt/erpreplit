@@ -15,6 +15,9 @@ export const expenseCategoriesTable = pgTable("expense_categories", {
   level:      integer("level").notNull().default(0),    // 0=root, 1=main, 2=sub
   sortOrder:  integer("sort_order").notNull().default(0),
   isActive:   boolean("is_active").notNull().default(true),
+  // Expense nature — drives Fixed vs Variable grouping in P&L / Reports.
+  // null only for root/level-1 aggregate nodes; every leaf MUST have a value.
+  nature:     text("nature"),                           // 'fixed' | 'variable' | null
   createdAt:  timestamp("created_at").defaultNow().notNull(),
 });
 

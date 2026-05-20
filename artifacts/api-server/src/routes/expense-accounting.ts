@@ -9,7 +9,7 @@ import {
   expenseCategoriesTable,
   expenseTransactionsTable,
 } from "@workspace/db/schema";
-import { eq, and, gte, lte, desc, asc } from "drizzle-orm";
+import { eq, and, gte, lte, desc, asc, isNull, sql } from "drizzle-orm";
 import { getRestaurantId } from "../lib/restaurant";
 
 const router: IRouter = Router();
@@ -17,73 +17,95 @@ function toNum(v: unknown) { return parseFloat(String(v)) || 0; }
 function fmt(v: number) { return String(v.toFixed(2)); }
 
 // ─── Category seed data ───────────────────────────────────────────────────────
-const CATEGORY_SEED = [
+// Nature: 'fixed' = recurring/predictable (rent, salaries, insurance, gov fees);
+//         'variable' = volume-dependent (cleaning supplies, fuel, marketing, …);
+//         null only for non-leaf aggregate rows (root + main categories).
+type Nature = "fixed" | "variable" | null;
+
+const CATEGORY_SEED: Array<{
+  code: string; name: string; nameAr: string;
+  parentCode: string | null; level: number; sortOrder: number;
+  nature: Nature;
+}> = [
   // Root
-  { code: "5",     name: "Expenses",                     nameAr: "المصروفات",               parentCode: null, level: 0, sortOrder: 0 },
+  { code: "5",     name: "Expenses",                     nameAr: "المصروفات",               parentCode: null, level: 0, sortOrder: 0, nature: null },
 
-  // ── Main categories ──────────────────────────────────────────────────────
-  { code: "5-1",   name: "Operational Expenses",         nameAr: "المصروفات التشغيلية",       parentCode: "5",   level: 1, sortOrder: 1 },
-  { code: "5-2",   name: "Human Resources Expenses",     nameAr: "مصروفات الموارد البشرية",    parentCode: "5",   level: 1, sortOrder: 2 },
-  { code: "5-3",   name: "Government Fees",              nameAr: "المصروفات الحكومية",         parentCode: "5",   level: 1, sortOrder: 3 },
-  { code: "5-4",   name: "Administrative Expenses",      nameAr: "المصروفات الإدارية",         parentCode: "5",   level: 1, sortOrder: 4 },
-  { code: "5-5",   name: "Financial Expenses",           nameAr: "المصروفات المالية",          parentCode: "5",   level: 1, sortOrder: 5 },
-  { code: "5-6",   name: "Transport & Vehicles",         nameAr: "النقل والمركبات",            parentCode: "5",   level: 1, sortOrder: 6 },
-  { code: "5-7",   name: "Rent",                         nameAr: "الإيجارات",                  parentCode: "5",   level: 1, sortOrder: 7 },
-  { code: "5-8",   name: "Other Expenses",               nameAr: "مصروفات أخرى",               parentCode: "5",   level: 1, sortOrder: 8 },
+  // ── Main categories (aggregate — nature derived from children) ───────────
+  { code: "5-1",   name: "Operational Expenses",         nameAr: "المصروفات التشغيلية",       parentCode: "5",   level: 1, sortOrder: 1, nature: null },
+  { code: "5-2",   name: "Human Resources Expenses",     nameAr: "مصروفات الموارد البشرية",    parentCode: "5",   level: 1, sortOrder: 2, nature: null },
+  { code: "5-3",   name: "Government Fees",              nameAr: "المصروفات الحكومية",         parentCode: "5",   level: 1, sortOrder: 3, nature: null },
+  { code: "5-4",   name: "Administrative Expenses",      nameAr: "المصروفات الإدارية",         parentCode: "5",   level: 1, sortOrder: 4, nature: null },
+  { code: "5-5",   name: "Financial Expenses",           nameAr: "المصروفات المالية",          parentCode: "5",   level: 1, sortOrder: 5, nature: null },
+  { code: "5-6",   name: "Transport & Vehicles",         nameAr: "النقل والمركبات",            parentCode: "5",   level: 1, sortOrder: 6, nature: null },
+  { code: "5-7",   name: "Rent",                         nameAr: "الإيجارات",                  parentCode: "5",   level: 1, sortOrder: 7, nature: null },
+  { code: "5-8",   name: "Other Expenses",               nameAr: "مصروفات أخرى",               parentCode: "5",   level: 1, sortOrder: 8, nature: null },
 
-  // ── 5-1 Operational ─────────────────────────────────────────────────────
-  { code: "5-1-1", name: "Cleaning",                     nameAr: "نظافة",                     parentCode: "5-1", level: 2, sortOrder: 1 },
-  { code: "5-1-2", name: "Fuel",                         nameAr: "محروقات",                   parentCode: "5-1", level: 2, sortOrder: 2 },
-  { code: "5-1-3", name: "Electricity, Water & Telecom", nameAr: "كهرباء ومياه واتصالات",      parentCode: "5-1", level: 2, sortOrder: 3 },
-  { code: "5-1-4", name: "Maintenance & Repair",         nameAr: "صيانة وإصلاح",               parentCode: "5-1", level: 2, sortOrder: 4 },
-  { code: "5-1-5", name: "Consumable Tools & Supplies",  nameAr: "أدوات ولوازم مستهلكة",       parentCode: "5-1", level: 2, sortOrder: 5 },
-  { code: "5-1-6", name: "Marketing & Advertising",      nameAr: "دعاية وإعلان",               parentCode: "5-1", level: 2, sortOrder: 6 },
+  // ── 5-1 Operational — mostly volume-dependent ───────────────────────────
+  { code: "5-1-1", name: "Cleaning",                     nameAr: "نظافة",                     parentCode: "5-1", level: 2, sortOrder: 1, nature: "variable" },
+  { code: "5-1-2", name: "Fuel",                         nameAr: "محروقات",                   parentCode: "5-1", level: 2, sortOrder: 2, nature: "variable" },
+  { code: "5-1-3", name: "Electricity, Water & Telecom", nameAr: "كهرباء ومياه واتصالات",      parentCode: "5-1", level: 2, sortOrder: 3, nature: "fixed"    },
+  { code: "5-1-4", name: "Maintenance & Repair",         nameAr: "صيانة وإصلاح",               parentCode: "5-1", level: 2, sortOrder: 4, nature: "variable" },
+  { code: "5-1-5", name: "Consumable Tools & Supplies",  nameAr: "أدوات ولوازم مستهلكة",       parentCode: "5-1", level: 2, sortOrder: 5, nature: "variable" },
+  { code: "5-1-6", name: "Marketing & Advertising",      nameAr: "دعاية وإعلان",               parentCode: "5-1", level: 2, sortOrder: 6, nature: "variable" },
 
-  // ── 5-2 HR ───────────────────────────────────────────────────────────────
-  { code: "5-2-1", name: "Salaries",                     nameAr: "رواتب",                     parentCode: "5-2", level: 2, sortOrder: 1 },
-  { code: "5-2-2", name: "Housing Allowance",            nameAr: "بدل سكن",                   parentCode: "5-2", level: 2, sortOrder: 2 },
-  { code: "5-2-3", name: "Staff Accommodation",          nameAr: "سكن موظفين",                parentCode: "5-2", level: 2, sortOrder: 3 },
-  { code: "5-2-4", name: "Medical Insurance",            nameAr: "تأمين طبي",                 parentCode: "5-2", level: 2, sortOrder: 4 },
-  { code: "5-2-5", name: "Social Insurance (GOSI)",      nameAr: "تأمينات اجتماعية",           parentCode: "5-2", level: 2, sortOrder: 5 },
-  { code: "5-2-6", name: "End-of-Service Benefits",      nameAr: "مكافأة نهاية خدمة",         parentCode: "5-2", level: 2, sortOrder: 6 },
-  { code: "5-2-7", name: "Vacation Salaries",            nameAr: "رواتب إجازات",               parentCode: "5-2", level: 2, sortOrder: 7 },
+  // ── 5-2 HR — all fixed (recurring payroll) ───────────────────────────────
+  { code: "5-2-1", name: "Salaries",                     nameAr: "رواتب",                     parentCode: "5-2", level: 2, sortOrder: 1, nature: "fixed"    },
+  { code: "5-2-2", name: "Housing Allowance",            nameAr: "بدل سكن",                   parentCode: "5-2", level: 2, sortOrder: 2, nature: "fixed"    },
+  { code: "5-2-3", name: "Staff Accommodation",          nameAr: "سكن موظفين",                parentCode: "5-2", level: 2, sortOrder: 3, nature: "fixed"    },
+  { code: "5-2-4", name: "Medical Insurance",            nameAr: "تأمين طبي",                 parentCode: "5-2", level: 2, sortOrder: 4, nature: "fixed"    },
+  { code: "5-2-5", name: "Social Insurance (GOSI)",      nameAr: "تأمينات اجتماعية",           parentCode: "5-2", level: 2, sortOrder: 5, nature: "fixed"    },
+  { code: "5-2-6", name: "End-of-Service Benefits",      nameAr: "مكافأة نهاية خدمة",         parentCode: "5-2", level: 2, sortOrder: 6, nature: "fixed"    },
+  { code: "5-2-7", name: "Vacation Salaries",            nameAr: "رواتب إجازات",               parentCode: "5-2", level: 2, sortOrder: 7, nature: "fixed"    },
 
-  // ── 5-3 Government ──────────────────────────────────────────────────────
-  { code: "5-3-1", name: "Labor Office Fees",            nameAr: "رسوم مكتب العمل",           parentCode: "5-3", level: 2, sortOrder: 1 },
-  { code: "5-3-2", name: "Passport Fees",                nameAr: "رسوم الجوازات",              parentCode: "5-3", level: 2, sortOrder: 2 },
-  { code: "5-3-3", name: "Sponsorship Transfer",         nameAr: "نقل كفالة",                 parentCode: "5-3", level: 2, sortOrder: 3 },
-  { code: "5-3-4", name: "Other Government Fees",        nameAr: "رسوم حكومية أخرى",          parentCode: "5-3", level: 2, sortOrder: 4 },
+  // ── 5-3 Government — recurring renewals = fixed ─────────────────────────
+  { code: "5-3-1", name: "Labor Office Fees",            nameAr: "رسوم مكتب العمل",           parentCode: "5-3", level: 2, sortOrder: 1, nature: "fixed"    },
+  { code: "5-3-2", name: "Passport Fees",                nameAr: "رسوم الجوازات",              parentCode: "5-3", level: 2, sortOrder: 2, nature: "fixed"    },
+  { code: "5-3-3", name: "Sponsorship Transfer",         nameAr: "نقل كفالة",                 parentCode: "5-3", level: 2, sortOrder: 3, nature: "variable" },
+  { code: "5-3-4", name: "Other Government Fees",        nameAr: "رسوم حكومية أخرى",          parentCode: "5-3", level: 2, sortOrder: 4, nature: "variable" },
 
   // ── 5-4 Administrative ──────────────────────────────────────────────────
-  { code: "5-4-1", name: "Stationery & Printing",        nameAr: "قرطاسية ومطبوعات",          parentCode: "5-4", level: 2, sortOrder: 1 },
-  { code: "5-4-2", name: "Computers & IT Equipment",     nameAr: "حاسب آلي",                  parentCode: "5-4", level: 2, sortOrder: 2 },
-  { code: "5-4-3", name: "Consulting Fees",              nameAr: "استشارات إدارية",            parentCode: "5-4", level: 2, sortOrder: 3 },
-  { code: "5-4-4", name: "Accounting Adjustments",       nameAr: "تسويات محاسبية",             parentCode: "5-4", level: 2, sortOrder: 4 },
+  { code: "5-4-1", name: "Stationery & Printing",        nameAr: "قرطاسية ومطبوعات",          parentCode: "5-4", level: 2, sortOrder: 1, nature: "variable" },
+  { code: "5-4-2", name: "Computers & IT Equipment",     nameAr: "حاسب آلي",                  parentCode: "5-4", level: 2, sortOrder: 2, nature: "variable" },
+  { code: "5-4-3", name: "Consulting Fees",              nameAr: "استشارات إدارية",            parentCode: "5-4", level: 2, sortOrder: 3, nature: "variable" },
+  { code: "5-4-4", name: "Accounting Adjustments",       nameAr: "تسويات محاسبية",             parentCode: "5-4", level: 2, sortOrder: 4, nature: "variable" },
 
   // ── 5-5 Financial ───────────────────────────────────────────────────────
-  { code: "5-5-1", name: "Bank Charges",                 nameAr: "رسوم بنكية",                parentCode: "5-5", level: 2, sortOrder: 1 },
-  { code: "5-5-2", name: "Allowed Discounts",            nameAr: "خصومات مسموح بها",          parentCode: "5-5", level: 2, sortOrder: 2 },
+  { code: "5-5-1", name: "Bank Charges",                 nameAr: "رسوم بنكية",                parentCode: "5-5", level: 2, sortOrder: 1, nature: "variable" },
+  { code: "5-5-2", name: "Allowed Discounts",            nameAr: "خصومات مسموح بها",          parentCode: "5-5", level: 2, sortOrder: 2, nature: "variable" },
 
   // ── 5-6 Transport ───────────────────────────────────────────────────────
-  { code: "5-6-1", name: "Vehicle Insurance",            nameAr: "تأمين سيارات",              parentCode: "5-6", level: 2, sortOrder: 1 },
-  { code: "5-6-2", name: "Vehicle Maintenance",          nameAr: "صيانة سيارات",              parentCode: "5-6", level: 2, sortOrder: 2 },
-  { code: "5-6-3", name: "Travel & Transportation",      nameAr: "سفر وانتقالات",             parentCode: "5-6", level: 2, sortOrder: 3 },
+  { code: "5-6-1", name: "Vehicle Insurance",            nameAr: "تأمين سيارات",              parentCode: "5-6", level: 2, sortOrder: 1, nature: "fixed"    },
+  { code: "5-6-2", name: "Vehicle Maintenance",          nameAr: "صيانة سيارات",              parentCode: "5-6", level: 2, sortOrder: 2, nature: "variable" },
+  { code: "5-6-3", name: "Travel & Transportation",      nameAr: "سفر وانتقالات",             parentCode: "5-6", level: 2, sortOrder: 3, nature: "variable" },
 
-  // ── 5-7 Rent ────────────────────────────────────────────────────────────
-  { code: "5-7-1", name: "Branch Rent",                  nameAr: "إيجارات الفروع",            parentCode: "5-7", level: 2, sortOrder: 1 },
-  { code: "5-7-2", name: "Staff Housing Rent",           nameAr: "سكن العاملين",              parentCode: "5-7", level: 2, sortOrder: 2 },
+  // ── 5-7 Rent — all fixed by definition ──────────────────────────────────
+  { code: "5-7-1", name: "Branch Rent",                  nameAr: "إيجارات الفروع",            parentCode: "5-7", level: 2, sortOrder: 1, nature: "fixed"    },
+  { code: "5-7-2", name: "Staff Housing Rent",           nameAr: "سكن العاملين",              parentCode: "5-7", level: 2, sortOrder: 2, nature: "fixed"    },
 
   // ── 5-8 Other ───────────────────────────────────────────────────────────
-  { code: "5-8-1", name: "Donations",                    nameAr: "تبرعات",                    parentCode: "5-8", level: 2, sortOrder: 1 },
-  { code: "5-8-2", name: "Losses & Miscellaneous",       nameAr: "خسائر ومصاريف متنوعة",      parentCode: "5-8", level: 2, sortOrder: 2 },
+  { code: "5-8-1", name: "Donations",                    nameAr: "تبرعات",                    parentCode: "5-8", level: 2, sortOrder: 1, nature: "variable" },
+  { code: "5-8-2", name: "Losses & Miscellaneous",       nameAr: "خسائر ومصاريف متنوعة",      parentCode: "5-8", level: 2, sortOrder: 2, nature: "variable" },
 ];
 
-// ─── Seed categories on startup ───────────────────────────────────────────────
+// ─── Seed + backfill categories on startup ────────────────────────────────────
+// Runs every startup (cheap). New installs insert the full tree; existing
+// installs get their `nature` column backfilled where it is currently NULL.
 export async function seedExpenseCategories() {
   const existing = await db.select({ code: expenseCategoriesTable.code }).from(expenseCategoriesTable);
-  if (existing.length > 0) return;
+  const haveCodes = new Set(existing.map(e => e.code));
   for (const cat of CATEGORY_SEED) {
-    await db.insert(expenseCategoriesTable).values(cat).onConflictDoNothing();
+    if (!haveCodes.has(cat.code)) {
+      await db.insert(expenseCategoriesTable).values(cat).onConflictDoNothing();
+    } else if (cat.nature !== null) {
+      // Backfill nature on existing seeded rows only when NULL — never
+      // overwrite a user-customised value.
+      await db.update(expenseCategoriesTable)
+        .set({ nature: cat.nature })
+        .where(and(
+          eq(expenseCategoriesTable.code, cat.code),
+          isNull(expenseCategoriesTable.nature),
+        ));
+    }
   }
 }
 
