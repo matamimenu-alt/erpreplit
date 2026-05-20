@@ -40,16 +40,6 @@ export interface PLReport {
   transfersOutCost?: number;
   /** Net transfer impact on COGS (transfersInCost - transfersOutCost) */
   netTransferCOGS?: number;
-  /** VAT amount that left this branch with outbound transfers */
-  transfersVatOut?: number;
-  /** VAT amount that arrived at this branch with inbound transfers */
-  transfersVatIn?: number;
-  /** Net VAT impact from transfers (vatIn - vatOut) */
-  netTransferVat?: number;
-  /** Full cost (net + VAT) of outbound transfers */
-  transfersOutGross?: number;
-  /** Full cost (net + VAT) of inbound transfers */
-  transfersInGross?: number;
   grossProfit: number;
   grossMarginPercent: number;
   foodCostPercent: number;

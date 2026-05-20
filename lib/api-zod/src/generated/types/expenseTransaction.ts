@@ -5,6 +5,7 @@
  * Restaurant Management & Accounting System API
  * OpenAPI spec version: 0.1.0
  */
+import type { ExpenseTransactionVatType } from "./expenseTransactionVatType";
 
 export interface ExpenseTransaction {
   id: number;
@@ -16,6 +17,7 @@ export interface ExpenseTransaction {
   descriptionAr?: string | null;
   amount: number;
   isVatApplicable: boolean;
+  vatType: ExpenseTransactionVatType;
   vatRate: number;
   vatAmount: number;
   totalAmount: number;

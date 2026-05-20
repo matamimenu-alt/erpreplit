@@ -31,13 +31,14 @@ function today() { return new Date().toISOString().split("T")[0]; }
 function pct(part: number, total: number) { return total > 0 ? (part / total) * 100 : 0; }
 
 // ─── VAT Mode ────────────────────────────────────────────────────────────────
-type VatMode = "none" | "exclusive" | "inclusive";
+// API-aligned values: "none" | "included" (شامل) | "excluded" (يُضاف فوق)
+type VatMode = "none" | "excluded" | "included";
 
 function computeVat(inputAmount: number, mode: VatMode) {
   const VAT_RATE = 15;
-  if (mode === "none")      return { net: inputAmount, vat: 0,                                     total: inputAmount };
-  if (mode === "exclusive") return { net: inputAmount, vat: +(inputAmount * VAT_RATE / 100).toFixed(2), total: +(inputAmount * (1 + VAT_RATE / 100)).toFixed(2) };
-  // inclusive: user entered total-including-VAT
+  if (mode === "none")     return { net: inputAmount, vat: 0,                                              total: inputAmount };
+  if (mode === "excluded") return { net: inputAmount, vat: +(inputAmount * VAT_RATE / 100).toFixed(2),     total: +(inputAmount * (1 + VAT_RATE / 100)).toFixed(2) };
+  // included: user entered total-including-VAT
   const net = +(inputAmount / (1 + VAT_RATE / 100)).toFixed(2);
   return { net, vat: +(inputAmount - net).toFixed(2), total: inputAmount };
 }
@@ -119,9 +120,9 @@ function CategoryPicker({ categories, value, onChange }: {
 // ─── VAT Mode Selector ────────────────────────────────────────────────────────
 function VatModeSelector({ value, onChange }: { value: VatMode; onChange: (m: VatMode) => void }) {
   const opts: { key: VatMode; label: string; sub: string }[] = [
-    { key: "none",      label: "بدون ضريبة",      sub: "المبلغ صافي"               },
-    { key: "exclusive", label: "يُضاف 15%",        sub: "الضريبة تُضاف على السعر"   },
-    { key: "inclusive", label: "شامل الضريبة 15%", sub: "المبلغ المُدخَل يشمل الضريبة" },
+    { key: "none",     label: "بدون ضريبة",      sub: "مصروف معفى — لا VAT"        },
+    { key: "excluded", label: "يُضاف 15%",        sub: "الضريبة تُضاف فوق السعر"    },
+    { key: "included", label: "شامل الضريبة 15%", sub: "المبلغ المُدخَل يشمل الضريبة" },
   ];
   return (
     <div className="grid grid-cols-3 gap-2">
@@ -129,9 +130,9 @@ function VatModeSelector({ value, onChange }: { value: VatMode; onChange: (m: Va
         <button key={o.key} type="button" onClick={() => onChange(o.key)}
           className={`flex flex-col items-center text-center px-2 py-2.5 rounded-xl border-2 text-xs font-medium transition-all ${
             value === o.key
-              ? o.key === "none"      ? "border-slate-500 bg-slate-50 text-slate-700"
-              : o.key === "exclusive" ? "border-amber-500 bg-amber-50 text-amber-700"
-              :                         "border-emerald-500 bg-emerald-50 text-emerald-700"
+              ? o.key === "none"     ? "border-slate-500 bg-slate-50 text-slate-700"
+              : o.key === "excluded" ? "border-amber-500 bg-amber-50 text-amber-700"
+              :                        "border-emerald-500 bg-emerald-50 text-emerald-700"
               : "border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50"
           }`}>
           <Percent className={`w-4 h-4 mb-1 ${value === o.key ? "" : "opacity-40"}`} />
@@ -150,13 +151,10 @@ const EMPTY: { date: string; categoryCode: string; description: string; inputAmo
 };
 
 function deriveVatMode(txn: ExpenseTransaction): VatMode {
-  if (!txn.isVatApplicable) return "none";
-  // If net × 1.15 ≈ total  → exclusive; if net + vat ≈ total and vat < net → could be either
-  // We distinguish by checking if total ≈ stored amount × 1.15 (exclusive saved net as amount)
-  // vs total ≈ amount (inclusive saved total as input, net as amount)
-  // In our system we always store the NET in amount, so exclusive and inclusive both store net.
-  // We can't reliably distinguish without an extra field, so default to exclusive.
-  return "exclusive";
+  const t = (txn as ExpenseTransaction & { vatType?: string }).vatType;
+  if (t === "none" || t === "included" || t === "excluded") return t;
+  // Backward compat for rows saved before vatType existed
+  return txn.isVatApplicable ? "excluded" : "none";
 }
 
 function TransactionForm({ categories, initial, onClose, onSave, isPending }: {
@@ -168,12 +166,16 @@ function TransactionForm({ categories, initial, onClose, onSave, isPending }: {
 }) {
   const [form, setForm] = useState(() => {
     if (!initial) return { ...EMPTY };
+    const mode = deriveVatMode(initial);
+    // For "included" mode the user originally typed the GROSS (total). We stored net
+    // in `amount`, so we must re-display the total to round-trip correctly.
+    const displayAmount = mode === "included" ? toNum(initial.totalAmount) : toNum(initial.amount);
     return {
       date: initial.date,
       categoryCode: initial.categoryCode,
       description: initial.description,
-      inputAmount: String(toNum(initial.amount)),
-      vatMode: deriveVatMode(initial),
+      inputAmount: String(displayAmount),
+      vatMode: mode,
       costCenter: initial.costCenter ?? "",
       referenceNo: initial.referenceNo ?? "",
       notes: initial.notes ?? "",
@@ -201,21 +203,25 @@ function TransactionForm({ categories, initial, onClose, onSave, isPending }: {
 
   function handleSubmit() {
     if (!validate()) return;
+    // Server computes net/vat/total from `amount` based on `vatType`.
+    // For "included", we send the total (what the user typed). For "excluded"/"none", we send the net.
+    const apiAmount = form.vatMode === "included" ? inputAmt : net;
     onSave({
       date: form.date,
       categoryCode: form.categoryCode,
       description: form.description,
-      amount: net,
+      amount: apiAmount,
       isVatApplicable: form.vatMode !== "none",
+      vatType: form.vatMode,
       vatRate: 15,
       costCenter: form.costCenter || undefined,
       referenceNo: form.referenceNo || undefined,
       notes: form.notes || undefined,
-    });
+    } as CreateExpenseTransaction & { vatType: VatMode });
   }
 
-  const amtLabel = form.vatMode === "inclusive" ? "المبلغ الإجمالي (شامل الضريبة)" :
-                   form.vatMode === "exclusive" ? "المبلغ قبل الضريبة (صافي)"    : "المبلغ";
+  const amtLabel = form.vatMode === "included" ? "المبلغ الإجمالي (شامل الضريبة)" :
+                   form.vatMode === "excluded" ? "المبلغ قبل الضريبة (صافي)"    : "المبلغ";
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -728,9 +734,17 @@ export default function ExpenseLedger() {
                         <td className="px-4 py-3 text-slate-500 text-xs">{txn.costCenter ?? "—"}</td>
                         <td className="px-4 py-3 font-medium text-slate-900 whitespace-nowrap">{formatSAR(net)}</td>
                         <td className="px-4 py-3 text-xs whitespace-nowrap">
-                          {txn.isVatApplicable
-                            ? <><span className="text-amber-600 font-medium">{formatSAR(toNum(txn.vatAmount))}</span><br /><span className="text-slate-400">15%</span></>
-                            : <span className="text-slate-300">—</span>}
+                          {(() => {
+                            const mode = deriveVatMode(txn);
+                            if (mode === "none") return <span className="text-slate-300">— معفى</span>;
+                            const label = mode === "included" ? "شامل" : "+15%";
+                            const cls = mode === "included" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700";
+                            return <>
+                              <span className="text-amber-600 font-medium">{formatSAR(toNum(txn.vatAmount))}</span>
+                              <br />
+                              <span className={`inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold ${cls}`}>{label}</span>
+                            </>;
+                          })()}
                         </td>
                         <td className="px-4 py-3 font-bold text-primary whitespace-nowrap">{formatSAR(toNum(txn.totalAmount))}</td>
                         <td className="px-4 py-3">

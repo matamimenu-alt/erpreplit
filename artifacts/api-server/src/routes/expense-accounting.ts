@@ -129,25 +129,50 @@ router.get("/transactions", async (req, res) => {
   }
 });
 
+// ─── VAT computation ──────────────────────────────────────────────────────────
+// vatType: 'none'     → no VAT (exempt / غير خاضع)
+//          'included' → amount already includes VAT (شامل الضريبة) — extract from total
+//          'excluded' → amount is net (يُضاف فوق السعر) — add VAT on top
+// 'amount' param is what the user typed: net for 'excluded'/'none', total for 'included'.
+function computeVat(inputAmount: number, vatType: string, rate: number) {
+  const r = (rate || 15) / 100;
+  if (!vatType || vatType === "none" || inputAmount === 0) {
+    return { net: +inputAmount.toFixed(2), vat: 0, total: +inputAmount.toFixed(2) };
+  }
+  if (vatType === "included") {
+    const net = +(inputAmount / (1 + r)).toFixed(2);
+    return { net, vat: +(inputAmount - net).toFixed(2), total: +inputAmount.toFixed(2) };
+  }
+  // excluded / add-on-top
+  const vat = +(inputAmount * r).toFixed(2);
+  return { net: +inputAmount.toFixed(2), vat, total: +(inputAmount + vat).toFixed(2) };
+}
+
+function normalizeVatType(req: { vatType?: unknown; isVatApplicable?: unknown }): string {
+  const t = String(req.vatType ?? "").toLowerCase();
+  if (t === "none" || t === "included" || t === "excluded") return t;
+  // Backward compat: legacy clients only send isVatApplicable
+  return req.isVatApplicable ? "excluded" : "none";
+}
+
 // ─── POST /api/expense-transactions ──────────────────────────────────────────
 router.post("/transactions", async (req, res) => {
   try {
     const restaurantId = getRestaurantId(req);
     const {
       date, categoryCode, description, descriptionAr,
-      amount, isVatApplicable, vatRate, costCenter, referenceNo, notes,
+      amount, vatRate, costCenter, referenceNo, notes,
     } = req.body;
 
     if (!date || !categoryCode || !description || amount === undefined) {
       return res.status(400).json({ error: "date, categoryCode, description, amount are required" });
     }
 
-    const net      = toNum(amount);
-    const applicable = !!isVatApplicable;
-    const rate     = applicable ? toNum(vatRate ?? 15) : 0;
-    const vat      = applicable ? +(net * rate / 100).toFixed(2) : 0;
-    const total    = +(net + vat).toFixed(2);
-    const month    = String(date).substring(0, 7);
+    const vatType = normalizeVatType(req.body);
+    const applicable = vatType !== "none";
+    const rate = applicable ? toNum(vatRate ?? 15) : 0;
+    const { net, vat, total } = computeVat(toNum(amount), vatType, rate);
+    const month = String(date).substring(0, 7);
 
     const [row] = await db.insert(expenseTransactionsTable).values({
       restaurantId,
@@ -158,6 +183,7 @@ router.post("/transactions", async (req, res) => {
       descriptionAr:   descriptionAr ? String(descriptionAr) : null,
       amount:          fmt(net),
       isVatApplicable: applicable,
+      vatType,
       vatRate:         fmt(rate),
       vatAmount:       fmt(vat),
       totalAmount:     fmt(total),
@@ -184,22 +210,21 @@ router.put("/transactions/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     const {
       date, categoryCode, description, descriptionAr,
-      amount, isVatApplicable, vatRate, costCenter, referenceNo, notes,
+      amount, vatRate, costCenter, referenceNo, notes,
     } = req.body;
 
-    const net      = toNum(amount);
-    const applicable = !!isVatApplicable;
-    const rate     = applicable ? toNum(vatRate ?? 15) : 0;
-    const vat      = applicable ? +(net * rate / 100).toFixed(2) : 0;
-    const total    = +(net + vat).toFixed(2);
-    const month    = String(date).substring(0, 7);
+    const vatType = normalizeVatType(req.body);
+    const applicable = vatType !== "none";
+    const rate = applicable ? toNum(vatRate ?? 15) : 0;
+    const { net, vat, total } = computeVat(toNum(amount), vatType, rate);
+    const month = String(date).substring(0, 7);
 
     const [row] = await db.update(expenseTransactionsTable)
       .set({
         date: String(date), month, categoryCode: String(categoryCode),
         description: String(description),
         descriptionAr: descriptionAr ? String(descriptionAr) : null,
-        amount: fmt(net), isVatApplicable: applicable,
+        amount: fmt(net), isVatApplicable: applicable, vatType,
         vatRate: fmt(rate), vatAmount: fmt(vat), totalAmount: fmt(total),
         costCenter: costCenter ? String(costCenter) : null,
         referenceNo: referenceNo ? String(referenceNo) : null,

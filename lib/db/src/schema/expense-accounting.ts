@@ -31,6 +31,7 @@ export const expenseTransactionsTable = pgTable("expense_transactions", {
   descriptionAr:   text("description_ar"),
   amount:          numeric("amount",    { precision: 14, scale: 2 }).notNull(),  // net before VAT
   isVatApplicable: boolean("is_vat_applicable").notNull().default(false),
+  vatType:         text("vat_type").notNull().default("none"), // 'none' | 'included' | 'excluded'
   vatRate:         numeric("vat_rate",  { precision: 5,  scale: 2 }).notNull().default("15"),
   vatAmount:       numeric("vat_amount",{ precision: 14, scale: 2 }).notNull().default("0"),
   totalAmount:     numeric("total_amount",{ precision: 14, scale: 2 }).notNull(),

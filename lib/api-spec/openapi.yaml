@@ -3573,6 +3573,7 @@ components:
         descriptionAr:   { type: string, nullable: true }
         amount:          { type: number }
         isVatApplicable: { type: boolean }
+        vatType:         { type: string, enum: [none, included, excluded] }
         vatRate:         { type: number }
         vatAmount:       { type: number }
         totalAmount:     { type: number }
@@ -3581,7 +3582,7 @@ components:
         notes:           { type: string, nullable: true }
         createdAt:       { type: string }
         updatedAt:       { type: string }
-      required: [id, restaurantId, date, month, categoryCode, description, amount, isVatApplicable, vatRate, vatAmount, totalAmount]
+      required: [id, restaurantId, date, month, categoryCode, description, amount, isVatApplicable, vatType, vatRate, vatAmount, totalAmount]
 
     CreateExpenseTransaction:
       type: object
@@ -3592,6 +3593,7 @@ components:
         descriptionAr:   { type: string, nullable: true }
         amount:          { type: number }
         isVatApplicable: { type: boolean }
+        vatType:         { type: string, enum: [none, included, excluded] }
         vatRate:         { type: number }
         costCenter:      { type: string, nullable: true }
         referenceNo:     { type: string, nullable: true }

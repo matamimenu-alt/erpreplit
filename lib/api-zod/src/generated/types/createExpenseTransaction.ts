@@ -5,6 +5,7 @@
  * Restaurant Management & Accounting System API
  * OpenAPI spec version: 0.1.0
  */
+import type { CreateExpenseTransactionVatType } from "./createExpenseTransactionVatType";
 
 export interface CreateExpenseTransaction {
   date: string;
@@ -13,6 +14,7 @@ export interface CreateExpenseTransaction {
   descriptionAr?: string | null;
   amount: number;
   isVatApplicable?: boolean;
+  vatType?: CreateExpenseTransactionVatType;
   vatRate?: number;
   costCenter?: string | null;
   referenceNo?: string | null;

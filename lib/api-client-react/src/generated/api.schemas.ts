@@ -505,16 +505,6 @@ export interface PLReport {
   transfersOutCost?: number;
   /** Net transfer impact on COGS (transfersInCost - transfersOutCost) */
   netTransferCOGS?: number;
-  /** VAT amount that left this branch with outbound transfers */
-  transfersVatOut?: number;
-  /** VAT amount that arrived at this branch with inbound transfers */
-  transfersVatIn?: number;
-  /** Net VAT impact from transfers (vatIn - vatOut) */
-  netTransferVat?: number;
-  /** Full cost (net + VAT) of outbound transfers */
-  transfersOutGross?: number;
-  /** Full cost (net + VAT) of inbound transfers */
-  transfersInGross?: number;
   grossProfit: number;
   grossMarginPercent: number;
   foodCostPercent: number;
@@ -566,43 +556,11 @@ export interface CategoryExpenseReport {
 
 export interface VatReport {
   month?: string;
-  /** Total sales including VAT */
   totalSales: number;
-  /** Output VAT collected from sales */
   outputVat: number;
-  /** Total purchases pre-VAT (from purchase invoices) */
   totalPurchases: number;
-  /** Raw input VAT paid on purchase invoices (before transfer allocation) */
   inputVat: number;
-  /** VAT that left this branch with outbound inter-branch transfers */
-  vatTransferredOut?: number;
-  /** Net goods value of outbound transfers */
-  netAmountTransferredOut?: number;
-  /** Number of outbound transfer records */
-  transfersOutCount?: number;
-  /** VAT that arrived at this branch with inbound inter-branch transfers */
-  vatReceivedIn?: number;
-  /** Net goods value of inbound transfers */
-  netAmountReceivedIn?: number;
-  /** Number of inbound transfer records */
-  transfersInCount?: number;
-  /** Net VAT impact from transfers (received - transferred out) */
-  netTransferVatImpact?: number;
-  /** Input VAT after applying inter-branch transfer allocation */
-  adjustedInputVat?: number;
-  /** Net VAT payable (output - adjustedInput); negative = reclaimable */
   vatPayable: number;
-  /** ZATCA return box summary */
-  zatca?: {
-    box1_taxableSupplies: number;
-    box2_outputVat: number;
-    box3_taxablePurchases: number;
-    box4_inputVatGross: number;
-    box4_vatTransferredOut: number;
-    box4_vatReceivedIn: number;
-    box4_inputVatNet: number;
-    box5_vatPayable: number;
-  };
 }
 
 export interface DashboardSummary {
@@ -850,10 +808,6 @@ export interface FixedCostTemplate {
   notes?: string | null;
   isActive: boolean;
   sortOrder: number;
-  /** VAT treatment for this fixed cost: "none" | "included" | "excluded" */
-  vatType: string;
-  /** VAT rate in percent (default 15) */
-  vatRate: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -864,25 +818,15 @@ export interface CreateFixedCostTemplate {
   defaultAmount: number;
   notes?: string | null;
   sortOrder?: number;
-  vatType?: string;
-  vatRate?: number;
 }
 
 export interface MonthlyFixedCostItem {
   templateId: number;
   category: string;
   name: string;
-  vatType: string;
-  vatRate: number;
   defaultAmount: number;
   overrideAmount?: number | null;
   effectiveAmount: number;
-  /** Net amount before VAT — used in P&L */
-  baseAmount: number;
-  /** VAT component */
-  vatAmount: number;
-  /** Total including VAT */
-  totalAmount: number;
   hasOverride: boolean;
   overrideNotes?: string | null;
   overrideId?: number | null;
@@ -895,12 +839,6 @@ export interface MonthlyFixedCosts {
   lockedBy?: string | null;
   lockedAt?: string | null;
   total: number;
-  /** Sum of baseAmount (net before VAT) across all items */
-  totalBase: number;
-  /** Sum of VAT portions across all items */
-  totalVat: number;
-  /** Sum of totalAmount (base + VAT) across all items */
-  totalGross: number;
   items: MonthlyFixedCostItem[];
 }
 
@@ -985,6 +923,15 @@ export interface ExpenseCategory {
   isActive: boolean;
 }
 
+export type ExpenseTransactionVatType =
+  (typeof ExpenseTransactionVatType)[keyof typeof ExpenseTransactionVatType];
+
+export const ExpenseTransactionVatType = {
+  none: "none",
+  included: "included",
+  excluded: "excluded",
+} as const;
+
 export interface ExpenseTransaction {
   id: number;
   restaurantId: number;
@@ -995,6 +942,7 @@ export interface ExpenseTransaction {
   descriptionAr?: string | null;
   amount: number;
   isVatApplicable: boolean;
+  vatType: ExpenseTransactionVatType;
   vatRate: number;
   vatAmount: number;
   totalAmount: number;
@@ -1005,6 +953,15 @@ export interface ExpenseTransaction {
   updatedAt?: string;
 }
 
+export type CreateExpenseTransactionVatType =
+  (typeof CreateExpenseTransactionVatType)[keyof typeof CreateExpenseTransactionVatType];
+
+export const CreateExpenseTransactionVatType = {
+  none: "none",
+  included: "included",
+  excluded: "excluded",
+} as const;
+
 export interface CreateExpenseTransaction {
   date: string;
   categoryCode: string;
@@ -1012,6 +969,7 @@ export interface CreateExpenseTransaction {
   descriptionAr?: string | null;
   amount: number;
   isVatApplicable?: boolean;
+  vatType?: CreateExpenseTransactionVatType;
   vatRate?: number;
   costCenter?: string | null;
   referenceNo?: string | null;

@@ -14,8 +14,6 @@ export interface FixedCostTemplate {
   notes?: string | null;
   isActive: boolean;
   sortOrder: number;
-  vatType: string;
-  vatRate: number;
   createdAt: string;
   updatedAt: string;
 }

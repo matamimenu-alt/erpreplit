@@ -8,45 +8,9 @@
 
 export interface VatReport {
   month?: string;
-  /** Total sales including VAT */
   totalSales: number;
-  /** Output VAT collected from sales */
   outputVat: number;
-  /** Total purchases (pre-VAT, from purchase invoices) */
   totalPurchases: number;
-  /** Raw input VAT paid on purchase invoices (before transfer allocation) */
   inputVat: number;
-
-  // ── Inter-Branch Transfer VAT Allocation ──────────────────────────────────
-  /** VAT that left this branch with outbound inter-branch transfers (reduces input VAT) */
-  vatTransferredOut?: number;
-  /** Net goods value of outbound transfers */
-  netAmountTransferredOut?: number;
-  /** Number of outbound transfer records */
-  transfersOutCount?: number;
-  /** VAT that arrived at this branch with inbound inter-branch transfers (adds to input VAT) */
-  vatReceivedIn?: number;
-  /** Net goods value of inbound transfers */
-  netAmountReceivedIn?: number;
-  /** Number of inbound transfer records */
-  transfersInCount?: number;
-  /** Net VAT impact from transfers (vatReceivedIn - vatTransferredOut) */
-  netTransferVatImpact?: number;
-  /** Input VAT after applying inter-branch transfer allocation */
-  adjustedInputVat?: number;
-
-  /** Net VAT payable (output - adjustedInput); negative = reclaimable */
   vatPayable: number;
-
-  /** ZATCA return box summary */
-  zatca?: {
-    box1_taxableSupplies: number;
-    box2_outputVat: number;
-    box3_taxablePurchases: number;
-    box4_inputVatGross: number;
-    box4_vatTransferredOut: number;
-    box4_vatReceivedIn: number;
-    box4_inputVatNet: number;
-    box5_vatPayable: number;
-  };
 }

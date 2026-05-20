@@ -3,7 +3,7 @@ import { useGetVatReport } from "@workspace/api-client-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PrintButton } from "@/components/ui/PrintButton";
 import { formatSAR, formatMonth } from "@/lib/format";
-import { Calculator, ShieldCheck, ArrowRightLeft, ArrowUpRight, ArrowDownLeft, Info } from "lucide-react";
+import { Calculator, ShieldCheck, ArrowRightLeft, ArrowUpRight, ArrowDownLeft, Info, Receipt, Wallet, TrendingUp, TrendingDown } from "lucide-react";
 
 export default function VatReport() {
   const [month, setMonth] = useState("");
@@ -20,6 +20,13 @@ export default function VatReport() {
     netTransferVatImpact?: number;
     adjustedInputVat?: number;
     fixedCostInputVat?: number;
+    expenseLedgerNet?: number;
+    expenseLedgerInputVat?: number;
+    totalTaxableSales?: number;
+    totalOutputVat?: number;
+    totalTaxableExpenses?: number;
+    totalInputVat?: number;
+    finalVatDue?: number;
     zatca?: {
       box1_taxableSupplies: number;
       box2_outputVat: number;
@@ -39,6 +46,7 @@ export default function VatReport() {
   const hasTransfers =
     (r?.vatTransferredOut ?? 0) > 0 || (r?.vatReceivedIn ?? 0) > 0;
   const hasFixedCostVat = (r?.fixedCostInputVat ?? 0) > 0;
+  const hasExpenseLedgerVat = (r?.expenseLedgerInputVat ?? 0) > 0;
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -57,6 +65,96 @@ export default function VatReport() {
           </div>
         }
       />
+
+      {/* ── Comprehensive Summary ── */}
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm mb-6 overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+          <Calculator className="w-4 h-4 text-indigo-600" />
+          <h3 className="font-bold text-slate-800">ملخص ضريبة القيمة المضافة</h3>
+          <span className="text-xs text-slate-400 mr-auto">
+            {month ? formatMonth(month) : "كل الفترات"}
+          </span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-100">
+          {/* OUTPUT SIDE */}
+          <div className="p-6 space-y-3">
+            <div className="flex items-center gap-2 text-emerald-700 mb-2">
+              <TrendingUp className="w-4 h-4" />
+              <span className="text-xs font-bold uppercase tracking-wide">المبيعات — Output VAT</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-600">إجمالي المبيعات الخاضعة</span>
+              <span className="font-semibold text-slate-900">{formatSAR(r?.totalTaxableSales ?? r?.totalSales)}</span>
+            </div>
+            <div className="flex justify-between text-base bg-emerald-50 rounded-lg px-3 py-2.5">
+              <span className="font-bold text-emerald-800">إجمالي ضريبة المبيعات</span>
+              <span className="font-bold text-emerald-700">{formatSAR(r?.totalOutputVat ?? r?.outputVat)}</span>
+            </div>
+          </div>
+
+          {/* INPUT SIDE */}
+          <div className="p-6 space-y-3">
+            <div className="flex items-center gap-2 text-rose-700 mb-2">
+              <TrendingDown className="w-4 h-4" />
+              <span className="text-xs font-bold uppercase tracking-wide">المصروفات — Input VAT</span>
+            </div>
+            <div className="space-y-1.5 text-xs text-slate-500">
+              <div className="flex justify-between"><span>المشتريات</span><span>{formatSAR(r?.totalPurchases)}</span></div>
+              <div className="flex justify-between"><span>المصروفات التشغيلية</span><span>{formatSAR(r?.expenseLedgerNet ?? 0)}</span></div>
+              {hasFixedCostVat && <div className="flex justify-between"><span>المصروفات الثابتة (خاضعة)</span><span className="text-emerald-600">VAT: {formatSAR(r?.fixedCostInputVat)}</span></div>}
+            </div>
+            <div className="flex justify-between text-sm pt-1 border-t border-slate-100">
+              <span className="text-slate-600">إجمالي المصروفات الخاضعة</span>
+              <span className="font-semibold text-slate-900">{formatSAR(r?.totalTaxableExpenses)}</span>
+            </div>
+            <div className="flex justify-between text-base bg-rose-50 rounded-lg px-3 py-2.5">
+              <span className="font-bold text-rose-800">إجمالي ضريبة المصروفات</span>
+              <span className="font-bold text-rose-700">{formatSAR(r?.totalInputVat ?? r?.adjustedInputVat)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Final VAT Due Bar */}
+        <div className={`px-6 py-4 border-t flex items-center justify-between ${(r?.finalVatDue ?? r?.vatPayable ?? 0) >= 0 ? "bg-gradient-to-r from-rose-50 to-amber-50" : "bg-gradient-to-r from-teal-50 to-emerald-50"}`}>
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-xl ${(r?.finalVatDue ?? r?.vatPayable ?? 0) >= 0 ? "bg-rose-100 text-rose-700" : "bg-teal-100 text-teal-700"}`}>
+              <Wallet className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-xs text-slate-500 font-semibold uppercase tracking-wide">
+                {(r?.finalVatDue ?? r?.vatPayable ?? 0) >= 0 ? "صافي الضريبة المستحقة" : "رصيد ضريبي للاسترداد"}
+              </div>
+              <div className="text-[11px] text-slate-400 font-mono">Output VAT − Input VAT</div>
+            </div>
+          </div>
+          <div className={`text-3xl font-display font-bold ${(r?.finalVatDue ?? r?.vatPayable ?? 0) >= 0 ? "text-rose-700" : "text-teal-700"}`}>
+            {isLoading ? "..." : formatSAR(r?.finalVatDue ?? r?.vatPayable)}
+          </div>
+        </div>
+
+        {/* Source breakdown chips */}
+        <div className="px-6 py-3 bg-slate-50 border-t flex flex-wrap items-center gap-2 text-[11px]">
+          <span className="text-slate-400 font-semibold uppercase">مصادر ضريبة المصروفات:</span>
+          <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-semibold flex items-center gap-1">
+            <Receipt className="w-3 h-3" /> المشتريات {formatSAR(r?.inputVat)}
+          </span>
+          {hasExpenseLedgerVat && (
+            <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-semibold flex items-center gap-1">
+              <Receipt className="w-3 h-3" /> دفتر المصروفات {formatSAR(r?.expenseLedgerInputVat)}
+            </span>
+          )}
+          {hasFixedCostVat && (
+            <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold flex items-center gap-1">
+              <Receipt className="w-3 h-3" /> المصروفات الثابتة {formatSAR(r?.fixedCostInputVat)}
+            </span>
+          )}
+          {hasTransfers && (
+            <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold flex items-center gap-1">
+              <ArrowRightLeft className="w-3 h-3" /> صافي تحويلات الفروع {formatSAR(r?.netTransferVatImpact ?? 0)}
+            </span>
+          )}
+        </div>
+      </div>
 
       {/* ── Hero card ── */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-8 text-white shadow-xl mb-8 relative overflow-hidden">
