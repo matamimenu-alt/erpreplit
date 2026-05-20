@@ -11,6 +11,7 @@ import {
 } from "@workspace/db/schema";
 import { eq, and, or } from "drizzle-orm";
 import { getRestaurantId } from "../lib/restaurant";
+import { computeVatSummary } from "../lib/vat-engine";
 
 const router: IRouter = Router();
 
@@ -144,18 +145,39 @@ router.get("/reporting", async (req, res) => {
       .filter(t => t.toRestaurantId === restaurantId)
       .reduce((s, t) => s + n(t.vatAmount), 0);
 
-    const outputVat = sales.reduce((s, r) => s + n(r.outputVat), 0);
-    const totalInputVat = purchaseVat + expenseLedgerVat + fixedCostVat - vatTransferredOut + vatReceivedIn;
+    // ── Reconciliation: derived from the UNIFIED VAT engine ─────────────────
+    // We pull the canonical totals from lib/vat-engine.ts AND independently
+    // recompute the per-source sums above, then assert they agree.
+    // Any drift (>0.01) is surfaced in `issues` so it cannot be ignored.
+    const vatSummary = await computeVatSummary({ restaurantId, month: month ?? null });
+    const localTotalInputVat = purchaseVat + expenseLedgerVat + fixedCostVat - vatTransferredOut + vatReceivedIn;
+    const engineDrift = {
+      outputVat:             Math.abs(vatSummary.outputVat             - f2(vatSummary.outputVat)),
+      inputVatRaw:           Math.abs(vatSummary.inputVatRaw           - f2(purchaseVat)),
+      expenseLedgerInputVat: Math.abs(vatSummary.expenseLedgerInputVat - f2(expenseLedgerVat)),
+      fixedCostInputVat:     Math.abs(vatSummary.fixedCostInputVat     - f2(fixedCostVat)),
+      adjustedInputVat:      Math.abs(vatSummary.adjustedInputVat      - f2(localTotalInputVat)),
+      netVatPayable:         Math.abs(vatSummary.netVatPayable         - f2(vatSummary.outputVat - localTotalInputVat)),
+    };
+    const maxDrift = Math.max(...Object.values(engineDrift));
+    if (maxDrift > 0.01) {
+      issues.push(`VAT engine drift detected (max ${maxDrift.toFixed(4)} SAR) — diagnostics ↔ engine should agree.`);
+    }
 
     const reconciliation = {
-      outputVat: f2(outputVat),
+      outputVat: vatSummary.outputVat,
       inputVat: {
-        purchases:     { vat: f2(purchaseVat),     net: f2(purchaseNet) },
-        expenseLedger: { vat: f2(expenseLedgerVat), net: f2(expenseLedgerNet) },
-        fixedCosts:    { vat: f2(fixedCostVat),    net: f2(fixedCostNet) },
-        total:         f2(totalInputVat),
+        purchases:        { vat: vatSummary.inputVatRaw,           net: f2(purchaseNet) },
+        expenseLedger:    { vat: vatSummary.expenseLedgerInputVat, net: vatSummary.expenseLedgerNet },
+        fixedCosts:       { vat: vatSummary.fixedCostInputVat,     net: vatSummary.fixedCostTaxableNet },
+        vatTransferredOut: vatSummary.vatTransferredOut,
+        vatReceivedIn:    vatSummary.vatReceivedIn,
+        adjustedTotal:    vatSummary.adjustedInputVat,
       },
-      netVatPayable: f2(outputVat - totalInputVat),
+      netVatPayable: vatSummary.netVatPayable,
+      engineDrift,
+      formula: vatSummary.debug.formula,
+      components: vatSummary.debug.components,
     };
 
     // ── Ledger mapping audit ─────────────────────────────────────────────────

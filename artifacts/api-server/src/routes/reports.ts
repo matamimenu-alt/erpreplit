@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { salesTable, purchasesTable, employeesTable, expensesTable, inventoryTable, branchTransfersTable, fixedCostTemplatesTable, fixedCostMonthlyValuesTable, expenseTransactionsTable, expenseCategoriesTable } from "@workspace/db/schema";
 import { eq, and, or } from "drizzle-orm";
 import { getRestaurantId } from "../lib/restaurant";
+import { computeVatSummary } from "../lib/vat-engine";
 
 const router: IRouter = Router();
 
@@ -479,7 +480,16 @@ router.get("/pl", async (req, res) => {
       + totalAppCommissions;   // from legacy app commissions
 
     const ebitda       = grossProfit - totalOperatingExpenses;
-    const vatPayable   = outputVat - inputVat;
+
+    // ── VAT — single source of truth (unified VAT engine) ──────────────────
+    // Net VAT Payable here MUST equal /api/vat/report's vatPayable and
+    // /api/dashboard/summary's adjustedVatPayable. Previously this endpoint
+    // computed `outputVat - inputVat` (purchase VAT only), which silently
+    // ignored fixed-cost VAT, expense-ledger VAT and inter-branch transfer
+    // adjustments — causing the P&L Net VAT Payable to disagree with the
+    // ZATCA / VAT Report by exactly those missing components.
+    const vatSummary   = await computeVatSummary({ restaurantId, month });
+    const vatPayable   = vatSummary.netVatPayable;          // canonical Net VAT
     const netProfit    = ebitda - vatPayable;
     const operatingProfit = ebitda; // alias for backward compat
 
@@ -620,10 +630,20 @@ router.get("/pl", async (req, res) => {
       operatingProfit:        f2(ebitda),   // backward compat alias
       ebitda:                 f2(ebitda),
 
-      // ── VAT ────────────────────────────────────────────────────────────────
-      outputVat:  f2(outputVat),
-      inputVat:   f2(inputVat),
-      vatPayable: f2(vatPayable),
+      // ── VAT (UNIFIED — from lib/vat-engine.ts) ─────────────────────────────
+      // These fields MUST match /api/vat/report and /api/dashboard/summary
+      // for the same restaurant + month. Any drift is a bug.
+      outputVat:               vatSummary.outputVat,
+      inputVat:                vatSummary.inputVatRaw,              // purchases only (legacy field)
+      inputVatRaw:             vatSummary.inputVatRaw,
+      fixedCostInputVat:       vatSummary.fixedCostInputVat,
+      expenseLedgerInputVat:   vatSummary.expenseLedgerInputVat,
+      vatTransferredOut:       vatSummary.vatTransferredOut,
+      vatReceivedIn:           vatSummary.vatReceivedIn,
+      adjustedInputVat:        vatSummary.adjustedInputVat,
+      vatPayable:              vatSummary.netVatPayable,            // canonical Net VAT Payable
+      netVatPayable:           vatSummary.netVatPayable,
+      vatDebug:                vatSummary.debug,
 
       // ── Net Profit ─────────────────────────────────────────────────────────
       netProfit:        f2(netProfit),

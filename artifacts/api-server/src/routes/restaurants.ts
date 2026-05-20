@@ -129,6 +129,7 @@ router.get("/group/summary", async (req, res) => {
   try {
     const month = req.query.month as string | undefined;
     const { salesTable, purchasesTable, employeesTable, expensesTable } = await import("@workspace/db/schema");
+    const { computeVatSummary } = await import("../lib/vat-engine");
 
     const activeRestaurants = await db.select().from(restaurantsTable)
       .where(ne(restaurantsTable.status, "archived"));
@@ -149,9 +150,14 @@ router.get("/group/summary", async (req, res) => {
       const purchases_ = purchases.reduce((s, p) => s + toNum(p.amountBeforeVat), 0);
       const salaries  = employees.reduce((s, e) => s + toNum(e.totalMonthlyCost), 0);
       const fixed     = expenses.reduce((s, e) => s + toNum(e.monthlyCost), 0);
-      const outputVat = sales.reduce((s, r) => s + toNum(r.outputVat), 0);
-      const inputVat  = purchases.reduce((s, p) => s + toNum(p.vatAmount), 0);
-      const vatPayable = outputVat - inputVat;
+
+      // VAT — UNIFIED via lib/vat-engine.ts (same as /api/vat/report, P&L, dashboard).
+      // Previously this used `outputVat - inputVat` (purchase VAT only), which
+      // re-introduced exactly the mismatch this refactor is fixing.
+      const vat = await computeVatSummary({ restaurantId: r.id, month: month ?? null });
+      const outputVat = vat.outputVat;
+      const inputVat  = vat.inputVatRaw;
+      const vatPayable = vat.netVatPayable;
       const profit = revenue - purchases_ - salaries - fixed - vatPayable;
 
       return {
@@ -165,6 +171,9 @@ router.get("/group/summary", async (req, res) => {
         purchases:      +purchases_.toFixed(2),
         salaries:       +salaries.toFixed(2),
         fixedExpenses:  +fixed.toFixed(2),
+        outputVat:      +outputVat.toFixed(2),
+        inputVat:       +inputVat.toFixed(2),
+        adjustedInputVat: vat.adjustedInputVat,
         vatPayable:     +vatPayable.toFixed(2),
         profit:         +profit.toFixed(2),
       };
