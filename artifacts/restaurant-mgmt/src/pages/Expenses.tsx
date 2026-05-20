@@ -15,6 +15,7 @@ import {
   useListExpenses,
 } from "@workspace/api-client-react";
 import type { FixedCostTemplate } from "@workspace/api-client-react";
+import { useInvalidateFinancials } from "@/hooks/use-invalidate-financials";
 import {
   getListFixedCostTemplatesQueryKey,
   getGetMonthlyFixedCostsQueryKey,
@@ -96,6 +97,7 @@ function MonthNav({ month, onChange }: { month: string; onChange: (m: string) =>
 function TemplateModal({ mode, template, onClose }: { mode: "add" | "edit"; template?: FixedCostTemplate; onClose: () => void }) {
   const { toast } = useToast();
   const qc = useQueryClient();
+  const invalidateFinancials = useInvalidateFinancials();
   const createTpl = useCreateFixedCostTemplate();
   const updateTpl = useUpdateFixedCostTemplate();
 
@@ -135,6 +137,7 @@ function TemplateModal({ mode, template, onClose }: { mode: "add" | "edit"; temp
       }
       await qc.invalidateQueries({ queryKey: getListFixedCostTemplatesQueryKey() });
       await qc.invalidateQueries({ queryKey: getGetFixedCostHistoryQueryKey() });
+      invalidateFinancials(); // refresh P&L / VAT / dashboard live
       onClose();
     } catch { toast({ title: "Failed to save", variant: "destructive" }); }
   }
@@ -244,6 +247,7 @@ type EditRow = { templateId: number; amount: string; notes: string };
 function MonthlyEntryTab({ month, setMonth }: { month: string; setMonth: (m: string) => void }) {
   const { toast } = useToast();
   const qc = useQueryClient();
+  const invalidateFinancials = useInvalidateFinancials();
   const { data: monthData, isLoading } = useGetMonthlyFixedCosts({ month });
   const batchSave = useBatchSaveMonthlyFixedCosts();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -337,6 +341,7 @@ function MonthlyEntryTab({ month, setMonth }: { month: string; setMonth: (m: str
       await qc.invalidateQueries({ queryKey: getGetFixedCostHistoryQueryKey() });
       await qc.invalidateQueries({ queryKey: getGetFixedCostAuditLogQueryKey() });
       await qc.invalidateQueries({ queryKey: getGetFixedCostYearSummaryQueryKey({}) });
+      invalidateFinancials();
       setEditMode(false);
       setEditRows([]);
       toast({ title: `${fmtMonth(month)} costs saved`, description: `${payload.length} items updated` });
@@ -353,12 +358,14 @@ function MonthlyEntryTab({ month, setMonth }: { month: string; setMonth: (m: str
       await unlockMonth.mutateAsync({ data: { month } });
       await qc.invalidateQueries({ queryKey: getGetMonthlyFixedCostsQueryKey({ month }) });
       await qc.invalidateQueries({ queryKey: getGetFixedCostAuditLogQueryKey() });
+      invalidateFinancials();
       toast({ title: `${fmtMonth(month)} unlocked` });
     } else {
       if (!confirm(`Lock ${fmtMonth(month)}? This will prevent any edits to this period.`)) return;
       await closeMonth.mutateAsync({ data: { month } });
       await qc.invalidateQueries({ queryKey: getGetMonthlyFixedCostsQueryKey({ month }) });
       await qc.invalidateQueries({ queryKey: getGetFixedCostAuditLogQueryKey() });
+      invalidateFinancials();
       toast({ title: `${fmtMonth(month)} locked` });
     }
   }
@@ -609,6 +616,7 @@ function MonthlyEntryTab({ month, setMonth }: { month: string; setMonth: (m: str
 function TemplatesTab() {
   const { toast } = useToast();
   const qc = useQueryClient();
+  const invalidateFinancials = useInvalidateFinancials();
   const { data: templates = [], isLoading } = useListFixedCostTemplates();
   const deleteTpl = useDeleteFixedCostTemplate();
   const [modal, setModal] = useState<{ mode: "add" | "edit"; template?: FixedCostTemplate } | null>(null);
@@ -617,6 +625,7 @@ function TemplatesTab() {
     if (!confirm(`Delete "${t.name}"? Monthly data saved for this item will also be removed.`)) return;
     await deleteTpl.mutateAsync({ id: t.id });
     await qc.invalidateQueries({ queryKey: getListFixedCostTemplatesQueryKey() });
+    invalidateFinancials();
     toast({ title: "Item deleted" });
   }
 

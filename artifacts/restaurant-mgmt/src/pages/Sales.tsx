@@ -7,6 +7,7 @@ import {
   useCreateSale, useUpdateSale, useDeleteSale,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useInvalidateFinancials } from "@/hooks/use-invalidate-financials";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PrintButton } from "@/components/ui/PrintButton";
 import { formatSAR, formatDate } from "@/lib/format";
@@ -252,6 +253,7 @@ type TabId = typeof TABS[number]["id"];
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function Sales() {
   const queryClient = useQueryClient();
+  const invalidateFinancials = useInvalidateFinancials();
 
   const [tab, setTab] = useState<TabId>("dashboard");
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
@@ -301,6 +303,7 @@ export default function Sales() {
     queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
     queryClient.invalidateQueries({ queryKey: getGetVatReportQueryKey() });
     if (reportFetch) queryClient.invalidateQueries({ queryKey: getGetSalesReportQueryKey() });
+    invalidateFinancials(); // P&L, reports, dashboard — live update
   };
 
   const create = useCreateSale({ mutation: { onSuccess: invalidate } });

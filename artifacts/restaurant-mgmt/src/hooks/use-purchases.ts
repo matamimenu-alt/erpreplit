@@ -1,26 +1,19 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { 
-  useCreatePurchase, 
-  useUpdatePurchase, 
+import {
+  useCreatePurchase,
+  useUpdatePurchase,
   useDeletePurchase,
   getListPurchasesQueryKey,
-  getGetDashboardSummaryQueryKey,
-  getGetVatReportQueryKey,
-  getGetPLReportQueryKey,
-  getGetMonthlyPurchaseReportQueryKey,
-  getGetCategoryExpenseReportQueryKey,
 } from "@workspace/api-client-react";
+import { useInvalidateFinancials } from "./use-invalidate-financials";
 
 export function usePurchasesMutations() {
   const queryClient = useQueryClient();
+  const invalidateFinancials = useInvalidateFinancials();
 
   const invalidateQueries = () => {
     queryClient.invalidateQueries({ queryKey: getListPurchasesQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getGetVatReportQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getGetPLReportQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getGetMonthlyPurchaseReportQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getGetCategoryExpenseReportQueryKey() });
+    invalidateFinancials();
   };
 
   const create = useCreatePurchase({ mutation: { onSuccess: invalidateQueries } });

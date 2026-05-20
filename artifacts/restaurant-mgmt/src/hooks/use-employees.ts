@@ -1,20 +1,19 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { 
-  useCreateEmployee, 
-  useUpdateEmployee, 
+import {
+  useCreateEmployee,
+  useUpdateEmployee,
   useDeleteEmployee,
   getListEmployeesQueryKey,
-  getGetDashboardSummaryQueryKey,
-  getGetPLReportQueryKey,
 } from "@workspace/api-client-react";
+import { useInvalidateFinancials } from "./use-invalidate-financials";
 
 export function useEmployeeMutations() {
   const queryClient = useQueryClient();
+  const invalidateFinancials = useInvalidateFinancials();
 
   const invalidateQueries = () => {
     queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getGetPLReportQueryKey() });
+    invalidateFinancials();
   };
 
   const create = useCreateEmployee({ mutation: { onSuccess: invalidateQueries } });

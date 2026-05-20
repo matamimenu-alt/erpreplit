@@ -495,7 +495,16 @@ export default function ExpenseLedger() {
   const { data: transactions = [], isLoading } = useListExpenseTransactions<ExpenseTransaction[]>({ month, categoryCode: filterCat || undefined });
   const { data: summary } = useGetExpenseSummary<{ tree: SummaryNode[] }>({ month });
 
-  const invalidate = () => queryClient.invalidateQueries({ predicate: q => String(q.queryKey[0]).includes("expense") });
+  const invalidate = () => queryClient.invalidateQueries({
+    predicate: q => {
+      const k = String(q.queryKey?.[0] ?? "");
+      // expense ledger lists + everything financial (P&L, VAT, dashboard, reports)
+      return k.includes("expense")
+        || k.startsWith("/api/reports/")
+        || k.startsWith("/api/dashboard")
+        || k.startsWith("/api/vat/");
+    },
+  });
 
   const createMut = useCreateExpenseTransaction({ mutation: { onSuccess: () => { toast({ title: "تم حفظ المصروف" }); setFormOpen(false); invalidate(); }, onError: () => toast({ title: "خطأ في الحفظ", variant: "destructive" }) } });
   const updateMut = useUpdateExpenseTransaction({ mutation: { onSuccess: () => { toast({ title: "تم التحديث" }); setEditTxn(null); invalidate(); }, onError: () => toast({ title: "خطأ في التحديث", variant: "destructive" }) } });

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   useGetPLReport,
   useGetMonthlyPurchaseReport,
@@ -10,6 +10,7 @@ import {
   getGetMonthlyPurchaseReportQueryKey,
   getGetCategoryExpenseReportQueryKey,
 } from "@workspace/api-client-react";
+import { useInvalidateFinancials } from "@/hooks/use-invalidate-financials";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PrintButton } from "@/components/ui/PrintButton";
 import { formatSAR, formatMonth } from "@/lib/format";
@@ -110,26 +111,50 @@ export default function Reports() {
   const [tab, setTab]     = useState<Tab>("pl");
   const [month, setMonth] = useState("");
   const queryClient       = useQueryClient();
+  const invalidateFinancials = useInvalidateFinancials();
 
-  const { data: plRaw, isLoading: plLoading, isFetching: plFetching } = useGetPLReport(
-    month ? { month } : undefined,
-    { query: { refetchOnMount: "always" } }
-  );
-  const { data: monthly, isLoading: monthlyLoading } = useGetMonthlyPurchaseReport(
-    { query: { refetchOnMount: "always" } }
-  );
+  // Live mode — always refetch on mount AND on window focus so any change made
+  // in another tab/page reflects immediately when user returns to the report.
+  const liveOpts = {
+    query: {
+      refetchOnMount: "always" as const,
+      refetchOnWindowFocus: true,
+      staleTime: 0,
+    },
+  };
+  const { data: plRaw, isLoading: plLoading, isFetching: plFetching, dataUpdatedAt: plUpdatedAt } =
+    useGetPLReport(month ? { month } : undefined, liveOpts);
+  const { data: monthly, isLoading: monthlyLoading } = useGetMonthlyPurchaseReport(liveOpts);
   const { data: catReport, isLoading: catLoading } = useGetCategoryExpenseReport(
     month ? { month } : undefined,
-    { query: { refetchOnMount: "always" } }
+    liveOpts,
   );
 
   const pl = plRaw as (typeof plRaw & PLExtra) | undefined;
+
+  // Debug log: P&L data turnover for live-update verification
+  const prevUpdatedAtRef = useRef<number>(0);
+  useEffect(() => {
+    if (plUpdatedAt && plUpdatedAt !== prevUpdatedAtRef.current) {
+      prevUpdatedAtRef.current = plUpdatedAt;
+      // eslint-disable-next-line no-console
+      console.debug(
+        "[P&L] data refreshed",
+        new Date(plUpdatedAt).toLocaleTimeString(),
+        "month=", month || "all",
+        "revenue=", pl?.totalRevenue,
+        "cogs=", pl?.adjustedCOGS ?? pl?.totalCOGS,
+        "netProfit=", pl?.netProfit,
+      );
+    }
+  }, [plUpdatedAt, month, pl?.totalRevenue, pl?.adjustedCOGS, pl?.totalCOGS, pl?.netProfit]);
 
   const handleRefreshAll = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: getGetPLReportQueryKey() });
     queryClient.invalidateQueries({ queryKey: getGetMonthlyPurchaseReportQueryKey() });
     queryClient.invalidateQueries({ queryKey: getGetCategoryExpenseReportQueryKey() });
-  }, [queryClient]);
+    invalidateFinancials();
+  }, [queryClient, invalidateFinancials]);
 
   const R = pl?.totalRevenue ?? 0; // denominator for % column
 
@@ -216,6 +241,13 @@ export default function Reports() {
         action={
           <div className="flex gap-2 items-center flex-wrap">
             <div className="no-print flex gap-2 items-center flex-wrap">
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-medium text-emerald-700" title="Auto-updates after every Add / Edit / Delete / Transfer">
+                <span className={`w-1.5 h-1.5 rounded-full ${plFetching ? "bg-amber-500 animate-pulse" : "bg-emerald-500"}`} />
+                {plFetching ? "Updating…" : "Live"}
+                {plUpdatedAt > 0 && !plFetching && (
+                  <span className="text-emerald-500/80 font-normal">· {new Date(plUpdatedAt).toLocaleTimeString()}</span>
+                )}
+              </div>
               <button onClick={handleRefreshAll} disabled={plFetching} title="Refresh all"
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm disabled:opacity-60">
                 <RefreshCw className={`w-4 h-4 ${plFetching ? "animate-spin" : ""}`} /> Refresh

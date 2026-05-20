@@ -1,22 +1,19 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { 
-  useCreateSale, 
-  useUpdateSale, 
+import {
+  useCreateSale,
+  useUpdateSale,
   useDeleteSale,
   getListSalesQueryKey,
-  getGetMonthlySalesSummaryQueryKey,
-  getGetDashboardSummaryQueryKey,
-  getGetVatReportQueryKey
 } from "@workspace/api-client-react";
+import { useInvalidateFinancials } from "./use-invalidate-financials";
 
 export function useSalesMutations() {
   const queryClient = useQueryClient();
+  const invalidateFinancials = useInvalidateFinancials();
 
   const invalidateQueries = () => {
     queryClient.invalidateQueries({ queryKey: getListSalesQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getGetMonthlySalesSummaryQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getGetVatReportQueryKey() });
+    invalidateFinancials(); // P&L, VAT, dashboard, monthly summaries — all live
   };
 
   const create = useCreateSale({ mutation: { onSuccess: invalidateQueries } });

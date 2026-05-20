@@ -7,6 +7,7 @@ import {
   getListBranchTransfersQueryKey, getGetInventoryQueryKey, getGetPLReportQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useInvalidateFinancials } from "@/hooks/use-invalidate-financials";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PrintButton } from "@/components/ui/PrintButton";
 import { formatSAR } from "@/lib/format";
@@ -67,6 +68,7 @@ function getCategoryLabel(cat: string) {
 
 export default function Inventory() {
   const queryClient = useQueryClient();
+  const invalidateFinancials = useInvalidateFinancials();
 
   // ─── Stock Levels ───────────────────────────────────────────────────
   const [catFilter, setCatFilter] = useState("all");
@@ -152,6 +154,7 @@ export default function Inventory() {
       queryClient.invalidateQueries({ queryKey: getListStockItemsQueryKey({}) });
       queryClient.invalidateQueries({ queryKey: getListStockMovementsQueryKey({}) });
       queryClient.invalidateQueries({ queryKey: getGetStockReportQueryKey({ month: currentMonth() }) });
+      invalidateFinancials();
     } catch (err: unknown) {
       const e = err as { data?: { error?: string }; message?: string };
       const msg = e.data?.error || e.message || "Failed to add movement";
@@ -171,6 +174,7 @@ export default function Inventory() {
       toast({ title: "Movement deleted" });
       queryClient.invalidateQueries({ queryKey: getListStockItemsQueryKey({}) });
       queryClient.invalidateQueries({ queryKey: getListStockMovementsQueryKey({}) });
+      invalidateFinancials();
     } catch {
       toast({ title: "Failed to delete movement", variant: "destructive" });
     }
@@ -281,6 +285,7 @@ export default function Inventory() {
       queryClient.invalidateQueries({ queryKey: getListStockItemsQueryKey({}) });
       queryClient.invalidateQueries({ queryKey: getListStockMovementsQueryKey({}) });
       queryClient.invalidateQueries({ queryKey: getListBranchTransfersQueryKey({}) });
+      invalidateFinancials();
     } catch (err: unknown) {
       const e = err as { data?: { error?: string }; message?: string };
       const msg = e.data?.error || e.message || "Failed to create transfer";
@@ -295,6 +300,7 @@ export default function Inventory() {
       queryClient.invalidateQueries({ queryKey: getListStockItemsQueryKey({}) });
       queryClient.invalidateQueries({ queryKey: getListStockMovementsQueryKey({}) });
       queryClient.invalidateQueries({ queryKey: getListBranchTransfersQueryKey({}) });
+      invalidateFinancials();
     } catch {
       toast({ title: "Failed to delete transfer", variant: "destructive" });
     }
@@ -389,6 +395,7 @@ export default function Inventory() {
       toast({ title: "Closing inventory saved" });
       queryClient.invalidateQueries({ queryKey: getGetInventoryQueryKey({ month: plMonth }) });
       queryClient.invalidateQueries({ queryKey: getGetPLReportQueryKey({ month: plMonth }) });
+      invalidateFinancials();
     } catch {
       toast({ title: "Failed to save", variant: "destructive" });
     }

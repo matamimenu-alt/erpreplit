@@ -1,23 +1,19 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { 
-  useCreateExpense, 
-  useUpdateExpense, 
+import {
+  useCreateExpense,
+  useUpdateExpense,
   useDeleteExpense,
   getListExpensesQueryKey,
-  getGetDashboardSummaryQueryKey,
-  getGetPLReportQueryKey,
-  getGetCategoryExpenseReportQueryKey,
 } from "@workspace/api-client-react";
+import { useInvalidateFinancials } from "./use-invalidate-financials";
 
 export function useExpenseMutations() {
   const queryClient = useQueryClient();
+  const invalidateFinancials = useInvalidateFinancials();
 
   const invalidateQueries = () => {
     queryClient.invalidateQueries({ queryKey: getListExpensesQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
-    // Invalidate P&L for all months (partial match covers month-filtered queries too)
-    queryClient.invalidateQueries({ queryKey: getGetPLReportQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getGetCategoryExpenseReportQueryKey() });
+    invalidateFinancials();
   };
 
   const create = useCreateExpense({ mutation: { onSuccess: invalidateQueries } });
