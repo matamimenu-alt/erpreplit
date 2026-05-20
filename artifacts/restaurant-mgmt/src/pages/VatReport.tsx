@@ -5,6 +5,26 @@ import { PrintButton } from "@/components/ui/PrintButton";
 import { formatSAR, formatMonth } from "@/lib/format";
 import { Calculator, ShieldCheck, ArrowRightLeft, ArrowUpRight, ArrowDownLeft, Info, Receipt, Wallet, TrendingUp, TrendingDown } from "lucide-react";
 
+function SourceTotal({ label, vat, net, color }: { label: string; vat: number; net: number; color: "blue" | "emerald" | "purple" }) {
+  const palette = {
+    blue:    { dot: "bg-blue-500",    text: "text-blue-700" },
+    emerald: { dot: "bg-emerald-500", text: "text-emerald-700" },
+    purple:  { dot: "bg-purple-500",  text: "text-purple-700" },
+  }[color];
+  return (
+    <div className="px-6 py-3 flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <span className={`w-2 h-2 rounded-full ${palette.dot}`} />
+        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</span>
+      </div>
+      <div className="text-right text-xs">
+        <div className="text-slate-500">Net: <span className="font-semibold text-slate-700">{formatSAR(net)}</span></div>
+        <div className={`font-bold ${palette.text}`}>VAT: {formatSAR(vat)}</div>
+      </div>
+    </div>
+  );
+}
+
 export default function VatReport() {
   const [month, setMonth] = useState("");
   const { data: reportRaw, isLoading } = useGetVatReport(month ? { month } : undefined);
@@ -38,7 +58,30 @@ export default function VatReport() {
       box4_inputVatNet: number;
       box5_vatPayable: number;
     };
+    breakdown?: BreakdownRow[];
+    breakdownTotals?: {
+      purchases:     { vat: number; net: number };
+      expenseLedger: { vat: number; net: number };
+      fixedCosts:    { vat: number; net: number };
+    };
+    excluded?: Array<{ sourceType: string; sourceId: string; label: string; date: string; amount: number; reason: string }>;
   };
+
+  type BreakdownRow = {
+    sourceType: "purchase" | "fixed-cost" | "expense-ledger";
+    sourceId: string;
+    label: string;
+    date: string;
+    vatType: string;
+    vatRate: number;
+    taxableAmount: number;
+    vatAmount: number;
+    status: "taxable" | "exempt" | "excluded";
+    reason?: string;
+  };
+
+  const [bdFilter, setBdFilter] = useState<"all" | "purchase" | "fixed-cost" | "expense-ledger">("all");
+  const [showExempt, setShowExempt] = useState(true);
 
   const report = reportRaw as VatReportExt | undefined;
   const r = report; // alias for clarity
@@ -221,6 +264,15 @@ export default function VatReport() {
                 <span className="font-semibold">+ {formatSAR(r?.fixedCostInputVat)}</span>
               </div>
             )}
+            {hasExpenseLedgerVat && (
+              <div className="flex justify-between items-center text-sm text-purple-700 bg-purple-50 px-3 py-2 rounded-lg">
+                <span className="flex items-center gap-1.5">
+                  <ArrowDownLeft className="w-3.5 h-3.5" />
+                  VAT on Expense Ledger (insurance, gov fees, services, contracts)
+                </span>
+                <span className="font-semibold">+ {formatSAR(r?.expenseLedgerInputVat)}</span>
+              </div>
+            )}
             {hasTransfers && (
               <>
                 {(r?.vatTransferredOut ?? 0) > 0 && (
@@ -244,14 +296,138 @@ export default function VatReport() {
               </>
             )}
             <div className="flex justify-between items-center text-lg font-bold text-slate-900 bg-slate-50 p-3 rounded-lg">
-              <span>{(hasTransfers || hasFixedCostVat) ? "Adjusted Input VAT" : "Input VAT Paid"}</span>
+              <span>{(hasTransfers || hasFixedCostVat || hasExpenseLedgerVat) ? "Adjusted Input VAT" : "Input VAT Paid"}</span>
               <span className="text-rose-600">
-                {formatSAR((hasTransfers || hasFixedCostVat) ? r?.adjustedInputVat : report?.inputVat)}
+                {formatSAR((hasTransfers || hasFixedCostVat || hasExpenseLedgerVat) ? r?.adjustedInputVat : report?.inputVat)}
               </span>
             </div>
           </div>
         </div>
       </div>
+
+      {/* ── Per-Source VAT Breakdown (Purchases / Fixed Costs / Expense Ledger) ── */}
+      {(r?.breakdown?.length ?? 0) > 0 && (
+        <div className="bg-card rounded-2xl border shadow-sm mb-6 overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3 flex-wrap">
+            <Receipt className="w-4 h-4 text-indigo-600" />
+            <h3 className="font-bold text-slate-800">VAT Breakdown by Source</h3>
+            <span className="text-xs text-slate-400">كل بنود الضريبة من جميع المصادر</span>
+
+            {/* Filter chips */}
+            <div className="ml-auto flex flex-wrap items-center gap-1.5 text-xs no-print">
+              {([
+                ["all",            "All",            r?.breakdown?.length ?? 0],
+                ["purchase",       "Purchases",      r?.breakdown?.filter(b => b.sourceType === "purchase").length ?? 0],
+                ["fixed-cost",     "Fixed Costs",    r?.breakdown?.filter(b => b.sourceType === "fixed-cost").length ?? 0],
+                ["expense-ledger", "Expense Ledger", r?.breakdown?.filter(b => b.sourceType === "expense-ledger").length ?? 0],
+              ] as const).map(([k, label, n]) => (
+                <button
+                  key={k}
+                  onClick={() => setBdFilter(k)}
+                  className={`px-2.5 py-1 rounded-full font-semibold border transition ${
+                    bdFilter === k
+                      ? "bg-indigo-600 text-white border-indigo-600"
+                      : "bg-white text-slate-600 border-slate-200 hover:border-indigo-300"
+                  }`}
+                >
+                  {label} <span className="opacity-70">({n})</span>
+                </button>
+              ))}
+              <label className="flex items-center gap-1.5 ml-2 cursor-pointer text-slate-600">
+                <input type="checkbox" checked={showExempt} onChange={e => setShowExempt(e.target.checked)} className="accent-indigo-600" />
+                Show exempt / excluded
+              </label>
+            </div>
+          </div>
+
+          {/* Source totals */}
+          {r?.breakdownTotals && (
+            <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-100 bg-slate-50 border-b">
+              <SourceTotal label="Purchases"      vat={r.breakdownTotals.purchases.vat}     net={r.breakdownTotals.purchases.net}     color="blue"   />
+              <SourceTotal label="Fixed Costs"    vat={r.breakdownTotals.fixedCosts.vat}    net={r.breakdownTotals.fixedCosts.net}    color="emerald"/>
+              <SourceTotal label="Expense Ledger" vat={r.breakdownTotals.expenseLedger.vat} net={r.breakdownTotals.expenseLedger.net} color="purple" />
+            </div>
+          )}
+
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+                <tr>
+                  <th className="px-4 py-2.5 text-left font-semibold">Source</th>
+                  <th className="px-4 py-2.5 text-left font-semibold">Item</th>
+                  <th className="px-4 py-2.5 text-center font-semibold">Date</th>
+                  <th className="px-4 py-2.5 text-center font-semibold">VAT Type</th>
+                  <th className="px-4 py-2.5 text-right font-semibold">Rate</th>
+                  <th className="px-4 py-2.5 text-right font-semibold">Taxable (net)</th>
+                  <th className="px-4 py-2.5 text-right font-semibold">VAT Amount</th>
+                  <th className="px-4 py-2.5 text-center font-semibold">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(r?.breakdown ?? [])
+                  .filter(b => bdFilter === "all" || b.sourceType === bdFilter)
+                  .filter(b => showExempt || b.status === "taxable")
+                  .map((b) => {
+                    const srcMeta = b.sourceType === "purchase"
+                      ? { label: "Purchase",       color: "bg-blue-100 text-blue-700" }
+                      : b.sourceType === "fixed-cost"
+                        ? { label: "Fixed Cost",   color: "bg-emerald-100 text-emerald-700" }
+                        : { label: "Expense",      color: "bg-purple-100 text-purple-700" };
+                    const statusMeta = b.status === "taxable"
+                      ? { label: "Taxable",  color: "bg-emerald-50 text-emerald-700 border-emerald-200" }
+                      : b.status === "exempt"
+                        ? { label: "Exempt", color: "bg-slate-50 text-slate-500 border-slate-200" }
+                        : { label: "Excluded", color: "bg-amber-50 text-amber-700 border-amber-200" };
+                    return (
+                      <tr key={`${b.sourceType}-${b.sourceId}`} className="border-t border-slate-100 hover:bg-slate-50/60">
+                        <td className="px-4 py-2">
+                          <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${srcMeta.color}`}>{srcMeta.label}</span>
+                        </td>
+                        <td className="px-4 py-2 text-slate-700">{b.label}</td>
+                        <td className="px-4 py-2 text-center text-slate-500 text-xs">{b.date}</td>
+                        <td className="px-4 py-2 text-center text-xs text-slate-600 capitalize">{b.vatType}</td>
+                        <td className="px-4 py-2 text-right text-xs text-slate-500">{b.vatRate ? `${b.vatRate}%` : "—"}</td>
+                        <td className="px-4 py-2 text-right tabular-nums">{formatSAR(b.taxableAmount)}</td>
+                        <td className={`px-4 py-2 text-right font-semibold tabular-nums ${b.vatAmount > 0 ? "text-rose-600" : "text-slate-400"}`}>
+                          {formatSAR(b.vatAmount)}
+                        </td>
+                        <td className="px-4 py-2 text-center">
+                          <span className={`px-2 py-0.5 rounded-full text-[11px] border font-semibold ${statusMeta.color}`} title={b.reason ?? ""}>
+                            {statusMeta.label}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                {(r?.breakdown ?? []).filter(b => bdFilter === "all" || b.sourceType === bdFilter).filter(b => showExempt || b.status === "taxable").length === 0 && (
+                  <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-400 text-sm">No entries match the current filter.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Excluded audit list (auto-generated entries) */}
+          {(r?.excluded?.length ?? 0) > 0 && (
+            <div className="border-t border-slate-100 bg-amber-50/40 p-4">
+              <details>
+                <summary className="cursor-pointer text-xs font-semibold text-amber-700 flex items-center gap-1.5">
+                  <Info className="w-3.5 h-3.5" />
+                  {r?.excluded?.length} auto-generated entries excluded from Input VAT (already counted at source) — click for audit list
+                </summary>
+                <ul className="mt-3 space-y-1 text-xs text-slate-600">
+                  {r?.excluded?.map(e => (
+                    <li key={`x-${e.sourceId}`} className="flex justify-between gap-4">
+                      <span className="truncate">{e.label} <span className="text-slate-400">· {e.date}</span></span>
+                      <span className="text-slate-500">{formatSAR(e.amount)} · {e.reason}</span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Inter-Branch Transfer VAT Section ── */}
       {hasTransfers && (
