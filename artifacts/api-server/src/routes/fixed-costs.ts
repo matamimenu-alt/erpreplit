@@ -211,10 +211,13 @@ router.delete("/templates/:id", async (req, res) => {
       .from(fixedCostTemplatesTable)
       .where(and(eq(fixedCostTemplatesTable.id, id), eq(fixedCostTemplatesTable.restaurantId, restaurantId)));
     if (!existing) return res.status(404).json({ error: "Not found" });
-    await writeAudit({
-      restaurantId, templateId: id, templateName: existing.name,
-      action: "delete_template", oldAmount: toNum(existing.defaultAmount),
-    });
+    // Delete audit logs first (FK constraint: expense_audit_logs → fixed_cost_templates)
+    await db.delete(expenseAuditLogsTable)
+      .where(eq(expenseAuditLogsTable.templateId, id));
+    // Then delete monthly overrides (cascade would handle this, but be explicit)
+    await db.delete(fixedCostMonthlyValuesTable)
+      .where(eq(fixedCostMonthlyValuesTable.templateId, id));
+    // Now delete the template itself
     await db.delete(fixedCostTemplatesTable)
       .where(and(eq(fixedCostTemplatesTable.id, id), eq(fixedCostTemplatesTable.restaurantId, restaurantId)));
     res.status(204).send();
