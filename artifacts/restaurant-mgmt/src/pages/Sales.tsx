@@ -1,6 +1,6 @@
-import { useState, memo, useEffect } from "react";
+import { useState, memo, useEffect, useMemo } from "react";
 import {
-  useListSales, useGetMonthlySalesSummary, useGetSalesAppConfig,
+  useListSales, useGetSalesAppConfig,
   useUpdateSalesAppConfig, useGetSalesReport,
   getListSalesQueryKey, getGetMonthlySalesSummaryQueryKey, getGetDashboardSummaryQueryKey,
   getGetVatReportQueryKey, getGetSalesAppConfigQueryKey, getGetSalesReportQueryKey,
@@ -289,7 +289,6 @@ export default function Sales() {
   });
 
   const { data: salesRaw = [], isLoading } = useListSales(month ? { month } : undefined);
-  const { data: summary = [] } = useGetMonthlySalesSummary();
 
   const { data: reportData, isLoading: reportLoading } = useGetSalesReport(
     reportFetch ? { from: reportFrom || undefined, to: reportTo || undefined } : undefined,
@@ -309,7 +308,6 @@ export default function Sales() {
   const remove = useDeleteSale({ mutation: { onSuccess: invalidate } });
 
   const sales = salesRaw as SaleRecord[];
-  const latestSummary = summary.length > 0 ? summary[summary.length - 1] : null;
 
   function handleCreate(data: SaleForm) {
     create.mutate({ data: data as Parameters<typeof create.mutate>[0]["data"] }, {
@@ -355,15 +353,24 @@ export default function Sales() {
     exportToExcel(rows, `sales-${month || "all"}`, "Sales");
   }
 
-  // ─── KPI Cards ─────────────────────────────────────────────────────────────
-  const kpiCards = latestSummary
+  // ─── KPI Cards — computed directly from the month-filtered sales list ──────
+  const kpiTotals = useMemo(() => ({
+    totalRevenue: sales.reduce((s, r) => s + r.totalRevenue, 0),
+    netSales:     sales.reduce((s, r) => s + r.netSales, 0),
+    outputVat:    sales.reduce((s, r) => s + r.outputVat, 0),
+    cash:         sales.reduce((s, r) => s + r.cash, 0),
+    card:         sales.reduce((s, r) => s + r.card, 0),
+    apps:         sales.reduce((s, r) => s + appsTotal(r), 0),
+  }), [sales]);
+
+  const kpiCards = sales.length > 0
     ? [
-        { label: "Total Revenue", value: latestSummary.totalRevenue, sub: "as entered", color: "bg-slate-700 text-white" },
-        { label: "Net Sales (excl. VAT)", value: latestSummary.netSales, sub: "taxable base", color: "bg-emerald-50 border border-emerald-200 text-emerald-900" },
-        { label: "Output VAT (15%)", value: latestSummary.totalOutputVat, sub: "ZATCA", color: "bg-purple-50 border border-purple-200 text-purple-900" },
-        { label: "Cash Total", value: latestSummary.cash, sub: "cash channel", color: "bg-amber-50 border border-amber-200 text-amber-900" },
-        { label: "Card Total", value: latestSummary.card, sub: "POS / Visa", color: "bg-blue-50 border border-blue-200 text-blue-900" },
-        { label: "Delivery Apps", value: (latestSummary.app1 ?? 0) + (latestSummary.app2 ?? 0) + (latestSummary.app3 ?? 0) + (latestSummary.app4 ?? 0) + (latestSummary.app5 ?? 0) + (latestSummary.app6 ?? 0), sub: "all apps combined", color: "bg-indigo-50 border border-indigo-200 text-indigo-900" },
+        { label: "Total Revenue",       value: kpiTotals.totalRevenue, sub: "as entered",      color: "bg-slate-700 text-white" },
+        { label: "Net Sales (excl. VAT)", value: kpiTotals.netSales,   sub: "taxable base",    color: "bg-emerald-50 border border-emerald-200 text-emerald-900" },
+        { label: "Output VAT (15%)",    value: kpiTotals.outputVat,    sub: "ZATCA",           color: "bg-purple-50 border border-purple-200 text-purple-900" },
+        { label: "Cash Total",          value: kpiTotals.cash,         sub: "cash channel",    color: "bg-amber-50 border border-amber-200 text-amber-900" },
+        { label: "Card Total",          value: kpiTotals.card,         sub: "POS / Visa",      color: "bg-blue-50 border border-blue-200 text-blue-900" },
+        { label: "Delivery Apps",       value: kpiTotals.apps,         sub: "all apps combined", color: "bg-indigo-50 border border-indigo-200 text-indigo-900" },
       ]
     : [];
 
