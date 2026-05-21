@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { salesTable, purchasesTable, employeesTable, expensesTable, inventoryTable, branchTransfersTable, fixedCostTemplatesTable, fixedCostMonthlyValuesTable, expenseTransactionsTable, expenseCategoriesTable } from "@workspace/db/schema";
+import { salesTable, purchasesTable, employeesTable, inventoryTable, branchTransfersTable, fixedCostTemplatesTable, fixedCostMonthlyValuesTable, expenseTransactionsTable, expenseCategoriesTable } from "@workspace/db/schema";
 import { eq, and, or } from "drizzle-orm";
 import { getRestaurantId } from "../lib/restaurant";
 import { computeVatSummary } from "../lib/vat-engine";
@@ -238,12 +238,13 @@ router.get("/pl", async (req, res) => {
     }, 0);
     const totalLaborCost = payrollExpenses; // backward-compat alias
 
-    // Legacy staff & commissions from expensesTable (non-payroll HR costs: iqama, visa, tickets)
-    const legacyExpenses      = await db.select().from(expensesTable).where(eq(expensesTable.restaurantId, restaurantId));
-    const totalStaffExpenses  = legacyExpenses.filter(e => e.category === "staff-expenses").reduce((s, e) => s + toNum(e.monthlyCost), 0);
-    const totalAppCommissions = legacyExpenses.filter(e => e.category === "app-commission").reduce((s, e) => s + toNum(e.monthlyCost), 0);
-    // Legacy fixed (kept for backward compat, may overlap with dynamic — prefer dynamic)
-    const totalFixedExpenses  = legacyExpenses.filter(e => (e.category ?? "fixed") === "fixed").reduce((s, e) => s + toNum(e.monthlyCost), 0);
+    // Legacy `expensesTable` is deprecated as of the Expenses Management merge.
+    // All recurring items (rent, utilities, staff-expenses, app-commission,
+    // operating) now live in `fixed_cost_templates` (see migration). Reading
+    // here is kept at 0 to preserve the field shape for downstream consumers.
+    const totalStaffExpenses  = 0;
+    const totalAppCommissions = 0;
+    const totalFixedExpenses  = 0;
 
     // ── [5] FIXED EXPENSES — SOURCE RULE: Fixed Cost Templates (excl. staff-salaries) ──
     // ⚠ 'staff-salaries' is EXCLUDED here — payroll module owns all HR costs
@@ -481,16 +482,14 @@ router.get("/pl", async (req, res) => {
 
     const ebitda       = grossProfit - totalOperatingExpenses;
 
-    // ── VAT — single source of truth (unified VAT engine) ──────────────────
-    // Net VAT Payable here MUST equal /api/vat/report's vatPayable and
-    // /api/dashboard/summary's adjustedVatPayable. Previously this endpoint
-    // computed `outputVat - inputVat` (purchase VAT only), which silently
-    // ignored fixed-cost VAT, expense-ledger VAT and inter-branch transfer
-    // adjustments — causing the P&L Net VAT Payable to disagree with the
-    // ZATCA / VAT Report by exactly those missing components.
+    // ── VAT (informational only — NOT included in Net Profit) ─────────────
+    // Accounting rule (Saudi VAT, IFRS): VAT is a pass-through liability,
+    // not an income/expense. P&L lines are already VAT-exclusive (Net), so
+    // Net Profit MUST NOT subtract Net VAT Payable. VAT figures are exposed
+    // here purely for cross-referencing the dedicated Zakat & VAT report.
     const vatSummary   = await computeVatSummary({ restaurantId, month });
-    const vatPayable   = vatSummary.netVatPayable;          // canonical Net VAT
-    const netProfit    = ebitda - vatPayable;
+    const vatPayable   = vatSummary.netVatPayable;          // canonical Net VAT (info only)
+    const netProfit    = ebitda;                            // VAT-exclusive net profit
     const operatingProfit = ebitda; // alias for backward compat
 
     res.json({

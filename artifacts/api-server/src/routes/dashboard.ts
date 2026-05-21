@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import {
-  salesTable, purchasesTable, employeesTable, expensesTable, branchTransfersTable,
+  salesTable, purchasesTable, employeesTable, branchTransfersTable,
   expenseTransactionsTable, fixedCostTemplatesTable, fixedCostMonthlyValuesTable,
 } from "@workspace/db/schema";
 import { eq, or, and } from "drizzle-orm";
@@ -43,11 +43,11 @@ router.get("/summary", async (req, res) => {
 
     const employees = await db.select().from(employeesTable)
       .where(eq(employeesTable.restaurantId, restaurantId));
-    const expenses = await db.select().from(expensesTable)
-      .where(eq(expensesTable.restaurantId, restaurantId));
 
     const totalSalaries = employees.reduce((s, e) => s + toNum(e.totalMonthlyCost), 0);
-    const totalFixedExpenses = expenses.reduce((s, e) => s + toNum(e.monthlyCost), 0);
+    // Legacy `expenses` table is deprecated — all recurring items now live in
+    // fixed_cost_templates (single source of truth, Expenses Management module).
+    const totalFixedExpenses = 0;
 
     // ── Expense Ledger (manual rows only — drives netProfit) ──
     let expenseTxnRows = await db.select().from(expenseTransactionsTable)
@@ -100,6 +100,10 @@ router.get("/summary", async (req, res) => {
     const effectivePurchases = totalPurchases + netTransferCost;
 
     // ── VAT — UNIFIED via lib/vat-engine (matches /api/vat/report & P&L) ──
+    // VAT is a pass-through liability, NOT an expense, so it does NOT affect
+    // Net Profit. Net Profit uses VAT-exclusive (Net) totals only. The VAT
+    // fields below are exposed informationally so the dashboard can mirror
+    // the Zakat & VAT report.
     const vat = await computeVatSummary({ restaurantId, month: month ?? null });
     const adjustedVatPayable = vat.netVatPayable;
 
@@ -109,8 +113,7 @@ router.get("/summary", async (req, res) => {
       - totalSalaries
       - totalFixedExpenses
       - dynamicFixedCosts
-      - expenseLedgerNet
-      - adjustedVatPayable;
+      - expenseLedgerNet;
 
     res.json({
       month: month ?? "all",

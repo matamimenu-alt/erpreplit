@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { dishesTable, dishIngredientsTable, pricingConfigTable, purchasesTable, expensesTable, employeesTable } from "@workspace/db/schema";
+import { dishesTable, dishIngredientsTable, pricingConfigTable, purchasesTable, fixedCostTemplatesTable, fixedCostMonthlyValuesTable, employeesTable } from "@workspace/db/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { getRestaurantId } from "../lib/restaurant";
 
@@ -25,13 +25,27 @@ async function getOrCreateConfig(restaurantId: number) {
 }
 
 async function computePricing(restaurantId: number) {
-  const [config, expenses, employees] = await Promise.all([
+  // Fixed costs come from the unified Expenses Management module
+  // (fixed_cost_templates + per-month overrides). Salaries are counted via the
+  // payroll/employees module, so we EXCLUDE the 'staff-salaries' template
+  // category here to avoid double-counting.
+  const [config, fixedTemplates, fixedOverrides, employees] = await Promise.all([
     getOrCreateConfig(restaurantId),
-    db.select().from(expensesTable).where(eq(expensesTable.restaurantId, restaurantId)),
+    db.select().from(fixedCostTemplatesTable).where(and(
+      eq(fixedCostTemplatesTable.restaurantId, restaurantId),
+      eq(fixedCostTemplatesTable.isActive, true),
+    )),
+    db.select().from(fixedCostMonthlyValuesTable).where(eq(fixedCostMonthlyValuesTable.restaurantId, restaurantId)),
     db.select().from(employeesTable).where(eq(employeesTable.restaurantId, restaurantId)),
   ]);
 
-  const totalExpenses = expenses.reduce((s, e) => s + toNum(e.monthlyCost), 0);
+  // For pricing we use the template's default monthly amount (representative
+  // recurring cost). If you need month-specific pricing, swap to the override
+  // for the current month here.
+  const totalExpenses = fixedTemplates
+    .filter(t => t.category !== "staff-salaries")
+    .reduce((s, t) => s + toNum(t.defaultAmount), 0);
+  void fixedOverrides; // reserved for future per-month pricing
   const totalSalaries = employees.reduce((s, e) => s + toNum(e.totalMonthlyCost), 0);
   const totalFixedCosts = totalExpenses + totalSalaries;
   const monthlyOrders = config.monthlyOrders || 1000;

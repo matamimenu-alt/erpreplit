@@ -1,103 +1,42 @@
+/**
+ * LEGACY ROUTE — DEPRECATED.
+ *
+ * The legacy `expenses` table has been merged into the unified Expenses
+ * Management module (fixed_cost_templates + expense_transactions). All rows
+ * have been migrated; the table is intentionally empty.
+ *
+ * - GET endpoints still respond (always empty list) so any old frontend that
+ *   hasn't been updated yet keeps working without crashing.
+ * - WRITE endpoints (POST/PUT/DELETE) respond with 410 Gone + a helpful
+ *   message pointing callers to the new endpoints. This prevents new rows
+ *   from being inserted into the deprecated table and silently diverging
+ *   from the unified model.
+ *
+ * New endpoints:
+ *   • Recurring/fixed items → /api/fixed-costs/*
+ *   • Transactions          → /api/expense-categories/transactions
+ */
 import { Router, type IRouter } from "express";
-import { db } from "@workspace/db";
-import { expensesTable } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
-import { getRestaurantId } from "../lib/restaurant";
 
 const router: IRouter = Router();
 
-function toNum(v: unknown) {
-  return parseFloat(String(v));
-}
+const DEPRECATION_MSG = {
+  error: "Endpoint deprecated",
+  message:
+    "The legacy /api/expenses endpoints have been merged into the unified " +
+    "Expenses Management module. Use /api/fixed-costs/* for recurring items " +
+    "(rent, utilities, salaries, subscriptions, …) and " +
+    "/api/expense-categories/transactions for one-off ledger entries.",
+  migrationDate: "2026-05-21",
+};
 
-function toRecord(r: typeof expensesTable.$inferSelect) {
-  return {
-    id: r.id,
-    category: r.category ?? "fixed",
-    name: r.name,
-    monthlyCost: toNum(r.monthlyCost),
-    notes: r.notes ?? undefined,
-    contractStartDate: r.contractStartDate ?? undefined,
-    contractEndDate: r.contractEndDate ?? undefined,
-    createdAt: r.createdAt.toISOString(),
-  };
-}
+// GET endpoints — return empty list, keeps stale clients alive
+router.get("/", (_req, res) => res.json([]));
 
-// GET /api/expenses
-router.get("/", async (req, res) => {
-  try {
-    const restaurantId = getRestaurantId(req);
-    const records = await db.select().from(expensesTable)
-      .where(eq(expensesTable.restaurantId, restaurantId))
-      .orderBy(expensesTable.name);
-    res.json(records.map(toRecord));
-  } catch (err) {
-    req.log.error({ err }, "Error listing expenses");
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// POST /api/expenses
-router.post("/", async (req, res) => {
-  try {
-    const restaurantId = getRestaurantId(req);
-    const { category, name, monthlyCost, notes, contractStartDate, contractEndDate } = req.body;
-    const [record] = await db
-      .insert(expensesTable)
-      .values({
-        restaurantId,
-        category: category || "fixed",
-        name,
-        monthlyCost: String(Number(monthlyCost).toFixed(2)),
-        notes: notes || null,
-        contractStartDate: contractStartDate || null,
-        contractEndDate: contractEndDate || null,
-      })
-      .returning();
-    res.status(201).json(toRecord(record));
-  } catch (err) {
-    req.log.error({ err }, "Error creating expense");
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// PUT /api/expenses/:id
-router.put("/:id", async (req, res) => {
-  try {
-    const restaurantId = getRestaurantId(req);
-    const id = parseInt(req.params.id);
-    const { category, name, monthlyCost, notes, contractStartDate, contractEndDate } = req.body;
-    const [record] = await db
-      .update(expensesTable)
-      .set({
-        category: category || "fixed",
-        name,
-        monthlyCost: String(Number(monthlyCost).toFixed(2)),
-        notes: notes || null,
-        contractStartDate: contractStartDate || null,
-        contractEndDate: contractEndDate || null,
-      })
-      .where(and(eq(expensesTable.id, id), eq(expensesTable.restaurantId, restaurantId)))
-      .returning();
-    if (!record) return res.status(404).json({ error: "Not found" });
-    res.json(toRecord(record));
-  } catch (err) {
-    req.log.error({ err }, "Error updating expense");
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// DELETE /api/expenses/:id
-router.delete("/:id", async (req, res) => {
-  try {
-    const restaurantId = getRestaurantId(req);
-    const id = parseInt(req.params.id);
-    await db.delete(expensesTable).where(and(eq(expensesTable.id, id), eq(expensesTable.restaurantId, restaurantId)));
-    res.status(204).send();
-  } catch (err) {
-    req.log.error({ err }, "Error deleting expense");
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
+// All write endpoints — block with 410 Gone
+router.post   ("/",    (_req, res) => res.status(410).json(DEPRECATION_MSG));
+router.put    ("/:id", (_req, res) => res.status(410).json(DEPRECATION_MSG));
+router.delete ("/:id", (_req, res) => res.status(410).json(DEPRECATION_MSG));
+router.patch  ("/:id", (_req, res) => res.status(410).json(DEPRECATION_MSG));
 
 export default router;

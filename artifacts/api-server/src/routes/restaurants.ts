@@ -128,7 +128,7 @@ router.delete("/:id", async (req, res) => {
 router.get("/group/summary", async (req, res) => {
   try {
     const month = req.query.month as string | undefined;
-    const { salesTable, purchasesTable, employeesTable, expensesTable } = await import("@workspace/db/schema");
+    const { salesTable, purchasesTable, employeesTable } = await import("@workspace/db/schema");
     const { computeVatSummary } = await import("../lib/vat-engine");
 
     const activeRestaurants = await db.select().from(restaurantsTable)
@@ -138,7 +138,6 @@ router.get("/group/summary", async (req, res) => {
       let sales = await db.select().from(salesTable).where(eq(salesTable.restaurantId, r.id));
       let purchases = await db.select().from(purchasesTable).where(eq(purchasesTable.restaurantId, r.id));
       const employees = await db.select().from(employeesTable).where(eq(employeesTable.restaurantId, r.id));
-      const expenses  = await db.select().from(expensesTable).where(eq(expensesTable.restaurantId, r.id));
 
       if (month) {
         sales     = sales.filter(s => s.date.startsWith(month));
@@ -149,16 +148,18 @@ router.get("/group/summary", async (req, res) => {
       const revenue   = sales.reduce((s, r) => s + toNum(r.netSales), 0);
       const purchases_ = purchases.reduce((s, p) => s + toNum(p.amountBeforeVat), 0);
       const salaries  = employees.reduce((s, e) => s + toNum(e.totalMonthlyCost), 0);
-      const fixed     = expenses.reduce((s, e) => s + toNum(e.monthlyCost), 0);
+      // Legacy `expenses` table deprecated — Expenses Management module is the source.
+      const fixed     = 0;
 
-      // VAT — UNIFIED via lib/vat-engine.ts (same as /api/vat/report, P&L, dashboard).
-      // Previously this used `outputVat - inputVat` (purchase VAT only), which
-      // re-introduced exactly the mismatch this refactor is fixing.
+      // VAT — UNIFIED via lib/vat-engine.ts (same engine as /vat/report, P&L,
+      // dashboard). Exposed here for cross-referencing the Zakat & VAT module
+      // ONLY — Net Profit must NOT subtract VAT (accounting rule: VAT is a
+      // pass-through liability, P&L lines are already Net/VAT-exclusive).
       const vat = await computeVatSummary({ restaurantId: r.id, month: month ?? null });
       const outputVat = vat.outputVat;
       const inputVat  = vat.inputVatRaw;
       const vatPayable = vat.netVatPayable;
-      const profit = revenue - purchases_ - salaries - fixed - vatPayable;
+      const profit = revenue - purchases_ - salaries - fixed;     // VAT-exclusive net profit
 
       return {
         restaurantId:   r.id,
@@ -180,7 +181,8 @@ router.get("/group/summary", async (req, res) => {
     }));
 
     const totalRevenue  = results.reduce((s, r) => s + r.revenue, 0);
-    const totalExpenses = results.reduce((s, r) => s + r.purchases + r.salaries + r.fixedExpenses + r.vatPayable, 0);
+    // Group total expenses — VAT-exclusive (matches P&L rule: VAT is not an expense).
+    const totalExpenses = results.reduce((s, r) => s + r.purchases + r.salaries + r.fixedExpenses, 0);
     const totalProfit   = results.reduce((s, r) => s + r.profit, 0);
 
     const sorted = [...results].sort((a, b) => b.profit - a.profit);

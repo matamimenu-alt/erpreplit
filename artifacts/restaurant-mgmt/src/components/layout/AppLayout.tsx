@@ -32,12 +32,13 @@ const PAGE_TITLES: Record<string, string> = {
   "/suppliers": "Suppliers",
   "/supplier-prices": "Price Comparison",
   "/employees": "HR & Employees",
-  "/expenses": "Fixed Expenses",
+  "/expenses-management": "Expenses Management",
+  "/expenses": "Expenses Management",
+  "/expense-ledger": "Expenses Management",
   "/inventory": "Inventory",
   "/food-cost": "Food Cost & Pricing",
-  "/vat-report": "ZATCA VAT Report",
+  "/vat-report": "Zakat & VAT",
   "/reports": "Financial Reports",
-  "/expense-ledger": "Expense Ledger",
 };
 
 function cn(...inputs: ClassValue[]) {
@@ -56,11 +57,10 @@ const branchNavItems = [
   { name: "Suppliers", href: "/suppliers", icon: Building2 },
   { name: "Price Comparison", href: "/supplier-prices", icon: TrendingDown },
   { name: "HR & Employees", href: "/employees", icon: Users },
-  { name: "Fixed Expenses", href: "/expenses", icon: FileBarChart },
-  { name: "Expense Ledger", href: "/expense-ledger", icon: TrendingDown },
+  { name: "Expenses Management", href: "/expenses-management", icon: FileBarChart },
   { name: "Inventory", href: "/inventory", icon: Warehouse },
   { name: "Food Cost & Pricing", href: "/food-cost", icon: ChefHat },
-  { name: "ZATCA VAT Report", href: "/vat-report", icon: Calculator },
+  { name: "Zakat & VAT", href: "/vat-report", icon: Calculator },
   { name: "Financial Reports", href: "/reports", icon: FileBarChart },
 ];
 

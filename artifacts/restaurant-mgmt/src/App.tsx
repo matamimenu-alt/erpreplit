@@ -11,14 +11,13 @@ import Purchases from "@/pages/Purchases";
 import Suppliers from "@/pages/Suppliers";
 import SupplierPrices from "@/pages/SupplierPrices";
 import Employees from "@/pages/Employees";
-import Expenses from "@/pages/Expenses";
 import Inventory from "@/pages/Inventory";
 import FoodCost from "@/pages/FoodCost";
 import VatReport from "@/pages/VatReport";
 import Reports from "@/pages/Reports";
 import Branches from "@/pages/Branches";
 import GroupDashboard from "@/pages/GroupDashboard";
-import ExpenseLedger from "@/pages/ExpenseLedger";
+import ExpensesManagement from "@/pages/ExpensesManagement";
 import { RestaurantProvider } from "@/contexts/RestaurantContext";
 
 const queryClient = new QueryClient({
@@ -42,8 +41,12 @@ function Router() {
         <Route path="/suppliers" component={Suppliers} />
         <Route path="/supplier-prices" component={SupplierPrices} />
         <Route path="/employees" component={Employees} />
-        <Route path="/expenses" component={Expenses} />
-        <Route path="/expense-ledger" component={ExpenseLedger} />
+        {/* Unified Expenses Management (replaces Fixed Expenses + Expense Ledger).
+            Old paths /expenses and /expense-ledger redirect to the new module so
+            any bookmarks / hard-coded links keep working. */}
+        <Route path="/expenses-management" component={ExpensesManagement} />
+        <Route path="/expenses"            component={ExpensesManagement} />
+        <Route path="/expense-ledger"      component={ExpensesManagement} />
         <Route path="/inventory" component={Inventory} />
         <Route path="/food-cost" component={FoodCost} />
         <Route path="/vat-report" component={VatReport} />
