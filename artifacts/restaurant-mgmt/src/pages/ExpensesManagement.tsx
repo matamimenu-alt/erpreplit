@@ -15,9 +15,10 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import Expenses from "@/pages/Expenses";
 import ExpenseLedger from "@/pages/ExpenseLedger";
-import { Calendar, Receipt, ScrollText } from "lucide-react";
+import ExpenseCategoriesManager from "@/pages/ExpenseCategoriesManager";
+import { Calendar, Receipt, ScrollText, FolderTree } from "lucide-react";
 
-type Tab = "recurring" | "transactions";
+type Tab = "recurring" | "transactions" | "categories";
 
 // Deep-link preservation: legacy /expense-ledger bookmarks must land on the
 // Transactions tab; /expenses (old Fixed Expenses) and /expenses-management
@@ -32,6 +33,8 @@ const TABS: Array<{ id: Tab; label: string; arabic: string; icon: typeof Calenda
     hint: "Fixed monthly definitions (rent, utilities, salaries, subscriptions, …) with per-month overrides." },
   { id: "transactions", label: "Transactions",      arabic: "حركات المصروفات",    icon: Receipt,
     hint: "One-off operating-expense entries (cleaning, marketing, gov fees, services, …). Auto-generated rows from recurring items appear here too." },
+  { id: "categories",   label: "Categories",        arabic: "التصنيفات",          icon: FolderTree,
+    hint: "Define your own Fixed/Variable expense categories. Changes sync to the P&L report automatically." },
 ];
 
 export default function ExpensesManagement() {
@@ -92,6 +95,7 @@ export default function ExpensesManagement() {
         <div className="p-4">
           {tab === "recurring"    && <Expenses />}
           {tab === "transactions" && <ExpenseLedger />}
+          {tab === "categories"   && <ExpenseCategoriesManager />}
         </div>
       </div>
     </div>

@@ -1543,6 +1543,60 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/ExpenseCategory"
+    post:
+      operationId: createExpenseCategory
+      tags: [expenses]
+      summary: Create a new expense category (Fixed or Variable)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExpenseCategory"
+      responses:
+        "201":
+          description: Created category
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpenseCategory"
+
+  /expense-categories/{code}:
+    put:
+      operationId: updateExpenseCategory
+      tags: [expenses]
+      summary: Rename a category or change its nature (Fixed/Variable)
+      parameters:
+        - { name: code, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateExpenseCategory"
+      responses:
+        "200":
+          description: Updated category
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpenseCategory"
+    delete:
+      operationId: deleteExpenseCategory
+      tags: [expenses]
+      summary: Delete (deactivate) an expense category — rejected if it has transactions
+      parameters:
+        - { name: code, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Deleted (deactivated)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                required: [success]
 
   /expense-categories/summary:
     get:
@@ -3559,7 +3613,27 @@ components:
         level:      { type: integer }
         sortOrder:  { type: integer }
         isActive:   { type: boolean }
+        # 'fixed' = recurring/predictable; 'variable' = volume-dependent.
+        # null only on aggregate (level-0/1) nodes; required for leaves.
+        nature:     { type: string, nullable: true, enum: [fixed, variable] }
       required: [id, code, name, nameAr, level, sortOrder, isActive]
+
+    CreateExpenseCategory:
+      type: object
+      properties:
+        name:       { type: string,  description: "English display name" }
+        nameAr:     { type: string,  description: "Arabic display name" }
+        parentCode: { type: string,  description: "Parent code (e.g. '5-1' to nest under Operational Expenses)" }
+        nature:     { type: string, enum: [fixed, variable], description: "Fixed or Variable cost — REQUIRED for the new category" }
+      required: [name, nameAr, parentCode, nature]
+
+    UpdateExpenseCategory:
+      type: object
+      properties:
+        name:     { type: string }
+        nameAr:   { type: string }
+        nature:   { type: string, enum: [fixed, variable] }
+        isActive: { type: boolean }
 
     ExpenseTransaction:
       type: object

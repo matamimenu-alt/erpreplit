@@ -1876,10 +1876,62 @@ export const ListExpenseCategoriesResponseItem = zod.object({
   level: zod.number(),
   sortOrder: zod.number(),
   isActive: zod.boolean(),
+  nature: zod.enum(["fixed", "variable"]).nullish(),
 });
 export const ListExpenseCategoriesResponse = zod.array(
   ListExpenseCategoriesResponseItem,
 );
+
+/**
+ * @summary Create a new expense category (Fixed or Variable)
+ */
+export const CreateExpenseCategoryBody = zod.object({
+  name: zod.string().describe("English display name"),
+  nameAr: zod.string().describe("Arabic display name"),
+  parentCode: zod
+    .string()
+    .describe("Parent code (e.g. '5-1' to nest under Operational Expenses)"),
+  nature: zod
+    .enum(["fixed", "variable"])
+    .describe("Fixed or Variable cost — REQUIRED for the new category"),
+});
+
+/**
+ * @summary Rename a category or change its nature (Fixed/Variable)
+ */
+export const UpdateExpenseCategoryParams = zod.object({
+  code: zod.coerce.string(),
+});
+
+export const UpdateExpenseCategoryBody = zod.object({
+  name: zod.string().optional(),
+  nameAr: zod.string().optional(),
+  nature: zod.enum(["fixed", "variable"]).optional(),
+  isActive: zod.boolean().optional(),
+});
+
+export const UpdateExpenseCategoryResponse = zod.object({
+  id: zod.number(),
+  code: zod.string(),
+  name: zod.string(),
+  nameAr: zod.string(),
+  parentCode: zod.string().nullish(),
+  level: zod.number(),
+  sortOrder: zod.number(),
+  isActive: zod.boolean(),
+  nature: zod.enum(["fixed", "variable"]).nullish(),
+});
+
+/**
+ * @summary Delete (deactivate) an expense category — rejected if it has transactions
+ */
+export const DeleteExpenseCategoryParams = zod.object({
+  code: zod.coerce.string(),
+});
+
+export const DeleteExpenseCategoryResponse = zod.object({
+  success: zod.boolean(),
+});
 
 /**
  * @summary Expense totals grouped by category tree

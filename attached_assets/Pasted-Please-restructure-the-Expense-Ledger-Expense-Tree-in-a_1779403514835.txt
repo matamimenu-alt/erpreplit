@@ -1,0 +1,101 @@
+Please restructure the Expense Ledger / Expense Tree in a professional hierarchy so all expenses are automatically organized correctly inside the P&L report.
+
+I want the system to classify expenses into Main Categories and Subcategories, similar to professional hotel and restaurant accounting systems.
+
+Example structure:
+
+1. HR & Employee Costs
+   This section should include:
+
+* Salaries & Wages
+* Overtime
+* Vacation Allowances
+* Air Tickets / Travel
+* Employee Meals
+* Staff Accommodation
+* End of Service
+* Medical Insurance
+* Recruitment Costs
+* Training
+
+2. Government & Legal Expenses
+   This section should include:
+
+* Iqama Fees
+* GOSI / Social Insurance
+* Municipality Licenses
+* Commercial Registration
+* Chamber of Commerce
+* Visa Costs
+* Passport Services
+* Government Platforms
+* Legal Fees
+
+3. Fixed Operating Costs
+   This section should include:
+
+* Rent
+* Internet
+* Software Subscriptions
+* Insurance
+* Security Contracts
+* Maintenance Contracts
+* Accounting Systems
+* POS Systems
+
+4. Variable Operating Costs
+   This section should include:
+
+* Electricity
+* Water
+* Gas
+* Fuel
+* Packaging
+* Cleaning Materials
+* Laundry
+* Kitchen Consumables
+* Smallwares
+* Delivery Expenses
+
+5. Marketing & Sales
+   This section should include:
+
+* Social Media Ads
+* Influencer Marketing
+* Printing
+* Photography
+* Promotions & Discounts
+* Talabat / HungerStation Commissions
+
+6. Repairs & Maintenance
+   This section should include:
+
+* Equipment Maintenance
+* AC Maintenance
+* Plumbing
+* Electrical Repairs
+* Emergency Repairs
+
+7. Administrative Expenses
+   This section should include:
+
+* Office Supplies
+* Stationery
+* Bank Charges
+* Communication Expenses
+* Courier Services
+
+Requirements:
+
+* I need the ability to create/edit/delete categories and subcategories.
+* Every expense must be linked to:
+
+  * Main Category
+  * Subcategory
+  * Fixed or Variable classification
+* The system must automatically sync all categories into the P&L report.
+* The P&L should display expenses grouped professionally by these categories.
+* VAT must remain excluded from the P&L calculations.
+* The structure should support multi-branch restaurant and hotel operations.
+
+The goal is to have a clean and professional hospitality accounting structure similar to ERP/accounting systems used in hotels and restaurant groups.

@@ -122,6 +122,155 @@ router.get("/", async (req, res) => {
   }
 });
 
+// ─── POST /api/expense-categories — create user-defined category ─────────────
+// Forces Fixed/Variable nature on every new leaf so P&L grouping stays
+// deterministic. New code is auto-generated as <parentCode>-<next-index>.
+router.post("/", async (req, res) => {
+  try {
+    const { name, nameAr, parentCode, nature } = req.body ?? {};
+    if (!name || !nameAr || !parentCode || !nature) {
+      return res.status(400).json({ error: "name, nameAr, parentCode and nature are required" });
+    }
+    if (nature !== "fixed" && nature !== "variable") {
+      return res.status(400).json({ error: "nature must be 'fixed' or 'variable'" });
+    }
+    const parent = await db.select().from(expenseCategoriesTable)
+      .where(eq(expenseCategoriesTable.code, String(parentCode))).limit(1);
+    if (parent.length === 0) {
+      return res.status(400).json({ error: `parent category '${parentCode}' not found` });
+    }
+    // Aggregate-vs-leaf invariant: a leaf (nature set) carries transactions
+    // and must never gain children — that would orphan the parent's
+    // transactions out of the Fixed-vs-Variable rollup. Force parents to be
+    // aggregate nodes (nature=null).
+    if (parent[0].nature !== null) {
+      return res.status(400).json({
+        error: `parent category '${parentCode}' is a leaf — pick an aggregate (group) category as the parent`,
+      });
+    }
+    // Find next available sub-code under this parent
+    const siblings = await db.select().from(expenseCategoriesTable)
+      .where(eq(expenseCategoriesTable.parentCode, String(parentCode)));
+    const usedSuffixes = siblings
+      .map(s => parseInt(s.code.slice(String(parentCode).length + 1), 10))
+      .filter(n => !isNaN(n));
+    const nextSuffix = (usedSuffixes.length === 0 ? 0 : Math.max(...usedSuffixes)) + 1;
+    const code = `${parentCode}-${nextSuffix}`;
+    const sortOrder = (siblings.reduce((m, s) => Math.max(m, s.sortOrder), 0)) + 1;
+
+    const [row] = await db.insert(expenseCategoriesTable).values({
+      code,
+      name:       String(name),
+      nameAr:     String(nameAr),
+      parentCode: String(parentCode),
+      level:      parent[0].level + 1,
+      sortOrder,
+      isActive:   true,
+      nature,
+    }).returning();
+    res.status(201).json(row);
+  } catch (err) {
+    req.log.error({ err }, "Error creating expense category");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── PUT /api/expense-categories/:code — rename / change nature ──────────────
+router.put("/:code", async (req, res) => {
+  try {
+    const code = req.params.code;
+    const { name, nameAr, nature, isActive } = req.body ?? {};
+    if (nature !== undefined && nature !== "fixed" && nature !== "variable") {
+      return res.status(400).json({ error: "nature must be 'fixed' or 'variable'" });
+    }
+    // Aggregate categories (existing rows with nature=null AND children)
+    // cannot become leaves — that would let users post transactions onto a
+    // group node and break P&L rollup. Allow nature edits only on leaves.
+    if (nature !== undefined) {
+      const existing = await db.select().from(expenseCategoriesTable)
+        .where(eq(expenseCategoriesTable.code, code)).limit(1);
+      if (existing.length === 0) return res.status(404).json({ error: "category not found" });
+      if (existing[0].nature === null) {
+        return res.status(400).json({
+          error: `category '${code}' is an aggregate (group) node — its Fixed/Variable nature cannot be set`,
+        });
+      }
+    }
+    const patch: Record<string, unknown> = {};
+    if (name     !== undefined) patch.name     = String(name);
+    if (nameAr   !== undefined) patch.nameAr   = String(nameAr);
+    if (nature   !== undefined) patch.nature   = nature;
+    if (isActive !== undefined) patch.isActive = Boolean(isActive);
+    if (Object.keys(patch).length === 0) {
+      return res.status(400).json({ error: "no fields to update" });
+    }
+    const [row] = await db.update(expenseCategoriesTable)
+      .set(patch)
+      .where(eq(expenseCategoriesTable.code, code))
+      .returning();
+    if (!row) return res.status(404).json({ error: "category not found" });
+    res.json(row);
+  } catch (err) {
+    req.log.error({ err }, "Error updating expense category");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── DELETE /api/expense-categories/:code — soft-delete (deactivate) ─────────
+// Hard-delete would orphan transactions and break P&L. We:
+//   • reject if any transactions reference the code (data-integrity)
+//   • reject if any child categories exist (would orphan them)
+//   • otherwise mark isActive=false so it disappears from pickers while
+//     historical references remain valid.
+router.delete("/:code", async (req, res) => {
+  try {
+    const code = req.params.code;
+    const txns = await db.select({ id: expenseTransactionsTable.id })
+      .from(expenseTransactionsTable)
+      .where(eq(expenseTransactionsTable.categoryCode, code)).limit(1);
+    if (txns.length > 0) {
+      return res.status(409).json({
+        error: "category has transactions",
+        message: "Cannot delete — this category is used by one or more expense transactions. Reassign or delete those transactions first.",
+      });
+    }
+    const children = await db.select({ code: expenseCategoriesTable.code })
+      .from(expenseCategoriesTable)
+      .where(eq(expenseCategoriesTable.parentCode, code)).limit(1);
+    if (children.length > 0) {
+      return res.status(409).json({
+        error: "category has children",
+        message: "Cannot delete — this category has sub-categories. Delete those first.",
+      });
+    }
+    const [row] = await db.update(expenseCategoriesTable)
+      .set({ isActive: false })
+      .where(eq(expenseCategoriesTable.code, code))
+      .returning();
+    if (!row) return res.status(404).json({ error: "category not found" });
+    res.json({ success: true });
+  } catch (err) {
+    req.log.error({ err }, "Error deleting expense category");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── Helper: ensure category has Fixed/Variable nature ───────────────────────
+// Drives P&L Fixed-vs-Variable grouping. Aggregate nodes (level 0/1) have
+// nature=null and can never carry a transaction.
+async function assertLeafCategory(categoryCode: string): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  const rows = await db.select().from(expenseCategoriesTable)
+    .where(eq(expenseCategoriesTable.code, categoryCode)).limit(1);
+  if (rows.length === 0) {
+    return { ok: false, status: 400, error: `category '${categoryCode}' not found` };
+  }
+  const cat = rows[0];
+  if (cat.nature !== "fixed" && cat.nature !== "variable") {
+    return { ok: false, status: 400, error: `category '${categoryCode}' is an aggregate node — pick a leaf category with Fixed or Variable cost type` };
+  }
+  return { ok: true };
+}
+
 // ─── GET /api/expense-transactions ───────────────────────────────────────────
 router.get("/transactions", async (req, res) => {
   try {
@@ -189,6 +338,9 @@ router.post("/transactions", async (req, res) => {
     if (!date || !categoryCode || !description || amount === undefined) {
       return res.status(400).json({ error: "date, categoryCode, description, amount are required" });
     }
+    // Force Fixed/Variable classification — aggregate categories are rejected.
+    const leaf = await assertLeafCategory(String(categoryCode));
+    if (!leaf.ok) return res.status(leaf.status).json({ error: leaf.error });
 
     const vatType = normalizeVatType(req.body);
     const applicable = vatType !== "none";
@@ -234,6 +386,12 @@ router.put("/transactions/:id", async (req, res) => {
       date, categoryCode, description, descriptionAr,
       amount, vatRate, costCenter, referenceNo, notes,
     } = req.body;
+
+    // Force Fixed/Variable classification on edits too.
+    if (categoryCode) {
+      const leaf = await assertLeafCategory(String(categoryCode));
+      if (!leaf.ok) return res.status(leaf.status).json({ error: leaf.error });
+    }
 
     const vatType = normalizeVatType(req.body);
     const applicable = vatType !== "none";

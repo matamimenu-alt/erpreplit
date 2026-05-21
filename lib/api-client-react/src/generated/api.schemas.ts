@@ -912,6 +912,15 @@ export interface DishPricingResult {
   dishes: DishPricingItem[];
 }
 
+export type ExpenseCategoryNature =
+  | (typeof ExpenseCategoryNature)[keyof typeof ExpenseCategoryNature]
+  | null;
+
+export const ExpenseCategoryNature = {
+  fixed: "fixed",
+  variable: "variable",
+} as const;
+
 export interface ExpenseCategory {
   id: number;
   code: string;
@@ -921,6 +930,44 @@ export interface ExpenseCategory {
   level: number;
   sortOrder: number;
   isActive: boolean;
+  nature?: ExpenseCategoryNature;
+}
+
+/**
+ * Fixed or Variable cost — REQUIRED for the new category
+ */
+export type CreateExpenseCategoryNature =
+  (typeof CreateExpenseCategoryNature)[keyof typeof CreateExpenseCategoryNature];
+
+export const CreateExpenseCategoryNature = {
+  fixed: "fixed",
+  variable: "variable",
+} as const;
+
+export interface CreateExpenseCategory {
+  /** English display name */
+  name: string;
+  /** Arabic display name */
+  nameAr: string;
+  /** Parent code (e.g. '5-1' to nest under Operational Expenses) */
+  parentCode: string;
+  /** Fixed or Variable cost — REQUIRED for the new category */
+  nature: CreateExpenseCategoryNature;
+}
+
+export type UpdateExpenseCategoryNature =
+  (typeof UpdateExpenseCategoryNature)[keyof typeof UpdateExpenseCategoryNature];
+
+export const UpdateExpenseCategoryNature = {
+  fixed: "fixed",
+  variable: "variable",
+} as const;
+
+export interface UpdateExpenseCategory {
+  name?: string;
+  nameAr?: string;
+  nature?: UpdateExpenseCategoryNature;
+  isActive?: boolean;
 }
 
 export type ExpenseTransactionVatType =
@@ -1186,6 +1233,10 @@ export type UpdateDish200 = {
 };
 
 export type DeleteDish200 = {
+  success: boolean;
+};
+
+export type DeleteExpenseCategory200 = {
   success: boolean;
 };
 
