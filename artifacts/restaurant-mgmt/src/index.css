@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
@@ -110,6 +110,20 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
+  /* ─── Arabic mode: switch entire UI to Tajawal (display + body) ─────── */
+  body.font-ar,
+  body.font-ar h1, body.font-ar h2, body.font-ar h3,
+  body.font-ar h4, body.font-ar h5, body.font-ar h6 {
+    font-family: 'Tajawal', 'Inter', sans-serif;
+  }
+  /* ─── RTL: keep tabular numbers LTR so SAR amounts read naturally ───── */
+  [dir="rtl"] .tabular-nums,
+  [dir="rtl"] .font-mono {
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+  /* Mirror the auto-arrow indicators that depend on physical sides. */
+  /* (intentionally no global .rotate-180 RTL override — scope per component) */
   h1, h2, h3, h4, h5, h6 {
     @apply font-display tracking-tight;
   }

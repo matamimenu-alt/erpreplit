@@ -10,6 +10,7 @@ import {
 import type { SupplierProduct, Purchase } from "@workspace/api-client-react";
 import { useSupplierMutations } from "@/hooks/use-suppliers";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { PrintButton } from "@/components/ui/PrintButton";
 import { formatSAR } from "@/lib/format";
 import { PURCHASE_CATEGORY_GROUPS, getCategoryMeta, getGroupForCategory } from "@/lib/categories";
@@ -596,6 +597,7 @@ function SupplierCard({ s, onDelete }: { s: { id: number; name: string; contactP
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function Suppliers() {
+  const { t } = useLanguage();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { data: suppliers = [], isLoading } = useListSuppliers();
   const { createSupplier, removeSupplier } = useSupplierMutations();
@@ -605,8 +607,8 @@ export default function Suppliers() {
   return (
     <div>
       <PageHeader
-        title="Supplier Directory"
-        description="Manage vendors, contact info, and their product catalogs."
+        title={t("pages.suppliersPageTitle")}
+        description={t("pages.suppliersDesc")}
         action={
           <div className="flex gap-2 items-center">
             <button

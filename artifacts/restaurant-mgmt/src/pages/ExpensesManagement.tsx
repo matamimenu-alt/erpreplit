@@ -16,6 +16,7 @@ import { useLocation } from "wouter";
 import Expenses from "@/pages/Expenses";
 import ExpenseLedger from "@/pages/ExpenseLedger";
 import ExpenseCategoriesManager from "@/pages/ExpenseCategoriesManager";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { Calendar, Receipt, ScrollText, FolderTree } from "lucide-react";
 
 type Tab = "recurring" | "transactions" | "categories";
@@ -28,18 +29,19 @@ function initialTabFromPath(path: string): Tab {
   return "recurring";
 }
 
-const TABS: Array<{ id: Tab; label: string; arabic: string; icon: typeof Calendar; hint: string }> = [
-  { id: "recurring",    label: "Recurring Items",   arabic: "المصروفات المتكررة", icon: Calendar,
-    hint: "Fixed monthly definitions (rent, utilities, salaries, subscriptions, …) with per-month overrides." },
-  { id: "transactions", label: "Transactions",      arabic: "حركات المصروفات",    icon: Receipt,
-    hint: "One-off operating-expense entries (cleaning, marketing, gov fees, services, …). Auto-generated rows from recurring items appear here too." },
-  { id: "categories",   label: "Categories",        arabic: "التصنيفات",          icon: FolderTree,
-    hint: "Define your own Fixed/Variable expense categories. Changes sync to the P&L report automatically." },
+// Tab definitions reference translation keys, not literals. Both the visible
+// label and the inline hint resolve through t() so the entire tab bar swaps
+// language when the user toggles.
+const TAB_DEFS: Array<{ id: Tab; labelKey: string; hintKey: string; icon: typeof Calendar }> = [
+  { id: "recurring",    labelKey: "expenses.tabs.recurring",    hintKey: "expenses.tabs.recurringHint",    icon: Calendar  },
+  { id: "transactions", labelKey: "expenses.tabs.transactions", hintKey: "expenses.tabs.transactionsHint", icon: Receipt   },
+  { id: "categories",   labelKey: "expenses.tabs.categories",   hintKey: "expenses.tabs.categoriesHint",   icon: FolderTree },
 ];
 
 export default function ExpensesManagement() {
   const [location] = useLocation();
   const [tab, setTab] = useState<Tab>(() => initialTabFromPath(location));
+  const { t } = useLanguage();
 
   return (
     <div className="space-y-4">
@@ -50,14 +52,9 @@ export default function ExpensesManagement() {
             <ScrollText className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <h2 className="text-xl font-semibold text-slate-900">Expenses Management</h2>
-            <p className="text-sm text-slate-600 mt-0.5">
-              إدارة المصروفات الموحّدة — الثابتة والمتغيرة في مكان واحد. كل بند يدعم نوع الضريبة
-              (شامل / غير شامل / معفى) ويرتبط مباشرةً بشجرة الحسابات.
-            </p>
-            <p className="text-xs text-slate-500 mt-1">
-              VAT is reported separately in the Zakat &amp; VAT module — it never affects Net Profit.
-            </p>
+            <h2 className="text-xl font-semibold text-slate-900">{t("expenses.title")}</h2>
+            <p className="text-sm text-slate-600 mt-0.5">{t("expenses.subtitle")}</p>
+            <p className="text-xs text-slate-500 mt-1">{t("expenses.vatNote")}</p>
           </div>
         </div>
       </div>
@@ -65,32 +62,29 @@ export default function ExpensesManagement() {
       {/* Tab bar */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
         <div className="flex border-b border-slate-200 bg-slate-50">
-          {TABS.map(t => {
-            const Icon = t.icon;
-            const active = tab === t.id;
+          {TAB_DEFS.map(td => {
+            const Icon = td.icon;
+            const active = tab === td.id;
             return (
               <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
+                key={td.id}
+                onClick={() => setTab(td.id)}
                 className={
                   "flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors border-b-2 " +
                   (active
                     ? "bg-white text-slate-900 border-slate-900"
                     : "text-slate-600 hover:text-slate-900 hover:bg-white/60 border-transparent")
                 }
-                data-testid={`tab-${t.id}`}
+                data-testid={`tab-${td.id}`}
               >
                 <Icon className="w-4 h-4" />
-                <div className="flex flex-col items-center leading-tight">
-                  <span>{t.label}</span>
-                  <span className="text-[10px] text-slate-500 font-normal">{t.arabic}</span>
-                </div>
+                <span>{t(td.labelKey)}</span>
               </button>
             );
           })}
         </div>
         <div className="px-5 py-2 text-xs text-slate-500 border-b border-slate-100 bg-white">
-          {TABS.find(t => t.id === tab)?.hint}
+          {t(TAB_DEFS.find(td => td.id === tab)!.hintKey)}
         </div>
         <div className="p-4">
           {tab === "recurring"    && <Expenses />}

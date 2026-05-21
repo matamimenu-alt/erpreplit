@@ -9,6 +9,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useInvalidateFinancials } from "@/hooks/use-invalidate-financials";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { PrintButton } from "@/components/ui/PrintButton";
 import { formatSAR, formatDate } from "@/lib/format";
 import { exportToExcel } from "@/lib/export-excel";
@@ -252,6 +253,7 @@ type TabId = typeof TABS[number]["id"];
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function Sales() {
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
   const invalidateFinancials = useInvalidateFinancials();
 
@@ -381,8 +383,8 @@ export default function Sales() {
   return (
     <div>
       <PageHeader
-        title="Sales & Cash Management"
-        description="Daily revenue tracking by payment channel with VAT handling."
+        title={t("pages.salesPageTitle")}
+        description={t("pages.salesDesc")}
         action={
           <div className="flex gap-2 flex-wrap items-center">
             <div className="no-print flex gap-2 flex-wrap">

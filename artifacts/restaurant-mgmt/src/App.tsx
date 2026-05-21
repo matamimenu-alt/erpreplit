@@ -19,6 +19,7 @@ import Branches from "@/pages/Branches";
 import GroupDashboard from "@/pages/GroupDashboard";
 import ExpensesManagement from "@/pages/ExpensesManagement";
 import { RestaurantProvider } from "@/contexts/RestaurantContext";
+import { LanguageProvider } from "@/i18n/LanguageContext";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -62,9 +63,11 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <RestaurantProvider>
-            <Router />
-          </RestaurantProvider>
+          <LanguageProvider>
+            <RestaurantProvider>
+              <Router />
+            </RestaurantProvider>
+          </LanguageProvider>
         </WouterRouter>
         <Toaster />
       </TooltipProvider>

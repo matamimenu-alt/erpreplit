@@ -2,6 +2,7 @@ import { useState, useEffect, memo } from "react";
 import { useListEmployees } from "@workspace/api-client-react";
 import { useEmployeeMutations } from "@/hooks/use-employees";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { PrintButton } from "@/components/ui/PrintButton";
 import { formatSAR, formatDate } from "@/lib/format";
 import { exportToExcel } from "@/lib/export-excel";
@@ -200,6 +201,7 @@ function EmpModal({
 
 // ──────────────────── Main Page ────────────────────────────────────────
 export default function Employees() {
+  const { t } = useLanguage();
   const [addOpen, setAddOpen] = useState(false);
   const [editEmp, setEditEmp] = useState<{ id: number; data: EmpForm } | null>(null);
 
@@ -273,8 +275,8 @@ export default function Employees() {
   return (
     <div>
       <PageHeader
-        title="HR & Payroll"
-        description="Employee payroll — Net Salary = Basic + Overtime − Deductions − Absences."
+        title={t("pages.employeesPageTitle")}
+        description={t("pages.employeesDesc")}
         action={
           <div className="flex gap-2 flex-wrap items-center">
             <div className="no-print flex gap-2 flex-wrap">

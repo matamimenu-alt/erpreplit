@@ -25,6 +25,7 @@ import {
 } from "@workspace/api-client-react";
 import { useExpenseMutations } from "@/hooks/use-expenses";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { PrintButton } from "@/components/ui/PrintButton";
 import { formatSAR } from "@/lib/format";
 import { useQueryClient } from "@tanstack/react-query";
@@ -1117,14 +1118,15 @@ const TABS = [
 type TabKey = typeof TABS[number]["key"];
 
 export default function Expenses() {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<TabKey>("entry");
   const [selectedMonth, setSelectedMonth] = useState(currentMonth());
 
   return (
     <div>
       <PageHeader
-        title="Fixed Costs"
-        description="Month-by-month entry of all fixed operating costs with trend analysis and audit trail."
+        title={t("pages.fixedCostsPageTitle")}
+        description={t("pages.fixedCostsDesc")}
         action={<PrintButton />}
       />
 

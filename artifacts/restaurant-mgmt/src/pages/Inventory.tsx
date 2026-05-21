@@ -9,6 +9,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useInvalidateFinancials } from "@/hooks/use-invalidate-financials";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { PrintButton } from "@/components/ui/PrintButton";
 import { formatSAR } from "@/lib/format";
 import { toast } from "@/hooks/use-toast";
@@ -67,6 +68,7 @@ function getCategoryLabel(cat: string) {
 }
 
 export default function Inventory() {
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
   const invalidateFinancials = useInvalidateFinancials();
 
@@ -405,7 +407,7 @@ export default function Inventory() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Inventory Management" description="Track stock levels, movements, and branch transfers" action={<PrintButton />} />
+      <PageHeader title={t("pages.inventoryPageTitle")} description={t("pages.inventoryDesc")} action={<PrintButton />} />
 
       <Tabs defaultValue="stock-levels">
         <TabsList className="no-print flex flex-wrap gap-1 h-auto mb-4">

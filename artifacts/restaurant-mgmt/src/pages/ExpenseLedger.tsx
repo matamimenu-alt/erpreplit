@@ -9,6 +9,7 @@ import {
 } from "@workspace/api-client-react";
 import type { ExpenseTransaction, CreateExpenseTransaction, ExpenseCategory } from "@workspace/api-client-react";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { PrintButton } from "@/components/ui/PrintButton";
 import { formatSAR } from "@/lib/format";
 import { useRestaurant } from "@/contexts/RestaurantContext";
@@ -478,6 +479,7 @@ function SyncPanel({ month, restaurantId, onDone }: { month: string; restaurantI
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function ExpenseLedger() {
+  const { t } = useLanguage();
   const { activeRestaurant } = useRestaurant();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -541,8 +543,8 @@ export default function ExpenseLedger() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="دفتر المصروفات"
-        description={`شجرة المصروفات المحاسبية — ${activeRestaurant?.name ?? ""}`}
+        title={t("pages.expenseLedgerPageTitle")}
+        description={t("pages.expenseLedgerDesc", { name: activeRestaurant?.name ?? "" })}
         action={
           <div className="flex items-center gap-2">
             <PrintButton />

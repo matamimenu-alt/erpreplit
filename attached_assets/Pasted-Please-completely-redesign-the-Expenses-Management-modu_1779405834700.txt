@@ -1,0 +1,167 @@
+Please completely redesign the “Expenses Management” module and convert it from a simple expense ledger into a professional hierarchical Expense Tree system similar to enterprise ERP accounting systems used in restaurants and hotels.
+
+CURRENT PROBLEM:
+The current page is showing:
+
+* Fixed Costs
+* Monthly Entry
+* Expense Ledger style
+
+This structure is not practical and not scalable.
+
+REQUIRED STRUCTURE:
+
+I want ONE unified “Expense Categories Tree” instead of separate fixed cost pages.
+
+The page should work exactly like a Purchase Categories Tree or Chart of Accounts structure.
+
+MAIN REQUIREMENTS:
+
+1. Replace Current Layout
+
+* Remove:
+
+  * Fixed Costs page
+  * Monthly Entry layout
+  * Old expense ledger style
+* Replace everything with:
+
+  * Expense Categories Tree
+  * Expense Transactions
+
+2. Create Hierarchical Expense Tree
+   The system must support:
+
+* Main Category
+* Subcategory
+* Nested structure (Tree View)
+
+Example:
+
+HR & Employee Costs
+├ Salaries
+├ Overtime
+├ Vacation
+├ Air Tickets
+├ Medical Insurance
+
+Government Expenses
+├ Iqama
+├ GOSI
+├ Municipality License
+├ Visa Fees
+
+Fixed Operating Costs
+├ Rent
+├ Internet
+├ Software Subscriptions
+├ Insurance
+
+Variable Operating Costs
+├ Electricity
+├ Water
+├ Gas
+├ Packaging
+├ Cleaning Materials
+
+Marketing & Sales
+├ Social Media Ads
+├ Printing
+├ Influencers
+├ Delivery Commissions
+
+Maintenance
+├ AC Maintenance
+├ Equipment Repairs
+├ Plumbing
+
+Administrative Expenses
+├ Office Supplies
+├ Bank Charges
+├ Communication
+
+3. Category Management Features
+   I need the ability to:
+
+* Add Main Category
+* Add Subcategory
+* Edit Categories
+* Delete Categories
+* Drag & Drop Reordering
+* Expand / Collapse Tree
+
+4. Fixed vs Variable Classification
+   Each category or subcategory must include:
+
+* Fixed Cost
+  OR
+* Variable Cost
+
+This classification should appear visually using badges/colors.
+
+5. Expense Transactions
+   When adding an expense transaction:
+   The system must require:
+
+* Main Category
+* Subcategory
+* Branch
+* Amount
+* VAT
+* Description
+* Date
+
+The transaction must automatically link to the expense tree.
+
+6. P&L Integration
+   VERY IMPORTANT:
+
+All expense categories and transactions must automatically synchronize into the P&L report.
+
+The P&L should display expenses grouped by:
+
+* Main Category
+* Subcategory
+* Fixed vs Variable
+
+7. VAT Handling
+   VAT must NOT affect profitability.
+
+Inside P&L:
+
+* Revenue = Net Revenue
+* Expenses = Net Expenses
+* VAT excluded completely
+
+VAT should only appear in:
+
+* Zakat & VAT module
+
+8. Dashboard Improvements
+   At the top of the page show:
+
+* Total Main Categories
+* Total Subcategories
+* Fixed Cost Categories Count
+* Variable Cost Categories Count
+
+9. UI/UX REQUIREMENT
+   The UI should look modern and clean:
+
+* Similar to ERPNext / Odoo / Zoho Books
+* Tree structure design
+* Professional accounting layout
+* Multi-branch ready
+* Hospitality & Restaurant friendly
+
+10. Final Goal
+    The Expenses module should become:
+    A professional accounting expense tree connected dynamically with:
+
+* Expense Transactions
+* P&L
+* VAT module
+* Multi-branch reporting
+
+No more “Monthly Fixed Cost Entry” design.
+Everything should be category-tree based and scalable.

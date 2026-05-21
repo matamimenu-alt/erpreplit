@@ -3,6 +3,7 @@ import { useListPurchases, useCreatePurchaseBatch, useGetPurchaseProductSuggesti
 import type { SupplierProduct } from "@workspace/api-client-react";
 import { usePurchasesMutations } from "@/hooks/use-purchases";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { PrintButton } from "@/components/ui/PrintButton";
 import { formatSAR, formatDate, formatMonth } from "@/lib/format";
 import { exportToExcel } from "@/lib/export-excel";
@@ -1013,6 +1014,7 @@ function PurchaseEditModal({
 // ─── Purchases Page ───────────────────────────────────────────────────────────
 
 export default function Purchases() {
+  const { t } = useLanguage();
   const [month, setMonth] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -1184,8 +1186,8 @@ export default function Purchases() {
   return (
     <div>
       <PageHeader
-        title="Purchases & Expenses"
-        description="Track all purchasing and expense records with VAT."
+        title={t("pages.purchasesPageTitle")}
+        description={t("pages.purchasesDesc")}
         action={
           <div className="flex gap-2 flex-wrap items-center">
             <div className="no-print flex gap-2 flex-wrap">

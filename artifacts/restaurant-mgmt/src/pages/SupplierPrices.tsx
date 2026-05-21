@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useGetSupplierPriceComparison, useListSuppliers } from "@workspace/api-client-react";
 import { useSupplierProductMutations } from "@/hooks/use-suppliers";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { PrintButton } from "@/components/ui/PrintButton";
 import { formatSAR } from "@/lib/format";
 import { useForm } from "react-hook-form";
@@ -18,6 +19,7 @@ const schema = z.object({
 type FormVals = z.infer<typeof schema>;
 
 export default function SupplierPrices() {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const { data: prices, isLoading } = useGetSupplierPriceComparison();
   const { data: suppliers } = useListSuppliers();
@@ -34,8 +36,8 @@ export default function SupplierPrices() {
   return (
     <div>
       <PageHeader 
-        title="Price Comparison Engine" 
-        description="Track supplier price changes and inflation."
+        title={t("pages.supplierPricesPageTitle")} 
+        description={t("pages.supplierPricesDesc")}
         action={
           <div className="flex gap-2 items-center">
             <button onClick={() => setOpen(true)} className="no-print flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl shadow-lg hover:-translate-y-0.5 transition-all">

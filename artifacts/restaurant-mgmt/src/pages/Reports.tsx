@@ -11,6 +11,7 @@ import {
   getGetCategoryExpenseReportQueryKey,
 } from "@workspace/api-client-react";
 import { useInvalidateFinancials } from "@/hooks/use-invalidate-financials";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PrintButton } from "@/components/ui/PrintButton";
 import { formatSAR, formatMonth } from "@/lib/format";
@@ -127,6 +128,7 @@ export default function Reports() {
   const [month, setMonth] = useState("");
   const queryClient       = useQueryClient();
   const invalidateFinancials = useInvalidateFinancials();
+  const { t, pickName, lang } = useLanguage();
 
   // Live mode — always refetch on mount AND on window focus so any change made
   // in another tab/page reflects immediately when user returns to the report.
@@ -190,86 +192,104 @@ export default function Reports() {
   // ── Export P&L ──────────────────────────────────────────────────────────────
   function exportPL() {
     if (!pl) return;
+    // Use translated labels so the exported Excel matches the on-screen UI.
+    const S = (k: string) => t(`pl.sections.${k}`).toUpperCase();
+    const L = (k: string) => t(`pl.rows.${k}`);
+    const COL_SECTION = t("reportsExtra.export.colSection");
+    const COL_ITEM    = t("reportsExtra.export.colItem");
+    const COL_SAR     = t("reportsExtra.export.colSar");
+    const row = (section: string, item: string, value: number) => ({
+      [COL_SECTION]: section, [COL_ITEM]: item, [COL_SAR]: value,
+    });
     const rows = [
-      { Section: "REVENUE", Item: "Cash Sales",            "SAR": pl.cashSales ?? 0 },
-      { Section: "REVENUE", Item: "Card / POS Sales",      "SAR": pl.cardSales ?? 0 },
-      { Section: "REVENUE", Item: "Delivery Apps Total",   "SAR": pl.appSalesTotal ?? 0 },
-      { Section: "REVENUE", Item: "Total Revenue",         "SAR": pl.totalRevenue },
-      { Section: "COGS", Item: "Food Cost",                "SAR": pl.foodCost },
-      { Section: "COGS", Item: "Beverage Cost",            "SAR": pl.beverageCost },
-      { Section: "COGS", Item: "General / Consumables",    "SAR": pl.otherCost },
-      { Section: "COGS", Item: "Cooking Fuel (Gas+Charcoal)", "SAR": cookingFuel },
-      { Section: "COGS", Item: "Adjusted COGS",            "SAR": adjCOGS },
-      { Section: "GROSS PROFIT", Item: "Gross Profit",     "SAR": pl.grossProfit },
-      { Section: "PURCHASE OPEX", Item: "Vehicle Fuel",    "SAR": pl.fuelEnergyCost ?? 0 },
-      { Section: "PURCHASE OPEX", Item: "Maintenance",     "SAR": pl.maintenanceCost ?? 0 },
-      { Section: "PURCHASE OPEX", Item: "IT & Communication","SAR": pl.itCommunicationCost ?? 0 },
-      { Section: "PURCHASE OPEX", Item: "Marketing",       "SAR": pl.marketingCost ?? 0 },
-      { Section: "PURCHASE OPEX", Item: "Others",          "SAR": pl.othersPurchaseCost ?? 0 },
-      // Per-main-category breakdown (dynamic — driven by the category tree)
-      ...byMain.flatMap(mc => [
-        { Section: mc.name.toUpperCase(), Item: mc.name, "SAR": mc.total },
-        ...mc.leaves.map(l => ({ Section: mc.name.toUpperCase(), Item: `  ${l.name}`, "SAR": l.amount })),
-      ]),
-      { Section: "PAYROLL", Item: "Net Salaries",          "SAR": payroll },
-      { Section: "PAYROLL", Item: "Staff Expenses",        "SAR": staffExp },
-      { Section: "FIXED", Item: "Fixed Costs (Templates)", "SAR": fixedDyn || fixedLegacy },
-      { Section: "COMMISSIONS", Item: "App Commissions",   "SAR": appCommissions },
-      { Section: "EBITDA", Item: "EBITDA",                 "SAR": ebitda },
-      { Section: "VAT", Item: "Output VAT",                "SAR": pl.outputVat ?? 0 },
-      { Section: "VAT", Item: "Input VAT (Recoverable)",   "SAR": pl.inputVat ?? 0 },
-      { Section: "VAT", Item: "Net VAT Payable",           "SAR": pl.vatPayable ?? 0 },
-      { Section: "NET PROFIT", Item: "Net Profit / (Loss)","SAR": pl.netProfit },
+      row(S("revenue"), L("cashSales"),    pl.cashSales ?? 0),
+      row(S("revenue"), L("cardSales"),    pl.cardSales ?? 0),
+      row(S("revenue"), L("appSales"),     pl.appSalesTotal ?? 0),
+      row(S("revenue"), L("totalRevenue"), pl.totalRevenue),
+      row(S("cogs"), L("foodCost"),     pl.foodCost),
+      row(S("cogs"), L("beverageCost"), pl.beverageCost),
+      row(S("cogs"), L("generalCost"),  pl.otherCost),
+      row(S("cogs"), L("cookingFuel"),  cookingFuel),
+      row(S("cogs"), L("adjustedCogs"), adjCOGS),
+      row(t("pl.rows.grossProfit").toUpperCase(), L("grossProfit"), pl.grossProfit),
+      row(S("purchaseOpex"), L("vehicleFuel"),   pl.fuelEnergyCost ?? 0),
+      row(S("purchaseOpex"), L("maintenance"),   pl.maintenanceCost ?? 0),
+      row(S("purchaseOpex"), L("itComm"),        pl.itCommunicationCost ?? 0),
+      row(S("purchaseOpex"), L("marketing"),     pl.marketingCost ?? 0),
+      row(S("purchaseOpex"), L("otherPurchase"), pl.othersPurchaseCost ?? 0),
+      // Per-main-category breakdown — names come from the bilingual category tree.
+      ...byMain.flatMap(mc => {
+        const mcName = pickName(mc);
+        return [
+          row(mcName.toUpperCase(), mcName, mc.total),
+          ...mc.leaves.map(l => row(mcName.toUpperCase(), `  ${pickName(l)}`, l.amount)),
+        ];
+      }),
+      row(S("payroll"), L("netSalaries"),   payroll),
+      row(S("payroll"), L("staffExpenses"), staffExp),
+      row(S("fixed"), L("fixedTemplates"), fixedDyn || fixedLegacy),
+      row(S("appCommissions"), L("deliveryAppCommissions"), appCommissions),
+      row("EBITDA", L("ebitda"), ebitda),
+      row(t("common.vat").toUpperCase(), L("outputVat"),     pl.outputVat ?? 0),
+      row(t("common.vat").toUpperCase(), L("inputVat"),      pl.inputVat ?? 0),
+      row(t("common.vat").toUpperCase(), L("netVatPayable"), pl.vatPayable ?? 0),
+      row(L("netProfit").toUpperCase(),  L("netProfit"),     pl.netProfit),
     ];
-    exportToExcel(rows, `pl-report-${month || "all"}`, "P&L Report");
+    exportToExcel(rows, `pl-report-${month || "all"}`, t("reportsExtra.export.plSheet"));
   }
 
   function exportMonthly() {
     const rows = (monthly ?? []).map(m => ({
-      Month: m.month, "Net Amount (SAR)": m.netAmount, "VAT (SAR)": m.totalVat,
-      "Total (SAR)": m.totalAmount, "Records": m.count,
+      [t("reportsExtra.export.colMonth")]:   m.month,
+      [t("reportsExtra.export.colNetSar")]:  m.netAmount,
+      [t("reportsExtra.export.colVatSar")]:  m.totalVat,
+      [t("reportsExtra.export.colTotalSar")]:m.totalAmount,
+      [t("reportsExtra.export.colRecords")]: m.count,
     }));
-    exportToExcel(rows, "monthly-purchases", "Monthly Purchases");
+    exportToExcel(rows, "monthly-purchases", t("reportsExtra.export.monthlySheet"));
   }
 
   function exportCategory() {
     const rows = (catReport ?? []).map(c => ({
-      Category: c.label, "Net Amount (SAR)": c.netAmount, "VAT (SAR)": c.totalVat,
-      "Total (SAR)": c.totalAmount, "Records": c.count,
+      [t("reportsExtra.export.colCategory")]:pickName({ name: c.label, nameAr: c.labelAr }),
+      [t("reportsExtra.export.colNetSar")]:  c.netAmount,
+      [t("reportsExtra.export.colVatSar")]:  c.totalVat,
+      [t("reportsExtra.export.colTotalSar")]:c.totalAmount,
+      [t("reportsExtra.export.colRecords")]: c.count,
     }));
-    exportToExcel(rows, `category-expenses-${month || "all"}`, "Category Expenses");
+    exportToExcel(rows, `category-expenses-${month || "all"}`, t("reportsExtra.export.categorySheet"));
   }
 
   const tabs: { id: Tab; label: string }[] = [
-    { id: "pl",       label: "P&L Statement"      },
-    { id: "monthly",  label: "Monthly Purchases"  },
-    { id: "category", label: "Category Expenses"  },
+    { id: "pl",       label: t("reports.tabs.pl")       },
+    { id: "monthly",  label: t("reports.tabs.monthly")  },
+    { id: "category", label: t("reports.tabs.category") },
   ];
 
   return (
     <div>
       <PageHeader
-        title="Financial Reports"
-        description="Profit & Loss, Purchase Analysis, and Category Breakdown"
+        title={t("reports.title")}
+        description={t("reports.subtitle")}
         action={
           <div className="flex gap-2 items-center flex-wrap">
             <div className="no-print flex gap-2 items-center flex-wrap">
               <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-medium text-emerald-700" title="Auto-updates after every Add / Edit / Delete / Transfer">
                 <span className={`w-1.5 h-1.5 rounded-full ${plFetching ? "bg-amber-500 animate-pulse" : "bg-emerald-500"}`} />
-                {plFetching ? "Updating…" : "Live"}
+                {plFetching ? t("common.updating") : t("common.live")}
                 {plUpdatedAt > 0 && !plFetching && (
                   <span className="text-emerald-500/80 font-normal">· {new Date(plUpdatedAt).toLocaleTimeString()}</span>
                 )}
               </div>
-              <button onClick={handleRefreshAll} disabled={plFetching} title="Refresh all"
+              <button onClick={handleRefreshAll} disabled={plFetching} title={t("common.refresh")}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm disabled:opacity-60">
-                <RefreshCw className={`w-4 h-4 ${plFetching ? "animate-spin" : ""}`} /> Refresh
+                <RefreshCw className={`w-4 h-4 ${plFetching ? "animate-spin" : ""}`} /> {t("common.refresh")}
               </button>
               <input type="month" value={month} onChange={e => setMonth(e.target.value)}
                 className="px-4 py-2 border rounded-xl shadow-sm focus:ring-primary/20 outline-none text-sm" />
-              {tab === "pl"       && <button onClick={exportPL}       className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 text-sm"><FileSpreadsheet className="w-4 h-4" /> Excel</button>}
-              {tab === "monthly"  && <button onClick={exportMonthly}  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 text-sm"><FileSpreadsheet className="w-4 h-4" /> Export Excel</button>}
-              {tab === "category" && <button onClick={exportCategory} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 text-sm"><FileSpreadsheet className="w-4 h-4" /> Export Excel</button>}
+              {tab === "pl"       && <button onClick={exportPL}       className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 text-sm"><FileSpreadsheet className="w-4 h-4" /> {t("common.exportExcel")}</button>}
+              {tab === "monthly"  && <button onClick={exportMonthly}  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 text-sm"><FileSpreadsheet className="w-4 h-4" /> {t("common.exportExcelLong")}</button>}
+              {tab === "category" && <button onClick={exportCategory} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 text-sm"><FileSpreadsheet className="w-4 h-4" /> {t("common.exportExcelLong")}</button>}
             </div>
             <PrintButton />
           </div>
@@ -293,10 +313,10 @@ export default function Reports() {
           {pl && (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               {[
-                { label: "Total Revenue",       value: pl.totalRevenue,  sub: formatMonth(month), color: "bg-blue-50 border-blue-200 text-blue-700",       icon: TrendingUp },
-                { label: "Gross Profit",         value: pl.grossProfit,   sub: `Margin: ${pl.grossMarginPercent?.toFixed(1)}%`, color: (pl.grossProfit ?? 0) >= 0 ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-rose-50 border-rose-200 text-rose-700", icon: (pl.grossProfit ?? 0) >= 0 ? TrendingUp : TrendingDown },
-                { label: "EBITDA",               value: ebitda,           sub: `${pctOf(ebitda, pl.totalRevenue)}% of revenue`,  color: ebitda >= 0 ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-rose-50 border-rose-200 text-rose-700", icon: ebitda >= 0 ? TrendingUp : TrendingDown },
-                { label: "Net Profit / (Loss)",  value: pl.netProfit,     sub: `Net margin: ${pl.netMarginPercent?.toFixed(1)}%`, color: (pl.netProfit ?? 0) >= 0 ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-rose-50 border-rose-200 text-rose-700", icon: (pl.netProfit ?? 0) >= 0 ? TrendingUp : TrendingDown },
+                { label: t("pl.kpi.totalRevenue"), value: pl.totalRevenue, sub: formatMonth(month), color: "bg-blue-50 border-blue-200 text-blue-700",       icon: TrendingUp },
+                { label: t("pl.kpi.grossProfit"),  value: pl.grossProfit,  sub: t("pl.kpi.margin",      { value: (pl.grossMarginPercent ?? 0).toFixed(1) }), color: (pl.grossProfit ?? 0) >= 0 ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-rose-50 border-rose-200 text-rose-700", icon: (pl.grossProfit ?? 0) >= 0 ? TrendingUp : TrendingDown },
+                { label: t("pl.kpi.ebitda"),       value: ebitda,          sub: t("pl.kpi.pctOfRevenue",{ value: pctOf(ebitda, pl.totalRevenue) }),         color: ebitda >= 0 ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-rose-50 border-rose-200 text-rose-700", icon: ebitda >= 0 ? TrendingUp : TrendingDown },
+                { label: t("pl.kpi.netProfit"),    value: pl.netProfit,    sub: t("pl.kpi.netMargin",   { value: (pl.netMarginPercent ?? 0).toFixed(1) }), color: (pl.netProfit ?? 0) >= 0 ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-rose-50 border-rose-200 text-rose-700", icon: (pl.netProfit ?? 0) >= 0 ? TrendingUp : TrendingDown },
               ].map((k, i) => (
                 <div key={i} className={`rounded-2xl border p-5 ${k.color}`}>
                   <div className="flex items-center justify-between mb-2">
@@ -313,13 +333,13 @@ export default function Reports() {
           {/* Source Ownership Legend */}
           <div className="no-print mb-4 flex flex-wrap gap-2">
             {[
-              { icon: <ShoppingCart className="w-3 h-3" />, label: "Purchases → COGS",       cls: "bg-blue-50 text-blue-700 border-blue-200" },
-              { icon: <Wrench className="w-3 h-3" />,       label: "Purchases → Opex",       cls: "bg-orange-50 text-orange-700 border-orange-200" },
-              { icon: <Receipt className="w-3 h-3" />,      label: "Expense Ledger → Opex",  cls: "bg-slate-50 text-slate-700 border-slate-200" },
-              { icon: <Landmark className="w-3 h-3" />,     label: "Expense Ledger → Govt",  cls: "bg-red-50 text-red-700 border-red-200" },
-              { icon: <Users className="w-3 h-3" />,        label: "HR Module → Payroll",    cls: "bg-purple-50 text-purple-700 border-purple-200" },
-              { icon: <Building2 className="w-3 h-3" />,    label: "Fixed Costs → Fixed",    cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-              { icon: <Flame className="w-3 h-3" />,        label: "Sales → App Commissions",cls: "bg-pink-50 text-pink-700 border-pink-200" },
+              { icon: <ShoppingCart className="w-3 h-3" />, label: t("reports.legend.purchasesCogs"),  cls: "bg-blue-50 text-blue-700 border-blue-200" },
+              { icon: <Wrench className="w-3 h-3" />,       label: t("reports.legend.purchasesOpex"),  cls: "bg-orange-50 text-orange-700 border-orange-200" },
+              { icon: <Receipt className="w-3 h-3" />,      label: t("reports.legend.ledgerOpex"),     cls: "bg-slate-50 text-slate-700 border-slate-200" },
+              { icon: <Landmark className="w-3 h-3" />,     label: t("reports.legend.ledgerGovt"),     cls: "bg-red-50 text-red-700 border-red-200" },
+              { icon: <Users className="w-3 h-3" />,        label: t("reports.legend.hrPayroll"),      cls: "bg-purple-50 text-purple-700 border-purple-200" },
+              { icon: <Building2 className="w-3 h-3" />,    label: t("reports.legend.fixedTemplates"), cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+              { icon: <Flame className="w-3 h-3" />,        label: t("reports.legend.appCommissions"), cls: "bg-pink-50 text-pink-700 border-pink-200" },
             ].map(b => (
               <span key={b.label} className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold border ${b.cls}`}>
                 {b.icon}{b.label}
@@ -329,148 +349,145 @@ export default function Reports() {
 
           <div className="bg-card rounded-2xl shadow-sm border overflow-hidden">
             {plLoading ? (
-              <div className="py-16 text-center text-slate-400">Loading P&L data...</div>
+              <div className="py-16 text-center text-slate-400">{t("reports.loadingPl")}</div>
             ) : (
               <div>
                 <div className="hidden print:block mb-6 p-6">
-                  <h1 className="text-2xl font-bold">Profit & Loss Statement</h1>
-                  <p className="text-slate-500">{formatMonth(month)} — Gourmet Ledger, Saudi Arabia</p>
+                  <h1 className="text-2xl font-bold">{t("reports.plTitle")}</h1>
+                  <p className="text-slate-500">{t("reports.plLocation", { month: formatMonth(month) })}</p>
                 </div>
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b-2 border-slate-200">
-                      <th className="pl-4 py-4 text-left text-slate-600 font-semibold">Description</th>
-                      <th className="pr-4 py-4 text-right text-slate-600 font-semibold">Amount (SAR)</th>
-                      <th className="pr-4 py-4 text-right text-slate-400 font-normal text-xs w-20">% Rev</th>
+                      <th className="pl-4 py-4 text-start text-slate-600 font-semibold">{t("reports.tableHeader.description")}</th>
+                      <th className="pr-4 py-4 text-end   text-slate-600 font-semibold">{t("reports.tableHeader.amount")}</th>
+                      <th className="pr-4 py-4 text-end   text-slate-400 font-normal text-xs w-20">{t("reports.tableHeader.pctRev")}</th>
                     </tr>
                   </thead>
                   <tbody>
 
                     {/* ── [1] REVENUE ─────────────────────────────────────────────────── */}
-                    <SH title="Revenue" icon={<TrendingUp className="w-3.5 h-3.5" />} />
-                    <Row label="Cash Sales"                 value={pl?.cashSales ?? 0}    indent percent={pctOf(pl?.cashSales, R)} />
-                    <Row label="Card / POS"                 value={pl?.cardSales ?? 0}    indent percent={pctOf(pl?.cardSales, R)} />
-                    <Row label="Delivery Apps"              value={pl?.appSalesTotal ?? 0} indent percent={pctOf(pl?.appSalesTotal, R)} />
-                    <Row label="Net Sales (excl. VAT)"      value={pl?.netSales ?? 0}     indent percent={pctOf(pl?.netSales, R)} />
+                    <SH title={t("pl.sections.revenue")} icon={<TrendingUp className="w-3.5 h-3.5" />} />
+                    <Row label={t("pl.rows.cashSales")}     value={pl?.cashSales ?? 0}    indent percent={pctOf(pl?.cashSales, R)} />
+                    <Row label={t("pl.rows.cardSales")}     value={pl?.cardSales ?? 0}    indent percent={pctOf(pl?.cardSales, R)} />
+                    <Row label={t("pl.rows.appSales")}      value={pl?.appSalesTotal ?? 0} indent percent={pctOf(pl?.appSalesTotal, R)} />
+                    <Row label={t("pl.rows.netSales")}      value={pl?.netSales ?? 0}     indent percent={pctOf(pl?.netSales, R)} />
                     <Div />
-                    <Row label="Total Revenue"              value={pl?.totalRevenue ?? 0} bold highlight="neutral" percent={100} />
+                    <Row label={t("pl.rows.totalRevenue")}  value={pl?.totalRevenue ?? 0} bold highlight="neutral" percent={100} />
                     <Div double />
 
                     {/* ── [2] COGS ────────────────────────────────────────────────────── */}
-                    <SH title="Cost of Goods Sold — COGS" icon={<ShoppingCart className="w-3.5 h-3.5" />} />
-                    <OwnershipNote icon={<ShoppingCart className="w-3 h-3" />} text="Source: Purchases Module only" />
-                    <Row label="Food (Poultry, Meat, Dairy, Produce…)" value={pl?.foodCost ?? 0}    indent percent={pctOf(pl?.foodCost, R)} />
-                    <Row label="Beverage (Juices, Water, Soft Drinks)"  value={pl?.beverageCost ?? 0} indent percent={pctOf(pl?.beverageCost, R)} />
-                    <Row label="General (Kitchen, Cleaning, Packaging)" value={pl?.otherCost ?? 0}   indent percent={pctOf(pl?.otherCost, R)} />
-                    <Row label="Cooking Fuel (Gas & Charcoal)" value={cookingFuel} indent percent={pctOf(cookingFuel, R)}
-                      sub="Direct production inputs — رeclassified to COGS, not OpEx" />
+                    <SH title={t("pl.sections.cogs")} icon={<ShoppingCart className="w-3.5 h-3.5" />} />
+                    <OwnershipNote icon={<ShoppingCart className="w-3 h-3" />} text={t("pl.ownership.cogs")} />
+                    <Row label={t("pl.rows.foodCost")}      value={pl?.foodCost ?? 0}    indent percent={pctOf(pl?.foodCost, R)} />
+                    <Row label={t("pl.rows.beverageCost")}  value={pl?.beverageCost ?? 0} indent percent={pctOf(pl?.beverageCost, R)} />
+                    <Row label={t("pl.rows.generalCost")}   value={pl?.otherCost ?? 0}   indent percent={pctOf(pl?.otherCost, R)} />
+                    <Row label={t("pl.rows.cookingFuel")}   value={cookingFuel} indent percent={pctOf(cookingFuel, R)}
+                      sub={t("pl.rows.cookingFuelSub")} />
 
                     {(pl?.totalInventoryAdjustment ?? 0) > 0 && <>
                       <Div />
-                      <Row label="Opening Inventory (+)"               value={pl?.openingInventory ?? 0}          indent />
-                      <Row label="Closing Food Inventory (−)"          value={-(pl?.closingFoodInventory ?? 0)}    indent />
-                      <Row label="Closing Beverage Inventory (−)"      value={-(pl?.closingBeverageInventory ?? 0)} indent />
-                      <Row label="Closing General Inventory (−)"       value={-(pl?.closingGeneralInventory ?? 0)} indent />
+                      <Row label={t("pl.rows.openingInventory")} value={pl?.openingInventory ?? 0}          indent />
+                      <Row label={t("pl.rows.closingFood")}      value={-(pl?.closingFoodInventory ?? 0)}    indent />
+                      <Row label={t("pl.rows.closingBev")}       value={-(pl?.closingBeverageInventory ?? 0)} indent />
+                      <Row label={t("pl.rows.closingGen")}       value={-(pl?.closingGeneralInventory ?? 0)} indent />
                     </>}
                     {((pl?.transfersInCost ?? 0) > 0 || (pl?.transfersOutCost ?? 0) > 0) && <>
                       <Div />
                       <div className="px-4 py-1 text-[10px] font-semibold uppercase tracking-widest text-blue-500 bg-blue-50 rounded-lg mx-1 mb-1">
-                        Inter-Branch Transfers — Net Cost (VAT travels with goods)
+                        {t("pl.rows.interBranchTransfers")}
                       </div>
                       {(pl?.transfersInCost ?? 0) > 0 && (
-                        <Row label={`Received from Other Branches — Net (+)${(pl?.transfersVatIn ?? 0) > 0 ? ` · VAT In: +${(pl?.transfersVatIn ?? 0).toLocaleString("en-SA", { minimumFractionDigits: 2 })}` : ""}`}
+                        <Row label={`${t("pl.rows.receivedFromBranches")}${(pl?.transfersVatIn ?? 0) > 0 ? ` · ${t("pl.rows.inputVat")}: +${(pl?.transfersVatIn ?? 0).toLocaleString(lang === "ar" ? "ar-SA" : "en-SA", { minimumFractionDigits: 2 })}` : ""}`}
                           value={pl?.transfersInCost ?? 0} indent />
                       )}
                       {(pl?.transfersOutCost ?? 0) > 0 && (
-                        <Row label={`Sent to Other Branches — Net (−)${(pl?.transfersVatOut ?? 0) > 0 ? ` · VAT Out: −${(pl?.transfersVatOut ?? 0).toLocaleString("en-SA", { minimumFractionDigits: 2 })}` : ""}`}
+                        <Row label={`${t("pl.rows.sentToBranches")}${(pl?.transfersVatOut ?? 0) > 0 ? ` · ${t("pl.rows.outputVat")}: −${(pl?.transfersVatOut ?? 0).toLocaleString(lang === "ar" ? "ar-SA" : "en-SA", { minimumFractionDigits: 2 })}` : ""}`}
                           value={-(pl?.transfersOutCost ?? 0)} indent />
-                      )}
-                      {((pl?.transfersVatOut ?? 0) > 0 || (pl?.transfersVatIn ?? 0) > 0) && (
-                        <div className="flex justify-between px-6 py-1 text-[11px] text-blue-600 italic">
-                          <span>VAT impact: see ZATCA VAT Report for per-branch VAT allocation</span>
-                          <span>{(pl?.netTransferVat ?? 0) >= 0 ? "+" : ""}{(pl?.netTransferVat ?? 0).toLocaleString("en-SA", { minimumFractionDigits: 2 })} SAR input VAT</span>
-                        </div>
                       )}
                     </>}
                     <Div />
-                    <Row label="Adjusted COGS" value={adjCOGS} bold highlight="neutral" percent={pctOf(adjCOGS, R)} />
+                    <Row label={t("pl.rows.adjustedCogs")} value={adjCOGS} bold highlight="neutral" percent={pctOf(adjCOGS, R)} />
                     <Div double />
 
                     {/* ── GROSS PROFIT ──────────────────────────────────────────────── */}
-                    <Row label="Gross Profit" value={pl?.grossProfit ?? 0} bold
+                    <Row label={t("pl.rows.grossProfit")} value={pl?.grossProfit ?? 0} bold
                       highlight={(pl?.grossProfit ?? 0) >= 0 ? "profit" : "loss"}
                       percent={pl?.grossMarginPercent} />
                     <Div double />
 
                     {/* ── [3] PURCHASE OPERATING EXPENSES ───────────────────────────── */}
                     {(pl?.totalPurchaseOpex ?? 0) > 0 && <>
-                      <SH title="Purchase Operating Expenses" icon={<Wrench className="w-3.5 h-3.5" />} />
-                      <OwnershipNote icon={<ShoppingCart className="w-3 h-3" />} text="Source: Purchases Module — non-COGS categories" />
-                      {(pl?.fuelEnergyCost ?? 0) > 0      && <Row label="Vehicle Fuel"              value={pl?.fuelEnergyCost ?? 0}      indent percent={pctOf(pl?.fuelEnergyCost, R)} />}
-                      {(pl?.maintenanceCost ?? 0) > 0     && <Row label="Maintenance & Repair"      value={pl?.maintenanceCost ?? 0}     indent percent={pctOf(pl?.maintenanceCost, R)} />}
-                      {(pl?.itCommunicationCost ?? 0) > 0 && <Row label="IT & Communication"        value={pl?.itCommunicationCost ?? 0} indent percent={pctOf(pl?.itCommunicationCost, R)} />}
-                      {(pl?.marketingCost ?? 0) > 0       && <Row label="Marketing & Advertising"   value={pl?.marketingCost ?? 0}       indent percent={pctOf(pl?.marketingCost, R)} />}
-                      {(pl?.othersPurchaseCost ?? 0) > 0  && <Row label="Other Purchase Expenses"   value={pl?.othersPurchaseCost ?? 0}  indent percent={pctOf(pl?.othersPurchaseCost, R)} />}
-                      <Row label="Total Purchase OpEx" value={pl?.totalPurchaseOpex ?? 0} bold highlight="neutral" percent={pctOf(pl?.totalPurchaseOpex, R)} />
+                      <SH title={t("pl.sections.purchaseOpex")} icon={<Wrench className="w-3.5 h-3.5" />} />
+                      <OwnershipNote icon={<ShoppingCart className="w-3 h-3" />} text={t("pl.ownership.purchaseOpex")} />
+                      {(pl?.fuelEnergyCost ?? 0) > 0      && <Row label={t("pl.rows.vehicleFuel")}   value={pl?.fuelEnergyCost ?? 0}      indent percent={pctOf(pl?.fuelEnergyCost, R)} />}
+                      {(pl?.maintenanceCost ?? 0) > 0     && <Row label={t("pl.rows.maintenance")}   value={pl?.maintenanceCost ?? 0}     indent percent={pctOf(pl?.maintenanceCost, R)} />}
+                      {(pl?.itCommunicationCost ?? 0) > 0 && <Row label={t("pl.rows.itComm")}        value={pl?.itCommunicationCost ?? 0} indent percent={pctOf(pl?.itCommunicationCost, R)} />}
+                      {(pl?.marketingCost ?? 0) > 0       && <Row label={t("pl.rows.marketing")}     value={pl?.marketingCost ?? 0}       indent percent={pctOf(pl?.marketingCost, R)} />}
+                      {(pl?.othersPurchaseCost ?? 0) > 0  && <Row label={t("pl.rows.otherPurchase")} value={pl?.othersPurchaseCost ?? 0}  indent percent={pctOf(pl?.othersPurchaseCost, R)} />}
+                      <Row label={t("pl.rows.totalPurchaseOpex")} value={pl?.totalPurchaseOpex ?? 0} bold highlight="neutral" percent={pctOf(pl?.totalPurchaseOpex, R)} />
                       <Div />
                     </>}
 
                     {/* ── [4] OPERATING EXPENSES — by Main Category (dynamic) ───── */}
                     {/* One section per main category from the expense tree (HR excluded — owned by Payroll). */}
-                    {byMain.filter(mc => mc.total > 0).map(mc => (
-                      <Fragment key={mc.code}>
-                        <SH title={`${mc.name} (${mc.code})`} icon={<Receipt className="w-3.5 h-3.5" />} />
-                        <OwnershipNote
-                          icon={<Receipt className="w-3 h-3" />}
-                          text={`Source: Expense Ledger ${mc.code}-x${mc.nameAr ? " — " + mc.nameAr : ""}`}
-                        />
-                        {mc.leaves.map(l => (
-                          <Row
-                            key={l.code}
-                            label={`${l.name} (${l.code})${l.nature ? " · " + l.nature : ""}`}
-                            value={l.amount}
-                            indent
-                            percent={pctOf(l.amount, R)}
+                    {byMain.filter(mc => mc.total > 0).map(mc => {
+                      const mcName = pickName(mc);
+                      return (
+                        <Fragment key={mc.code}>
+                          <SH title={`${mcName} (${mc.code})`} icon={<Receipt className="w-3.5 h-3.5" />} />
+                          <OwnershipNote
+                            icon={<Receipt className="w-3 h-3" />}
+                            text={t("pl.ownership.ledger", { code: mc.code })}
                           />
-                        ))}
-                        <Row label={`Total ${mc.name}`} value={mc.total} bold highlight="neutral" percent={pctOf(mc.total, R)} />
-                        <Div />
-                      </Fragment>
-                    ))}
+                          {mc.leaves.map(l => (
+                            <Row
+                              key={l.code}
+                              label={`${pickName(l)} (${l.code})${l.nature ? " · " + t(`common.${l.nature}`) : ""}`}
+                              value={l.amount}
+                              indent
+                              percent={pctOf(l.amount, R)}
+                            />
+                          ))}
+                          <Row label={`${t("pl.totalsPrefix")} ${mcName}`} value={mc.total} bold highlight="neutral" percent={pctOf(mc.total, R)} />
+                          <Div />
+                        </Fragment>
+                      );
+                    })}
                     {(ledger?.hrExcluded ?? 0) > 0 && (
                       <tr className="border-b border-slate-100">
                         <td colSpan={3} className="pl-10 py-2 text-xs text-slate-400 flex items-center gap-1">
-                          <Info className="w-3 h-3 inline mr-0.5" />
-                          HR ledger entries excluded ({formatSAR(ledger!.hrExcluded)}) — accounted for in Payroll section (HR owns 5-1-x)
+                          <Info className="w-3 h-3 inline me-0.5" />
+                          {t("pl.rows.hrExcluded", { amount: formatSAR(ledger!.hrExcluded) })}
                         </td>
                       </tr>
                     )}
                     {(ledger?.total ?? 0) > 0 && <>
-                      <Row label="Total Ledger OpEx (excl. HR)" value={ledger!.total} bold highlight="neutral" percent={pctOf(ledger!.total, R)} />
+                      <Row label={t("pl.rows.totalLedgerOpex")} value={ledger!.total} bold highlight="neutral" percent={pctOf(ledger!.total, R)} />
                       <Div />
                     </>}
 
                     {/* ── [6] PAYROLL EXPENSES ──────────────────────────────────────── */}
-                    <SH title="Payroll Expenses" icon={<Users className="w-3.5 h-3.5" />} />
-                    <OwnershipNote icon={<Users className="w-3 h-3" />} text="Source: HR Module (employees table) — single source of truth for all HR costs" />
-                    <Row label="Net Salaries (Salary + OT − Deductions)" value={payroll} indent percent={pctOf(payroll, R)}
-                      sub="رواتب + إضافي − خصومات − غيابات" />
-                    {staffExp > 0 && <Row label="Staff Expenses (Iqama, Visa, Insurance, Tickets)" value={staffExp} indent percent={pctOf(staffExp, R)} />}
-                    <Row label="Total Payroll Expenses" value={payroll + staffExp} bold highlight="neutral" percent={pctOf(payroll + staffExp, R)} />
+                    <SH title={t("pl.sections.payroll")} icon={<Users className="w-3.5 h-3.5" />} />
+                    <OwnershipNote icon={<Users className="w-3 h-3" />} text={t("pl.ownership.payroll")} />
+                    <Row label={t("pl.rows.netSalaries")} value={payroll} indent percent={pctOf(payroll, R)}
+                      sub={t("pl.rows.netSalariesSub")} />
+                    {staffExp > 0 && <Row label={t("pl.rows.staffExpenses")} value={staffExp} indent percent={pctOf(staffExp, R)} />}
+                    <Row label={t("pl.rows.totalPayroll")} value={payroll + staffExp} bold highlight="neutral" percent={pctOf(payroll + staffExp, R)} />
                     <Div />
 
                     {/* ── [7] FIXED EXPENSES ────────────────────────────────────────── */}
                     {(fixedDyn > 0 || fixedLegacy > 0) && <>
-                      <SH title="Fixed Expenses" icon={<Building2 className="w-3.5 h-3.5" />} />
-                      <OwnershipNote icon={<Building2 className="w-3 h-3" />} text="Source: Fixed Cost Templates (staff-salaries excluded — owned by Payroll module)" />
+                      <SH title={t("pl.sections.fixed")} icon={<Building2 className="w-3.5 h-3.5" />} />
+                      <OwnershipNote icon={<Building2 className="w-3 h-3" />} text={t("pl.ownership.fixed")} />
                       {fixedDyn > 0 && dynBreakdown && Object.entries(dynBreakdown).length > 0
                         ? Object.entries(dynBreakdown).map(([cat, amt]) => (
-                            <Row key={cat} label={FIXED_CAT_LABELS[cat] ?? cat} value={amt} indent percent={pctOf(amt, R)} />
+                            <Row key={cat} label={t(`reportsExtra.fixedCats.${cat}`) !== `reportsExtra.fixedCats.${cat}` ? t(`reportsExtra.fixedCats.${cat}`) : (FIXED_CAT_LABELS[cat] ?? cat)} value={amt} indent percent={pctOf(amt, R)} />
                           ))
-                        : fixedDyn > 0 && <Row label="Fixed Costs (Templates)" value={fixedDyn} indent percent={pctOf(fixedDyn, R)} />
+                        : fixedDyn > 0 && <Row label={t("pl.rows.fixedTemplates")} value={fixedDyn} indent percent={pctOf(fixedDyn, R)} />
                       }
-                      {fixedLegacy > 0 && <Row label="Fixed Costs (Legacy)" value={fixedLegacy} indent percent={pctOf(fixedLegacy, R)} />}
-                      <Row label="Total Fixed Expenses" value={fixedDyn + fixedLegacy} bold highlight="neutral" percent={pctOf(fixedDyn + fixedLegacy, R)} />
+                      {fixedLegacy > 0 && <Row label={t("pl.rows.fixedLegacy")} value={fixedLegacy} indent percent={pctOf(fixedLegacy, R)} />}
+                      <Row label={t("pl.rows.totalFixed")} value={fixedDyn + fixedLegacy} bold highlight="neutral" percent={pctOf(fixedDyn + fixedLegacy, R)} />
                       <Div />
                     </>}
 
@@ -479,10 +496,10 @@ export default function Reports() {
                       const fv = pl.fixedVsVariable!;
                       return (
                         <>
-                          <SH title="Fixed vs Variable Expenses" icon={<Building2 className="w-3.5 h-3.5" />} />
+                          <SH title={t("pl.sections.fixedVsVariable")} icon={<Building2 className="w-3.5 h-3.5" />} />
                           <OwnershipNote
                             icon={<Info className="w-3 h-3" />}
-                            text="Single source of truth — every operating expense (ledger + payroll + templates + commissions) classified by its nature field"
+                            text={t("pl.ownership.fixedVsVariable")}
                           />
                           <tr className="border-b border-slate-100">
                             <td colSpan={3} className="pl-6 py-2">
@@ -506,7 +523,7 @@ export default function Reports() {
                             </td>
                           </tr>
                           <Row
-                            label={`Fixed Expenses (${fv.fixed.length} sources)`}
+                            label={t("pl.rows.fixedSources", { n: fv.fixed.length })}
                             value={fv.fixedTotal}
                             indent
                             percent={pctOf(fv.fixedTotal, R)}
@@ -515,7 +532,7 @@ export default function Reports() {
                             <td colSpan={3} className="pl-12 py-1">
                               <details className="text-xs">
                                 <summary className="cursor-pointer text-slate-500 hover:text-slate-700">
-                                  Show fixed breakdown
+                                  {t("pl.rows.showFixed")}
                                 </summary>
                                 <table className="w-full mt-1">
                                   <tbody>
@@ -531,7 +548,7 @@ export default function Reports() {
                             </td>
                           </tr>
                           <Row
-                            label={`Variable Expenses (${fv.variable.length} sources)`}
+                            label={t("pl.rows.variableSources", { n: fv.variable.length })}
                             value={fv.variableTotal}
                             indent
                             percent={pctOf(fv.variableTotal, R)}
@@ -540,7 +557,7 @@ export default function Reports() {
                             <td colSpan={3} className="pl-12 py-1">
                               <details className="text-xs">
                                 <summary className="cursor-pointer text-slate-500 hover:text-slate-700">
-                                  Show variable breakdown
+                                  {t("pl.rows.showVariable")}
                                 </summary>
                                 <table className="w-full mt-1">
                                   <tbody>
@@ -558,14 +575,13 @@ export default function Reports() {
                           {fv.unclassified.length > 0 && (
                             <tr className="border-b border-red-200 bg-red-50">
                               <td colSpan={3} className="pl-6 py-2 text-xs text-red-700">
-                                <Info className="w-3 h-3 inline mr-1" />
-                                <strong>{fv.unclassified.length} unclassified expense(s)</strong> totaling {formatSAR(fv.unclassifiedTotal)} —
-                                missing Fixed/Variable nature. Check /api/diagnostics/reporting.
+                                <Info className="w-3 h-3 inline me-1" />
+                                {t("pl.rows.unclassified", { n: fv.unclassified.length, total: formatSAR(fv.unclassifiedTotal) })}
                               </td>
                             </tr>
                           )}
                           <Row
-                            label="Total Operating Expenses (Fixed + Variable)"
+                            label={t("pl.rows.totalOpExFixedVariable")}
                             value={fv.grandTotal}
                             bold
                             highlight="neutral"
@@ -578,38 +594,37 @@ export default function Reports() {
 
                     {/* ── [8] APP COMMISSIONS ───────────────────────────────────────── */}
                     {appCommissions > 0 && <>
-                      <SH title="App Commissions" icon={<Flame className="w-3.5 h-3.5" />} />
-                      <OwnershipNote icon={<Flame className="w-3 h-3" />} text="Source: Sales Channels — HungerStation, Jahez, Talabat, ToYou, The Chefz" />
-                      <Row label="Delivery App Commissions" value={appCommissions} indent percent={pctOf(appCommissions, R)} />
+                      <SH title={t("pl.sections.appCommissions")} icon={<Flame className="w-3.5 h-3.5" />} />
+                      <OwnershipNote icon={<Flame className="w-3 h-3" />} text={t("pl.ownership.commissions")} />
+                      <Row label={t("pl.rows.deliveryAppCommissions")} value={appCommissions} indent percent={pctOf(appCommissions, R)} />
                       <Div />
                     </>}
 
                     {/* ── Total OpEx ────────────────────────────────────────────────── */}
-                    <Row label="Total Operating Expenses" value={pl?.totalOperatingExpenses ?? 0} bold highlight="neutral" percent={pctOf(pl?.totalOperatingExpenses, R)} />
+                    <Row label={t("pl.rows.totalOpEx")} value={pl?.totalOperatingExpenses ?? 0} bold highlight="neutral" percent={pctOf(pl?.totalOperatingExpenses, R)} />
                     <Div double />
 
                     {/* ── [9] EBITDA ────────────────────────────────────────────────── */}
                     <Row
-                      label="EBITDA"
+                      label={t("pl.rows.ebitda")}
                       value={ebitda}
                       bold
                       highlight={ebitda >= 0 ? "profit" : "loss"}
                       percent={pctOf(ebitda, R)}
-                      sub="Gross Profit − All Operating Expenses"
                     />
                     <Div double />
 
                     {/* ── [10] VAT ──────────────────────────────────────────────────── */}
-                    <SH title="VAT Summary — Saudi ZATCA 15%" />
-                    <Row label="Output VAT (Sales × 15%)"          value={pl?.outputVat ?? 0} indent />
-                    <Row label="Input VAT (Recoverable from Purchases)" value={pl?.inputVat ?? 0} indent />
+                    <SH title={t("pl.sections.vat")} />
+                    <Row label={t("pl.rows.outputVat")}     value={pl?.outputVat ?? 0} indent />
+                    <Row label={t("pl.rows.inputVat")}      value={pl?.inputVat ?? 0} indent />
                     <Div />
-                    <Row label="Net VAT Payable to Government" value={pl?.vatPayable ?? 0} bold highlight="neutral" />
+                    <Row label={t("pl.rows.netVatPayable")} value={pl?.vatPayable ?? 0} bold highlight="neutral" />
                     <Div double />
 
                     {/* ── [11] NET PROFIT ───────────────────────────────────────────── */}
                     <tr>
-                      <td className="pl-4 pt-4 pb-5 text-base font-extrabold text-slate-900">Net Profit / (Loss)</td>
+                      <td className="pl-4 pt-4 pb-5 text-base font-extrabold text-slate-900">{t("pl.rows.netProfit")}</td>
                       <td className={`pr-4 pt-4 pb-5 text-right text-xl font-extrabold tabular-nums ${(pl?.netProfit ?? 0) >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
                         {formatSAR(pl?.netProfit)}
                       </td>
@@ -625,17 +640,17 @@ export default function Reports() {
                 <div className="px-6 py-4 bg-slate-50 border-t space-y-1.5 text-xs text-slate-500">
                   <div className="flex items-center gap-1.5 font-semibold text-slate-600">
                     <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-                    Single Source of Truth — Duplicate Prevention Rules
+                    {t("reportsExtra.footer.title")}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-0.5">
-                    <span>🛒 <strong>Purchases</strong> → COGS only (food, bev, gen, gas, charcoal)</span>
-                    <span>📋 <strong>Expense Ledger</strong> → Operating expenses (excl. HR)</span>
-                    <span>👥 <strong>HR Module</strong> → Payroll only (salaries, OT, deductions)</span>
-                    <span>🏢 <strong>Fixed Cost Templates</strong> → Rent, subscriptions (excl. staff-salaries)</span>
-                    <span>🏛 <strong>Expense Ledger 5-3-x</strong> → Government fees only</span>
-                    <span>🔥 <strong>Sales Channels</strong> → App commissions only</span>
+                    <span>{t("reportsExtra.footer.rule1")}</span>
+                    <span>{t("reportsExtra.footer.rule2")}</span>
+                    <span>{t("reportsExtra.footer.rule3")}</span>
+                    <span>{t("reportsExtra.footer.rule4")}</span>
+                    <span>{t("reportsExtra.footer.rule5")}</span>
+                    <span>{t("reportsExtra.footer.rule6")}</span>
                   </div>
-                  <p className="text-slate-400">EBITDA = Gross Profit − Purchase OpEx − Ledger OpEx − Govt Fees − Payroll − Fixed − Commissions</p>
+                  <p className="text-slate-400">{t("reportsExtra.footer.ebitdaFormula")}</p>
                 </div>
               </div>
             )}
@@ -655,47 +670,47 @@ export default function Reports() {
             return (
               <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
                 <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-center">
-                  <p className="text-xs text-slate-500 mb-0.5">Tax Invoice Net</p>
-                  <p className="font-bold text-blue-800">{formatSAR(totTaxNet)}</p>
-                  <p className="text-[10px] text-blue-600">Before VAT</p>
+                  <p className="text-xs text-slate-500 mb-0.5">{t("reportsExtra.monthlyKpi.taxInvoiceNet")}</p>
+                  <p className="font-bold text-blue-800 tabular-nums">{formatSAR(totTaxNet)}</p>
+                  <p className="text-[10px] text-blue-600">{t("reportsExtra.monthlyKpi.beforeVat")}</p>
                 </div>
                 <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-center">
-                  <p className="text-xs text-slate-500 mb-0.5">Input VAT</p>
-                  <p className="font-bold text-emerald-700">{formatSAR(totVat)}</p>
-                  <p className="text-[10px] text-emerald-600">Reclaimable</p>
+                  <p className="text-xs text-slate-500 mb-0.5">{t("reportsExtra.monthlyKpi.inputVat")}</p>
+                  <p className="font-bold text-emerald-700 tabular-nums">{formatSAR(totVat)}</p>
+                  <p className="text-[10px] text-emerald-600">{t("reportsExtra.monthlyKpi.reclaimable")}</p>
                 </div>
                 <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-center">
-                  <p className="text-xs text-slate-500 mb-0.5">Tax Invoice Total</p>
-                  <p className="font-bold text-emerald-800">{formatSAR(totTaxGross)}</p>
-                  <p className="text-[10px] text-emerald-600">incl. VAT</p>
+                  <p className="text-xs text-slate-500 mb-0.5">{t("reportsExtra.monthlyKpi.taxInvoiceTotal")}</p>
+                  <p className="font-bold text-emerald-800 tabular-nums">{formatSAR(totTaxGross)}</p>
+                  <p className="text-[10px] text-emerald-600">{t("reportsExtra.monthlyKpi.inclVat")}</p>
                 </div>
                 <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-center">
-                  <p className="text-xs text-slate-500 mb-0.5">Non-Tax Total</p>
-                  <p className="font-bold text-amber-700">{formatSAR(totNonTax)}</p>
-                  <p className="text-[10px] text-amber-600">No VAT</p>
+                  <p className="text-xs text-slate-500 mb-0.5">{t("reportsExtra.monthlyKpi.nonTaxTotal")}</p>
+                  <p className="font-bold text-amber-700 tabular-nums">{formatSAR(totNonTax)}</p>
+                  <p className="text-[10px] text-amber-600">{t("reportsExtra.monthlyKpi.noVat")}</p>
                 </div>
                 <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-center">
-                  <p className="text-xs text-slate-500 mb-0.5">Grand Total</p>
-                  <p className="font-bold text-slate-800">{formatSAR(grandTot)}</p>
-                  <p className="text-[10px] text-slate-500">All invoices</p>
+                  <p className="text-xs text-slate-500 mb-0.5">{t("reportsExtra.monthlyKpi.grandTotal")}</p>
+                  <p className="font-bold text-slate-800 tabular-nums">{formatSAR(grandTot)}</p>
+                  <p className="text-[10px] text-slate-500">{t("reportsExtra.monthlyKpi.allInvoices")}</p>
                 </div>
               </div>
             );
           })()}
           {monthlyLoading ? (
-            <div className="py-16 text-center text-slate-400">Loading…</div>
+            <div className="py-16 text-center text-slate-400">{t("common.loading")}</div>
           ) : (
             <div className="bg-card rounded-2xl shadow-sm border overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b-2 border-slate-200 bg-slate-50">
-                    <th className="pl-4 py-3 text-left font-semibold text-slate-600">Month</th>
-                    <th className="pr-4 py-3 text-right font-semibold text-slate-600">Tax Net</th>
-                    <th className="pr-4 py-3 text-right font-semibold text-slate-600">Input VAT</th>
-                    <th className="pr-4 py-3 text-right font-semibold text-slate-600">Tax Total</th>
-                    <th className="pr-4 py-3 text-right font-semibold text-slate-600">Non-Tax</th>
-                    <th className="pr-4 py-3 text-right font-semibold text-slate-600">Grand Total</th>
-                    <th className="pr-4 py-3 text-right font-semibold text-slate-600">Records</th>
+                    <th className="px-4 py-3 text-start font-semibold text-slate-600">{t("reportsExtra.monthlyTable.month")}</th>
+                    <th className="px-4 py-3 text-end font-semibold text-slate-600">{t("reportsExtra.monthlyTable.taxNet")}</th>
+                    <th className="px-4 py-3 text-end font-semibold text-slate-600">{t("reportsExtra.monthlyTable.inputVat")}</th>
+                    <th className="px-4 py-3 text-end font-semibold text-slate-600">{t("reportsExtra.monthlyTable.taxTotal")}</th>
+                    <th className="px-4 py-3 text-end font-semibold text-slate-600">{t("reportsExtra.monthlyTable.nonTax")}</th>
+                    <th className="px-4 py-3 text-end font-semibold text-slate-600">{t("reportsExtra.monthlyTable.grandTotal")}</th>
+                    <th className="px-4 py-3 text-end font-semibold text-slate-600">{t("reportsExtra.monthlyTable.records")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -711,7 +726,7 @@ export default function Reports() {
                     </tr>
                   ))}
                   {(!monthly || monthly.length === 0) && (
-                    <tr><td colSpan={7} className="py-16 text-center text-slate-400">No purchase data available</td></tr>
+                    <tr><td colSpan={7} className="py-16 text-center text-slate-400">{t("reportsExtra.monthlyTable.empty")}</td></tr>
                   )}
                 </tbody>
               </table>
@@ -724,18 +739,18 @@ export default function Reports() {
       {tab === "category" && (
         <div className="space-y-4">
           {catLoading ? (
-            <div className="py-16 text-center text-slate-400">Loading…</div>
+            <div className="py-16 text-center text-slate-400">{t("common.loading")}</div>
           ) : (
             <div className="bg-card rounded-2xl shadow-sm border overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b-2 border-slate-200 bg-slate-50">
-                    <th className="pl-4 py-3 text-left font-semibold text-slate-600">Category</th>
-                    <th className="pl-4 py-3 text-left font-semibold text-slate-600">Group</th>
-                    <th className="pr-4 py-3 text-right font-semibold text-slate-600">Net (SAR)</th>
-                    <th className="pr-4 py-3 text-right font-semibold text-slate-600">VAT</th>
-                    <th className="pr-4 py-3 text-right font-semibold text-slate-600">Total</th>
-                    <th className="pr-4 py-3 text-right font-semibold text-slate-600">Records</th>
+                    <th className="px-4 py-3 text-start font-semibold text-slate-600">{t("reportsExtra.categoryTable.category")}</th>
+                    <th className="px-4 py-3 text-start font-semibold text-slate-600">{t("reportsExtra.categoryTable.group")}</th>
+                    <th className="px-4 py-3 text-end font-semibold text-slate-600">{t("reportsExtra.categoryTable.netSar")}</th>
+                    <th className="px-4 py-3 text-end font-semibold text-slate-600">{t("reportsExtra.categoryTable.vat")}</th>
+                    <th className="px-4 py-3 text-end font-semibold text-slate-600">{t("reportsExtra.categoryTable.total")}</th>
+                    <th className="px-4 py-3 text-end font-semibold text-slate-600">{t("reportsExtra.categoryTable.records")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -753,7 +768,7 @@ export default function Reports() {
                     </tr>
                   ))}
                   {(!catReport || catReport.length === 0) && (
-                    <tr><td colSpan={6} className="py-16 text-center text-slate-400">No category data for this period</td></tr>
+                    <tr><td colSpan={6} className="py-16 text-center text-slate-400">{t("reportsExtra.categoryTable.empty")}</td></tr>
                   )}
                 </tbody>
               </table>

@@ -6,6 +6,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { PrintButton } from "@/components/ui/PrintButton";
 import { formatSAR } from "@/lib/format";
 import { toast } from "@/hooks/use-toast";
@@ -243,6 +244,7 @@ function DishModal({
 }
 
 export default function FoodCost() {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const { data: dishes = [] } = useListDishes();
   const { data: pricing } = useGetDishPricing();
@@ -353,8 +355,8 @@ export default function FoodCost() {
     <div className="p-6 space-y-6">
       <div className="flex items-start justify-between">
         <PageHeader
-          title="Food Cost & Pricing Engine"
-          description="Automated dish pricing based on real purchase data, fixed costs, and target margins."
+          title={t("pages.foodCostPageTitle")}
+          description={t("pages.foodCostDesc")}
         />
         <div className="flex gap-2 items-center">
           <Button variant="outline" size="sm" className="no-print" onClick={() => {
