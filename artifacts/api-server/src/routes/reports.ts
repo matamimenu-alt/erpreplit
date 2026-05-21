@@ -274,11 +274,13 @@ router.get("/pl", async (req, res) => {
       }
     }
 
-    // ── [6] EXPENSE LEDGER — SOURCE RULE: Operational & Administrative only ─
+    // ── [6] EXPENSE LEDGER — SOURCE RULE: all non-HR ledger entries ─────────
     // Only MANUAL entries. Auto-generated mirrors are excluded.
-    // 5-2-x (HR): EXCLUDED — Payroll module is the single source of truth for HR costs
-    // 5-3-x (Government): surfaced as its own P&L section
-    // 5-7-x (Rent): included here only if entered manually (and user should not also have it in Fixed Costs)
+    // HR_MAIN_CODE (5-1) is EXCLUDED — Payroll module is the single source
+    // of truth for HR costs. The rest is grouped DYNAMICALLY by the level-1
+    // main category, so any user-defined or restructured category flows into
+    // the right P&L bucket without code changes.
+    const HR_MAIN_CODE = "5-1"; // ⚠ kept in sync with CATEGORY_SEED main #1
     let expTxns = await db.select().from(expenseTransactionsTable)
       .where(and(
         eq(expenseTransactionsTable.restaurantId, restaurantId),
@@ -286,53 +288,99 @@ router.get("/pl", async (req, res) => {
       ));
     if (month) expTxns = expTxns.filter(t => t.month === month);
 
-    const ledgerByCode = (prefix: string) =>
-      expTxns.filter(t => t.categoryCode.startsWith(prefix)).reduce((s, t) => s + toNum(t.amount), 0);
+    // Load category tree once — reused for both byMainCategory rollup and the
+    // Fixed-vs-Variable classification below.
+    const allCats = await db.select().from(expenseCategoriesTable);
+    const catByCode = new Map(allCats.map(c => [c.code, c]));
 
-    // 5-1-x Operational (cleaned of 5-2-x payroll)
-    const ledgerCleaning     = ledgerByCode("5-1-1");
-    const ledgerFuel         = ledgerByCode("5-1-2");
-    const ledgerUtilities    = ledgerByCode("5-1-3");
-    const ledgerMaintenance  = ledgerByCode("5-1-4");
-    const ledgerTools        = ledgerByCode("5-1-5");
-    const ledgerMarketing    = ledgerByCode("5-1-6");
-    const ledgerOperational  = ledgerCleaning + ledgerFuel + ledgerUtilities + ledgerMaintenance + ledgerTools + ledgerMarketing;
+    // Walk up the tree to find the level-1 (main category) ancestor.
+    const mainAncestor = (code: string): string => {
+      let cur: string | null = code;
+      const seen = new Set<string>();
+      while (cur && !seen.has(cur)) {
+        seen.add(cur);
+        const row = catByCode.get(cur);
+        if (!row) {
+          // Unknown code — synthesise a main code from the first segment
+          // (e.g. '5-1-7' → '5-1') so it still rolls up sensibly.
+          const parts = code.split("-");
+          return parts.length >= 2 ? `${parts[0]}-${parts[1]}` : code;
+        }
+        if (row.level === 1) return row.code;
+        cur = row.parentCode;
+      }
+      return code;
+    };
 
-    // 5-2-x HR → EXCLUDED from P&L total (payroll is the source)
-    const ledgerHR           = ledgerByCode("5-2"); // tracked but NOT added to any total
+    // Build per-main-category rollup with leaf breakdown (HR excluded — owned by payroll).
+    type LeafRow = { code: string; name: string; nameAr: string; nature: "fixed" | "variable" | null; amount: number };
+    type MainRow = { code: string; name: string; nameAr: string; total: number; leaves: LeafRow[] };
+    const mainRollup = new Map<string, MainRow>();
+    let ledgerHR = 0;
+    for (const t of expTxns) {
+      const amt = toNum(t.amount);
+      const main = mainAncestor(t.categoryCode);
+      if (main === HR_MAIN_CODE) { ledgerHR += amt; continue; }
+      const mainCat = catByCode.get(main);
+      if (!mainRollup.has(main)) {
+        mainRollup.set(main, {
+          code: main,
+          name:   mainCat?.name   ?? main,
+          nameAr: mainCat?.nameAr ?? "",
+          total: 0,
+          leaves: [],
+        });
+      }
+      const row = mainRollup.get(main)!;
+      row.total += amt;
+      const leaf = catByCode.get(t.categoryCode);
+      const existing = row.leaves.find(l => l.code === t.categoryCode);
+      if (existing) {
+        existing.amount += amt;
+      } else {
+        row.leaves.push({
+          code:   t.categoryCode,
+          name:   leaf?.name   ?? t.categoryCode,
+          nameAr: leaf?.nameAr ?? "",
+          nature: (leaf?.nature === "fixed" || leaf?.nature === "variable") ? leaf.nature : null,
+          amount: amt,
+        });
+      }
+    }
 
-    // 5-3-x Government Fees → SEPARATE SECTION in P&L
-    const govLaborOffice     = expTxns.filter(t => t.categoryCode === "5-3-1").reduce((s, t) => s + toNum(t.amount), 0);
-    const govPassport        = expTxns.filter(t => t.categoryCode === "5-3-2").reduce((s, t) => s + toNum(t.amount), 0);
-    const govSponsor         = expTxns.filter(t => t.categoryCode === "5-3-3").reduce((s, t) => s + toNum(t.amount), 0);
-    const govOther           = expTxns.filter(t => t.categoryCode === "5-3-4").reduce((s, t) => s + toNum(t.amount), 0);
-    const totalGovernmentFees = govLaborOffice + govPassport + govSponsor + govOther;
-
-    // 5-4-x Administrative
-    const ledgerAdmin        = ledgerByCode("5-4");
-    // 5-5-x Financial
-    const ledgerFinancial    = ledgerByCode("5-5");
-    // 5-6-x Transport/Vehicles
-    const ledgerTransport    = ledgerByCode("5-6");
-    // 5-7-x Rent (manual — if also in Fixed Costs templates this is a user data entry issue)
-    const ledgerRent         = ledgerByCode("5-7");
-    // 5-8-x Other
-    const ledgerOther        = ledgerByCode("5-8");
-
-    // Total from Expense Ledger (EXCLUDING 5-2-x HR — payroll owns that).
-    // Sum every non-HR ledger row directly so that any ad-hoc code outside
-    // 5-1..5-8 is still represented in the ledger totals and reconciles with
-    // the Fixed-vs-Variable grand total (anything unmapped surfaces in the
-    // `unclassified` bucket rather than being silently dropped).
+    // Total Expense-Ledger net (excluding HR — payroll owns that).
     const totalExpenseTxnNet = expTxns
-      .filter(t => !t.categoryCode.startsWith("5-2"))
+      .filter(t => mainAncestor(t.categoryCode) !== HR_MAIN_CODE)
       .reduce((s, t) => s + toNum(t.amount), 0);
-    // Residual = any 5-x ledger amount not covered by the 5-1..5-8 named slots above.
-    // Kept as a derived value so the UI can show a "Other / uncategorised ledger" row
-    // when present, and reconciles with fixedVsVariable.
-    const ledgerNamedTotal = ledgerOperational + totalGovernmentFees + ledgerAdmin
-      + ledgerFinancial + ledgerTransport + ledgerRent + ledgerOther;
-    const ledgerResidual = totalExpenseTxnNet - ledgerNamedTotal;
+
+    // Build the ordered byMainCategory array using the canonical sort order
+    // from expense_categories so the P&L always renders 5-2, 5-3, … in the
+    // same sequence as the category tree (even when some mains have no
+    // transactions yet — those are returned with total=0 and empty leaves).
+    const mainCatsOrdered = allCats
+      .filter(c => c.level === 1 && c.isActive && c.code !== HR_MAIN_CODE)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+    const byMainCategory = mainCatsOrdered.map(mc => {
+      const r = mainRollup.get(mc.code) ?? { code: mc.code, name: mc.name, nameAr: mc.nameAr, total: 0, leaves: [] };
+      r.leaves.sort((a, b) => b.amount - a.amount);
+      return {
+        code:   r.code,
+        name:   r.name,
+        nameAr: r.nameAr,
+        total:  f2(r.total),
+        leaves: r.leaves.map(l => ({ ...l, amount: f2(l.amount) })),
+      };
+    });
+    // Surface unknown/legacy main codes too so nothing is silently dropped.
+    for (const [code, r] of mainRollup) {
+      if (mainCatsOrdered.some(m => m.code === code)) continue;
+      r.leaves.sort((a, b) => b.amount - a.amount);
+      byMainCategory.push({
+        code: r.code, name: r.name, nameAr: r.nameAr,
+        total: f2(r.total),
+        leaves: r.leaves.map(l => ({ ...l, amount: f2(l.amount) })),
+      });
+    }
 
     // ── Fixed vs Variable classification (single source of truth) ─────────────
     // Every leaf category in `expense_categories` has a `nature` of 'fixed' or
@@ -340,7 +388,6 @@ router.get("/pl", async (req, res) => {
     // fixed-cost templates (each with their own nature, default 'fixed') and
     // payroll (always fixed). Unmapped rows fall into "unclassified" and
     // raise a diagnostic warning rather than being silently dropped.
-    const allCats = await db.select().from(expenseCategoriesTable);
     const natureByCode = new Map<string, "fixed" | "variable">();
     for (const c of allCats) {
       if (c.nature === "fixed" || c.nature === "variable") natureByCode.set(c.code, c.nature);
@@ -368,7 +415,7 @@ router.get("/pl", async (req, res) => {
     // Aggregate ledger by code → nature
     const ledgerAggByCode = new Map<string, number>();
     for (const t of expTxns) {
-      if (t.categoryCode.startsWith("5-2")) continue; // HR owned by payroll
+      if (mainAncestor(t.categoryCode) === HR_MAIN_CODE) continue; // HR owned by payroll
       ledgerAggByCode.set(t.categoryCode, (ledgerAggByCode.get(t.categoryCode) ?? 0) + toNum(t.amount));
     }
     for (const [code, amt] of ledgerAggByCode) {
@@ -458,8 +505,8 @@ router.get("/pl", async (req, res) => {
     if (unclassified.length > 0) {
       req.log.warn({ unclassified }, "P&L: expense entries with unmapped nature — falling outside Fixed/Variable totals");
     }
-    const totalExpenseTxnVat   = expTxns.filter(t => !t.categoryCode.startsWith("5-2")).reduce((s, t) => s + toNum(t.vatAmount), 0);
-    const totalExpenseTxnTotal = expTxns.filter(t => !t.categoryCode.startsWith("5-2")).reduce((s, t) => s + toNum(t.totalAmount), 0);
+    const totalExpenseTxnVat   = expTxns.filter(t => mainAncestor(t.categoryCode) !== HR_MAIN_CODE).reduce((s, t) => s + toNum(t.vatAmount), 0);
+    const totalExpenseTxnTotal = expTxns.filter(t => mainAncestor(t.categoryCode) !== HR_MAIN_CODE).reduce((s, t) => s + toNum(t.totalAmount), 0);
 
     // ── [7] TOTALS & EBITDA ─────────────────────────────────────────────────
     // Each cost type comes from exactly ONE module — no overlaps:
@@ -556,37 +603,15 @@ router.get("/pl", async (req, res) => {
       othersPurchaseCost:  f2(purchaseOthers),
       totalPurchaseOpex:   f2(totalPurchaseOpex),
 
-      // ── Expense Ledger OpEx breakdown ─────────────────────────────────────
-      // SOURCE: Expense Ledger (manual entries only, 5-2-x HR excluded)
+      // ── Expense Ledger — grouped by Main Category (dynamic) ───────────────
+      // SOURCE: Expense Ledger (manual entries only, HR main category excluded —
+      // payroll owns HR costs). Every main category from `expense_categories`
+      // is rendered in canonical sort order, with leaves underneath. Any new
+      // category created by the user appears here automatically.
+      byMainCategory,
       ledgerOpex: {
-        // 5-1-x Operational
-        cleaning:    f2(ledgerCleaning),
-        fuel:        f2(ledgerFuel),
-        utilities:   f2(ledgerUtilities),
-        maintenance: f2(ledgerMaintenance),
-        tools:       f2(ledgerTools),
-        marketing:   f2(ledgerMarketing),
-        totalOperational: f2(ledgerOperational),
-        // 5-3-x Government (own section)
-        government:  f2(totalGovernmentFees),
-        // 5-4 Admin
-        administrative: f2(ledgerAdmin),
-        // 5-5 Financial
-        financial:   f2(ledgerFinancial),
-        // 5-6 Transport
-        transport:   f2(ledgerTransport),
-        // 5-7 Rent (manual)
-        rent:        f2(ledgerRent),
-        // 5-8 Other
-        other:       f2(ledgerOther),
-        // EXCLUDED from totals (HR owned by payroll):
-        hrExcluded:  f2(ledgerHR),
-        // Grand total from ledger (excl. HR)
+        hrExcluded:  f2(ledgerHR),   // HR total (5-1-x) excluded from P&L
         total:       f2(totalExpenseTxnNet),
-        // Residual: any 5-x ledger amount outside the named 5-1..5-8 slots
-        // (e.g. user-defined codes). Already INCLUDED in `total` above and in
-        // fixedVsVariable. Surface separately so the UI can reconcile.
-        residual:    f2(ledgerResidual),
       },
 
       // ── Fixed vs Variable classification (single source of truth) ──────────
@@ -594,16 +619,6 @@ router.get("/pl", async (req, res) => {
       // Includes payroll/legacy/purchase-opex/app-commissions in the right bucket.
       // `unclassified` length > 0 means a category is missing its `nature` mapping.
       fixedVsVariable,
-
-      // ── Government Fees (dedicated section) ────────────────────────────────
-      // SOURCE: Expense Ledger 5-3-x ONLY
-      governmentFees: {
-        laborOffice: f2(govLaborOffice),
-        passport:    f2(govPassport),
-        sponsorship: f2(govSponsor),
-        other:       f2(govOther),
-        total:       f2(totalGovernmentFees),
-      },
 
       // ── Payroll Expenses ───────────────────────────────────────────────────
       // SOURCE: HR Module (employees table) — ONLY source for HR costs
@@ -649,19 +664,16 @@ router.get("/pl", async (req, res) => {
       netMarginPercent: pct(netProfit, totalRevenue),
 
       // ── Expense Accounting (full breakdown for Expense Ledger page) ────────
+      // Dynamic: keyed by main-category code (5-2, 5-3, …) plus an
+      // `humanResources` key for the HR total that is excluded from the
+      // P&L grand total.
       expenseAccounting: {
         totalNet:   f2(totalExpenseTxnNet),
         totalVat:   f2(totalExpenseTxnVat),
         totalGross: f2(totalExpenseTxnTotal),
         byCategory: {
-          operational:    f2(ledgerOperational),
-          humanResources: f2(ledgerHR),   // excluded from P&L total
-          government:     f2(totalGovernmentFees),
-          administrative: f2(ledgerAdmin),
-          financial:      f2(ledgerFinancial),
-          transport:      f2(ledgerTransport),
-          rent:           f2(ledgerRent),
-          other:          f2(ledgerOther),
+          humanResources: f2(ledgerHR),
+          ...Object.fromEntries(byMainCategory.map(m => [m.code, m.total])),
         },
       },
     });

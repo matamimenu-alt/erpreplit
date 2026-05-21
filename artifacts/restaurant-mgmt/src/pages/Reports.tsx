@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { Fragment, useState, useCallback, useEffect, useRef } from "react";
 import {
   useGetPLReport,
   useGetMonthlyPurchaseReport,
@@ -90,15 +90,18 @@ type PLExtra = {
   payrollExpenses?: number;
   ebitda?: number;
   ledgerOpex?: {
-    cleaning: number; fuel: number; utilities: number; maintenance: number;
-    tools: number; marketing: number; totalOperational: number;
-    government: number; administrative: number; financial: number;
-    transport: number; rent: number; other: number; hrExcluded: number; total: number;
-    residual?: number;
+    hrExcluded: number; total: number;
   };
-  governmentFees?: {
-    laborOffice: number; passport: number; sponsorship: number; other: number; total: number;
-  };
+  // Dynamic per-main-category rollup (5-2 Government, 5-3 Fixed Operating,
+  // 5-4 Variable Operating, 5-5 Marketing, 5-6 Repairs, 5-7 Administrative,
+  // plus any user-defined mains). HR (5-1) is excluded — owned by Payroll.
+  byMainCategory?: Array<{
+    code: string;
+    name: string;
+    nameAr: string;
+    total: number;
+    leaves: Array<{ code: string; name: string; nameAr: string; nature: "fixed" | "variable" | null; amount: number }>;
+  }>;
   dynamicFixedBreakdown?: Record<string, number>;
   fixedVsVariable?: {
     fixedTotal: number;
@@ -174,7 +177,7 @@ export default function Reports() {
   const cookingFuel   = pl?.cookingFuelCost ?? 0;
   const adjCOGS       = pl?.adjustedCOGS ?? pl?.totalCOGS ?? 0;
   const ledger        = pl?.ledgerOpex;
-  const govFees       = pl?.governmentFees;
+  const byMain        = pl?.byMainCategory ?? [];
   const payroll       = pl?.payrollExpenses ?? pl?.totalLaborCost ?? 0;
   const staffExp      = (pl as unknown as Record<string, number>)?.totalStaffExpenses ?? 0;
   const fixedDyn      = (pl as unknown as Record<string, number>)?.totalDynamicFixedCosts ?? 0;
@@ -203,13 +206,11 @@ export default function Reports() {
       { Section: "PURCHASE OPEX", Item: "IT & Communication","SAR": pl.itCommunicationCost ?? 0 },
       { Section: "PURCHASE OPEX", Item: "Marketing",       "SAR": pl.marketingCost ?? 0 },
       { Section: "PURCHASE OPEX", Item: "Others",          "SAR": pl.othersPurchaseCost ?? 0 },
-      { Section: "LEDGER OPEX", Item: "Utilities",         "SAR": ledger?.utilities ?? 0 },
-      { Section: "LEDGER OPEX", Item: "Maintenance",       "SAR": ledger?.maintenance ?? 0 },
-      { Section: "LEDGER OPEX", Item: "Marketing",         "SAR": ledger?.marketing ?? 0 },
-      { Section: "GOVT FEES", Item: "Labor Office",        "SAR": govFees?.laborOffice ?? 0 },
-      { Section: "GOVT FEES", Item: "Passport Fees",       "SAR": govFees?.passport ?? 0 },
-      { Section: "GOVT FEES", Item: "Sponsorship Transfer","SAR": govFees?.sponsorship ?? 0 },
-      { Section: "GOVT FEES", Item: "Other Govt Fees",     "SAR": govFees?.other ?? 0 },
+      // Per-main-category breakdown (dynamic — driven by the category tree)
+      ...byMain.flatMap(mc => [
+        { Section: mc.name.toUpperCase(), Item: mc.name, "SAR": mc.total },
+        ...mc.leaves.map(l => ({ Section: mc.name.toUpperCase(), Item: `  ${l.name}`, "SAR": l.amount })),
+      ]),
       { Section: "PAYROLL", Item: "Net Salaries",          "SAR": payroll },
       { Section: "PAYROLL", Item: "Staff Expenses",        "SAR": staffExp },
       { Section: "FIXED", Item: "Fixed Costs (Templates)", "SAR": fixedDyn || fixedLegacy },
@@ -414,43 +415,38 @@ export default function Reports() {
                       <Div />
                     </>}
 
-                    {/* ── [4] OPERATING EXPENSES — EXPENSE LEDGER ───────────────────── */}
+                    {/* ── [4] OPERATING EXPENSES — by Main Category (dynamic) ───── */}
+                    {/* One section per main category from the expense tree (HR excluded — owned by Payroll). */}
+                    {byMain.filter(mc => mc.total > 0).map(mc => (
+                      <Fragment key={mc.code}>
+                        <SH title={`${mc.name} (${mc.code})`} icon={<Receipt className="w-3.5 h-3.5" />} />
+                        <OwnershipNote
+                          icon={<Receipt className="w-3 h-3" />}
+                          text={`Source: Expense Ledger ${mc.code}-x${mc.nameAr ? " — " + mc.nameAr : ""}`}
+                        />
+                        {mc.leaves.map(l => (
+                          <Row
+                            key={l.code}
+                            label={`${l.name} (${l.code})${l.nature ? " · " + l.nature : ""}`}
+                            value={l.amount}
+                            indent
+                            percent={pctOf(l.amount, R)}
+                          />
+                        ))}
+                        <Row label={`Total ${mc.name}`} value={mc.total} bold highlight="neutral" percent={pctOf(mc.total, R)} />
+                        <Div />
+                      </Fragment>
+                    ))}
+                    {(ledger?.hrExcluded ?? 0) > 0 && (
+                      <tr className="border-b border-slate-100">
+                        <td colSpan={3} className="pl-10 py-2 text-xs text-slate-400 flex items-center gap-1">
+                          <Info className="w-3 h-3 inline mr-0.5" />
+                          HR ledger entries excluded ({formatSAR(ledger!.hrExcluded)}) — accounted for in Payroll section (HR owns 5-1-x)
+                        </td>
+                      </tr>
+                    )}
                     {(ledger?.total ?? 0) > 0 && <>
-                      <SH title="Operating Expenses — Expense Ledger" icon={<Receipt className="w-3.5 h-3.5" />} />
-                      <OwnershipNote icon={<Receipt className="w-3 h-3" />} text="Source: Expense Ledger (manual entries, excl. HR — HR owned by Payroll module)" />
-                      {(ledger?.utilities ?? 0) > 0   && <Row label="Utilities & Telecom (5-1-3)"    value={ledger.utilities}   indent percent={pctOf(ledger.utilities, R)} />}
-                      {(ledger?.cleaning ?? 0) > 0    && <Row label="Cleaning Supplies (5-1-1)"       value={ledger.cleaning}    indent percent={pctOf(ledger.cleaning, R)} />}
-                      {(ledger?.maintenance ?? 0) > 0 && <Row label="Maintenance (5-1-4)"             value={ledger.maintenance} indent percent={pctOf(ledger.maintenance, R)} />}
-                      {(ledger?.tools ?? 0) > 0       && <Row label="Tools & Consumables (5-1-5)"     value={ledger.tools}       indent percent={pctOf(ledger.tools, R)} />}
-                      {(ledger?.marketing ?? 0) > 0   && <Row label="Marketing & Advertising (5-1-6)" value={ledger.marketing}   indent percent={pctOf(ledger.marketing, R)} />}
-                      {(ledger?.fuel ?? 0) > 0        && <Row label="Fuel — Ledger (5-1-2)"           value={ledger.fuel}        indent percent={pctOf(ledger.fuel, R)} />}
-                      {(ledger?.administrative ?? 0) > 0 && <Row label="Administrative (5-4)"         value={ledger.administrative} indent percent={pctOf(ledger.administrative, R)} />}
-                      {(ledger?.financial ?? 0) > 0   && <Row label="Financial Expenses (5-5)"        value={ledger.financial}   indent percent={pctOf(ledger.financial, R)} />}
-                      {(ledger?.transport ?? 0) > 0   && <Row label="Transport & Vehicles (5-6)"      value={ledger.transport}   indent percent={pctOf(ledger.transport, R)} />}
-                      {(ledger?.rent ?? 0) > 0        && <Row label="Rent — Manual (5-7)"             value={ledger.rent}        indent percent={pctOf(ledger.rent, R)} />}
-                      {(ledger?.other ?? 0) > 0       && <Row label="Other Expenses (5-8)"            value={ledger.other}       indent percent={pctOf(ledger.other, R)} />}
-                      {(ledger?.residual ?? 0) > 0    && <Row label="Other / uncategorised ledger"  value={ledger.residual ?? 0} indent percent={pctOf(ledger.residual ?? 0, R)} />}
-                      {(ledger?.hrExcluded ?? 0) > 0  && (
-                        <tr className="border-b border-slate-100">
-                          <td colSpan={3} className="pl-10 py-2 text-xs text-slate-400 flex items-center gap-1">
-                            <Info className="w-3 h-3 inline mr-0.5" />
-                            HR entries excluded ({formatSAR(ledger.hrExcluded)}) — accounted for in Payroll section
-                          </td>
-                        </tr>
-                      )}
-                      <Row label="Total Ledger OpEx" value={ledger?.total ?? 0} bold highlight="neutral" percent={pctOf(ledger?.total, R)} />
-                      <Div />
-                    </>}
-
-                    {/* ── [5] GOVERNMENT FEES ───────────────────────────────────────── */}
-                    {(govFees?.total ?? 0) > 0 && <>
-                      <SH title="Government Fees (5-3-x)" icon={<Landmark className="w-3.5 h-3.5" />} />
-                      <OwnershipNote icon={<Receipt className="w-3 h-3" />} text="Source: Expense Ledger 5-3-x — مكتب العمل، جوازات، كفالة، بلدية، رخص" />
-                      {(govFees?.laborOffice ?? 0) > 0  && <Row label="Labor Office Fees (5-3-1)"    value={govFees.laborOffice}  indent percent={pctOf(govFees.laborOffice, R)} />}
-                      {(govFees?.passport ?? 0) > 0     && <Row label="Passport / Visa Fees (5-3-2)" value={govFees.passport}     indent percent={pctOf(govFees.passport, R)} />}
-                      {(govFees?.sponsorship ?? 0) > 0  && <Row label="Sponsorship Transfer (5-3-3)" value={govFees.sponsorship}  indent percent={pctOf(govFees.sponsorship, R)} />}
-                      {(govFees?.other ?? 0) > 0        && <Row label="Other Government Fees (5-3-4)" value={govFees.other}       indent percent={pctOf(govFees.other, R)} />}
-                      <Row label="Total Government Fees" value={govFees?.total ?? 0} bold highlight="neutral" percent={pctOf(govFees?.total, R)} />
+                      <Row label="Total Ledger OpEx (excl. HR)" value={ledger!.total} bold highlight="neutral" percent={pctOf(ledger!.total, R)} />
                       <Div />
                     </>}
 

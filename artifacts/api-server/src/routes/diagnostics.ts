@@ -231,8 +231,26 @@ router.get("/reporting", async (req, res) => {
     const codesWithoutNature = new Set(
       allCategories.filter(c => !c.nature).map(c => c.code),
     );
+    // Resolve the level-1 main-category ancestor for a code (used for HR exclusion).
+    // HR is now main category 5-1 in the 7-main hospitality tree.
+    const HR_MAIN_CODE = "5-1";
+    const ancestorMain = (code: string): string => {
+      let cur: string | null = code;
+      const seen = new Set<string>();
+      while (cur && !seen.has(cur)) {
+        seen.add(cur);
+        const row = allCategories.find(c => c.code === cur);
+        if (!row) {
+          const parts = code.split("-");
+          return parts.length >= 2 ? `${parts[0]}-${parts[1]}` : code;
+        }
+        if (row.level === 1) return row.code;
+        cur = row.parentCode;
+      }
+      return code;
+    };
     const unclassifiedTxns = manualExpenses.filter(e => {
-      if (e.categoryCode.startsWith("5-2")) return false; // HR excluded by design
+      if (ancestorMain(e.categoryCode) === HR_MAIN_CODE) return false; // HR excluded by design (owned by Payroll)
       // walk up parent chain to see if any ancestor has nature
       const cat = allCategories.find(c => c.code === e.categoryCode);
       if (!cat) return true; // orphan — already flagged

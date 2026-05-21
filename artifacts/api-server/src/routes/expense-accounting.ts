@@ -31,60 +31,85 @@ const CATEGORY_SEED: Array<{
   { code: "5",     name: "Expenses",                     nameAr: "المصروفات",               parentCode: null, level: 0, sortOrder: 0, nature: null },
 
   // ── Main categories (aggregate — nature derived from children) ───────────
-  { code: "5-1",   name: "Operational Expenses",         nameAr: "المصروفات التشغيلية",       parentCode: "5",   level: 1, sortOrder: 1, nature: null },
-  { code: "5-2",   name: "Human Resources Expenses",     nameAr: "مصروفات الموارد البشرية",    parentCode: "5",   level: 1, sortOrder: 2, nature: null },
-  { code: "5-3",   name: "Government Fees",              nameAr: "المصروفات الحكومية",         parentCode: "5",   level: 1, sortOrder: 3, nature: null },
-  { code: "5-4",   name: "Administrative Expenses",      nameAr: "المصروفات الإدارية",         parentCode: "5",   level: 1, sortOrder: 4, nature: null },
-  { code: "5-5",   name: "Financial Expenses",           nameAr: "المصروفات المالية",          parentCode: "5",   level: 1, sortOrder: 5, nature: null },
-  { code: "5-6",   name: "Transport & Vehicles",         nameAr: "النقل والمركبات",            parentCode: "5",   level: 1, sortOrder: 6, nature: null },
-  { code: "5-7",   name: "Rent",                         nameAr: "الإيجارات",                  parentCode: "5",   level: 1, sortOrder: 7, nature: null },
-  { code: "5-8",   name: "Other Expenses",               nameAr: "مصروفات أخرى",               parentCode: "5",   level: 1, sortOrder: 8, nature: null },
+  // Professional hospitality chart of accounts. Re-ordered & re-grouped in
+  // 2026-05 to match standard ERP structure for hotels & restaurant groups.
+  // ⚠ HR_MAIN_CODE in reports.ts depends on 5-1 being HR — keep in sync.
+  { code: "5-1",   name: "HR & Employee Costs",          nameAr: "تكاليف الموظفين والموارد البشرية", parentCode: "5", level: 1, sortOrder: 1, nature: null },
+  { code: "5-2",   name: "Government & Legal",           nameAr: "المصروفات الحكومية والقانونية",   parentCode: "5", level: 1, sortOrder: 2, nature: null },
+  { code: "5-3",   name: "Fixed Operating Costs",        nameAr: "تكاليف التشغيل الثابتة",          parentCode: "5", level: 1, sortOrder: 3, nature: null },
+  { code: "5-4",   name: "Variable Operating Costs",     nameAr: "تكاليف التشغيل المتغيرة",         parentCode: "5", level: 1, sortOrder: 4, nature: null },
+  { code: "5-5",   name: "Marketing & Sales",            nameAr: "التسويق والمبيعات",               parentCode: "5", level: 1, sortOrder: 5, nature: null },
+  { code: "5-6",   name: "Repairs & Maintenance",        nameAr: "الإصلاح والصيانة",                parentCode: "5", level: 1, sortOrder: 6, nature: null },
+  { code: "5-7",   name: "Administrative Expenses",      nameAr: "المصروفات الإدارية",              parentCode: "5", level: 1, sortOrder: 7, nature: null },
 
-  // ── 5-1 Operational — mostly volume-dependent ───────────────────────────
-  { code: "5-1-1", name: "Cleaning",                     nameAr: "نظافة",                     parentCode: "5-1", level: 2, sortOrder: 1, nature: "variable" },
-  { code: "5-1-2", name: "Fuel",                         nameAr: "محروقات",                   parentCode: "5-1", level: 2, sortOrder: 2, nature: "variable" },
-  { code: "5-1-3", name: "Electricity, Water & Telecom", nameAr: "كهرباء ومياه واتصالات",      parentCode: "5-1", level: 2, sortOrder: 3, nature: "fixed"    },
-  { code: "5-1-4", name: "Maintenance & Repair",         nameAr: "صيانة وإصلاح",               parentCode: "5-1", level: 2, sortOrder: 4, nature: "variable" },
-  { code: "5-1-5", name: "Consumable Tools & Supplies",  nameAr: "أدوات ولوازم مستهلكة",       parentCode: "5-1", level: 2, sortOrder: 5, nature: "variable" },
-  { code: "5-1-6", name: "Marketing & Advertising",      nameAr: "دعاية وإعلان",               parentCode: "5-1", level: 2, sortOrder: 6, nature: "variable" },
+  // ── 5-1 HR & Employee Costs ─────────────────────────────────────────────
+  // Payroll itself comes from the HR module; these capture allowances,
+  // benefits and HR-related one-offs entered manually via Expense Ledger.
+  { code: "5-1-1",  name: "Salaries & Wages",      nameAr: "الرواتب والأجور",       parentCode: "5-1", level: 2, sortOrder: 1,  nature: "fixed"    },
+  { code: "5-1-2",  name: "Overtime",              nameAr: "العمل الإضافي",        parentCode: "5-1", level: 2, sortOrder: 2,  nature: "variable" },
+  { code: "5-1-3",  name: "Vacation Allowances",   nameAr: "بدلات الإجازات",       parentCode: "5-1", level: 2, sortOrder: 3,  nature: "fixed"    },
+  { code: "5-1-4",  name: "Air Tickets / Travel",  nameAr: "تذاكر السفر",          parentCode: "5-1", level: 2, sortOrder: 4,  nature: "variable" },
+  { code: "5-1-5",  name: "Employee Meals",        nameAr: "وجبات الموظفين",       parentCode: "5-1", level: 2, sortOrder: 5,  nature: "variable" },
+  { code: "5-1-6",  name: "Staff Accommodation",   nameAr: "سكن الموظفين",         parentCode: "5-1", level: 2, sortOrder: 6,  nature: "fixed"    },
+  { code: "5-1-7",  name: "End of Service",        nameAr: "مكافأة نهاية الخدمة",  parentCode: "5-1", level: 2, sortOrder: 7,  nature: "fixed"    },
+  { code: "5-1-8",  name: "Medical Insurance",     nameAr: "التأمين الطبي",        parentCode: "5-1", level: 2, sortOrder: 8,  nature: "fixed"    },
+  { code: "5-1-9",  name: "Recruitment Costs",     nameAr: "تكاليف التوظيف",       parentCode: "5-1", level: 2, sortOrder: 9,  nature: "variable" },
+  { code: "5-1-10", name: "Training",              nameAr: "التدريب",              parentCode: "5-1", level: 2, sortOrder: 10, nature: "variable" },
 
-  // ── 5-2 HR — all fixed (recurring payroll) ───────────────────────────────
-  { code: "5-2-1", name: "Salaries",                     nameAr: "رواتب",                     parentCode: "5-2", level: 2, sortOrder: 1, nature: "fixed"    },
-  { code: "5-2-2", name: "Housing Allowance",            nameAr: "بدل سكن",                   parentCode: "5-2", level: 2, sortOrder: 2, nature: "fixed"    },
-  { code: "5-2-3", name: "Staff Accommodation",          nameAr: "سكن موظفين",                parentCode: "5-2", level: 2, sortOrder: 3, nature: "fixed"    },
-  { code: "5-2-4", name: "Medical Insurance",            nameAr: "تأمين طبي",                 parentCode: "5-2", level: 2, sortOrder: 4, nature: "fixed"    },
-  { code: "5-2-5", name: "Social Insurance (GOSI)",      nameAr: "تأمينات اجتماعية",           parentCode: "5-2", level: 2, sortOrder: 5, nature: "fixed"    },
-  { code: "5-2-6", name: "End-of-Service Benefits",      nameAr: "مكافأة نهاية خدمة",         parentCode: "5-2", level: 2, sortOrder: 6, nature: "fixed"    },
-  { code: "5-2-7", name: "Vacation Salaries",            nameAr: "رواتب إجازات",               parentCode: "5-2", level: 2, sortOrder: 7, nature: "fixed"    },
+  // ── 5-2 Government & Legal ──────────────────────────────────────────────
+  { code: "5-2-1", name: "Iqama Fees",              nameAr: "رسوم الإقامة",        parentCode: "5-2", level: 2, sortOrder: 1, nature: "fixed"    },
+  { code: "5-2-2", name: "GOSI / Social Insurance", nameAr: "التأمينات الاجتماعية", parentCode: "5-2", level: 2, sortOrder: 2, nature: "fixed"    },
+  { code: "5-2-3", name: "Municipality Licenses",   nameAr: "تراخيص البلدية",      parentCode: "5-2", level: 2, sortOrder: 3, nature: "fixed"    },
+  { code: "5-2-4", name: "Commercial Registration", nameAr: "السجل التجاري",       parentCode: "5-2", level: 2, sortOrder: 4, nature: "fixed"    },
+  { code: "5-2-5", name: "Chamber of Commerce",     nameAr: "الغرفة التجارية",     parentCode: "5-2", level: 2, sortOrder: 5, nature: "fixed"    },
+  { code: "5-2-6", name: "Visa Costs",              nameAr: "رسوم التأشيرات",      parentCode: "5-2", level: 2, sortOrder: 6, nature: "variable" },
+  { code: "5-2-7", name: "Passport Services",       nameAr: "خدمات الجوازات",      parentCode: "5-2", level: 2, sortOrder: 7, nature: "variable" },
+  { code: "5-2-8", name: "Government Platforms",    nameAr: "المنصات الحكومية",    parentCode: "5-2", level: 2, sortOrder: 8, nature: "variable" },
+  { code: "5-2-9", name: "Legal Fees",              nameAr: "الرسوم القانونية",    parentCode: "5-2", level: 2, sortOrder: 9, nature: "variable" },
 
-  // ── 5-3 Government — recurring renewals = fixed ─────────────────────────
-  { code: "5-3-1", name: "Labor Office Fees",            nameAr: "رسوم مكتب العمل",           parentCode: "5-3", level: 2, sortOrder: 1, nature: "fixed"    },
-  { code: "5-3-2", name: "Passport Fees",                nameAr: "رسوم الجوازات",              parentCode: "5-3", level: 2, sortOrder: 2, nature: "fixed"    },
-  { code: "5-3-3", name: "Sponsorship Transfer",         nameAr: "نقل كفالة",                 parentCode: "5-3", level: 2, sortOrder: 3, nature: "variable" },
-  { code: "5-3-4", name: "Other Government Fees",        nameAr: "رسوم حكومية أخرى",          parentCode: "5-3", level: 2, sortOrder: 4, nature: "variable" },
+  // ── 5-3 Fixed Operating Costs ──────────────────────────────────────────
+  { code: "5-3-1", name: "Rent",                    nameAr: "الإيجار",             parentCode: "5-3", level: 2, sortOrder: 1, nature: "fixed" },
+  { code: "5-3-2", name: "Internet",                nameAr: "الإنترنت",            parentCode: "5-3", level: 2, sortOrder: 2, nature: "fixed" },
+  { code: "5-3-3", name: "Software Subscriptions",  nameAr: "اشتراكات البرامج",    parentCode: "5-3", level: 2, sortOrder: 3, nature: "fixed" },
+  { code: "5-3-4", name: "Insurance",               nameAr: "التأمين",             parentCode: "5-3", level: 2, sortOrder: 4, nature: "fixed" },
+  { code: "5-3-5", name: "Security Contracts",      nameAr: "عقود الأمن",          parentCode: "5-3", level: 2, sortOrder: 5, nature: "fixed" },
+  { code: "5-3-6", name: "Maintenance Contracts",   nameAr: "عقود الصيانة",        parentCode: "5-3", level: 2, sortOrder: 6, nature: "fixed" },
+  { code: "5-3-7", name: "Accounting Systems",      nameAr: "أنظمة المحاسبة",      parentCode: "5-3", level: 2, sortOrder: 7, nature: "fixed" },
+  { code: "5-3-8", name: "POS Systems",             nameAr: "أنظمة نقاط البيع",    parentCode: "5-3", level: 2, sortOrder: 8, nature: "fixed" },
 
-  // ── 5-4 Administrative ──────────────────────────────────────────────────
-  { code: "5-4-1", name: "Stationery & Printing",        nameAr: "قرطاسية ومطبوعات",          parentCode: "5-4", level: 2, sortOrder: 1, nature: "variable" },
-  { code: "5-4-2", name: "Computers & IT Equipment",     nameAr: "حاسب آلي",                  parentCode: "5-4", level: 2, sortOrder: 2, nature: "variable" },
-  { code: "5-4-3", name: "Consulting Fees",              nameAr: "استشارات إدارية",            parentCode: "5-4", level: 2, sortOrder: 3, nature: "variable" },
-  { code: "5-4-4", name: "Accounting Adjustments",       nameAr: "تسويات محاسبية",             parentCode: "5-4", level: 2, sortOrder: 4, nature: "variable" },
+  // ── 5-4 Variable Operating Costs ───────────────────────────────────────
+  { code: "5-4-1",  name: "Electricity",         nameAr: "الكهرباء",         parentCode: "5-4", level: 2, sortOrder: 1,  nature: "variable" },
+  { code: "5-4-2",  name: "Water",               nameAr: "المياه",           parentCode: "5-4", level: 2, sortOrder: 2,  nature: "variable" },
+  { code: "5-4-3",  name: "Gas",                 nameAr: "الغاز",            parentCode: "5-4", level: 2, sortOrder: 3,  nature: "variable" },
+  { code: "5-4-4",  name: "Fuel",                nameAr: "الوقود",           parentCode: "5-4", level: 2, sortOrder: 4,  nature: "variable" },
+  { code: "5-4-5",  name: "Packaging",           nameAr: "التغليف",          parentCode: "5-4", level: 2, sortOrder: 5,  nature: "variable" },
+  { code: "5-4-6",  name: "Cleaning Materials",  nameAr: "مواد التنظيف",     parentCode: "5-4", level: 2, sortOrder: 6,  nature: "variable" },
+  { code: "5-4-7",  name: "Laundry",             nameAr: "المغسلة",          parentCode: "5-4", level: 2, sortOrder: 7,  nature: "variable" },
+  { code: "5-4-8",  name: "Kitchen Consumables", nameAr: "مستهلكات المطبخ",  parentCode: "5-4", level: 2, sortOrder: 8,  nature: "variable" },
+  { code: "5-4-9",  name: "Smallwares",          nameAr: "الأدوات الصغيرة",  parentCode: "5-4", level: 2, sortOrder: 9,  nature: "variable" },
+  { code: "5-4-10", name: "Delivery Expenses",   nameAr: "مصاريف التوصيل",   parentCode: "5-4", level: 2, sortOrder: 10, nature: "variable" },
 
-  // ── 5-5 Financial ───────────────────────────────────────────────────────
-  { code: "5-5-1", name: "Bank Charges",                 nameAr: "رسوم بنكية",                parentCode: "5-5", level: 2, sortOrder: 1, nature: "variable" },
-  { code: "5-5-2", name: "Allowed Discounts",            nameAr: "خصومات مسموح بها",          parentCode: "5-5", level: 2, sortOrder: 2, nature: "variable" },
+  // ── 5-5 Marketing & Sales ──────────────────────────────────────────────
+  { code: "5-5-1", name: "Social Media Ads",                       nameAr: "إعلانات التواصل الاجتماعي", parentCode: "5-5", level: 2, sortOrder: 1, nature: "variable" },
+  { code: "5-5-2", name: "Influencer Marketing",                   nameAr: "تسويق المؤثرين",           parentCode: "5-5", level: 2, sortOrder: 2, nature: "variable" },
+  { code: "5-5-3", name: "Printing",                               nameAr: "الطباعة",                  parentCode: "5-5", level: 2, sortOrder: 3, nature: "variable" },
+  { code: "5-5-4", name: "Photography",                            nameAr: "التصوير",                  parentCode: "5-5", level: 2, sortOrder: 4, nature: "variable" },
+  { code: "5-5-5", name: "Promotions & Discounts",                 nameAr: "العروض والخصومات",         parentCode: "5-5", level: 2, sortOrder: 5, nature: "variable" },
+  { code: "5-5-6", name: "Talabat / HungerStation Commissions",    nameAr: "عمولات طلبات وهنقرستيشن",  parentCode: "5-5", level: 2, sortOrder: 6, nature: "variable" },
 
-  // ── 5-6 Transport ───────────────────────────────────────────────────────
-  { code: "5-6-1", name: "Vehicle Insurance",            nameAr: "تأمين سيارات",              parentCode: "5-6", level: 2, sortOrder: 1, nature: "fixed"    },
-  { code: "5-6-2", name: "Vehicle Maintenance",          nameAr: "صيانة سيارات",              parentCode: "5-6", level: 2, sortOrder: 2, nature: "variable" },
-  { code: "5-6-3", name: "Travel & Transportation",      nameAr: "سفر وانتقالات",             parentCode: "5-6", level: 2, sortOrder: 3, nature: "variable" },
+  // ── 5-6 Repairs & Maintenance ──────────────────────────────────────────
+  { code: "5-6-1", name: "Equipment Maintenance", nameAr: "صيانة المعدات",        parentCode: "5-6", level: 2, sortOrder: 1, nature: "variable" },
+  { code: "5-6-2", name: "AC Maintenance",        nameAr: "صيانة المكيفات",       parentCode: "5-6", level: 2, sortOrder: 2, nature: "variable" },
+  { code: "5-6-3", name: "Plumbing",              nameAr: "السباكة",              parentCode: "5-6", level: 2, sortOrder: 3, nature: "variable" },
+  { code: "5-6-4", name: "Electrical Repairs",    nameAr: "الإصلاحات الكهربائية", parentCode: "5-6", level: 2, sortOrder: 4, nature: "variable" },
+  { code: "5-6-5", name: "Emergency Repairs",     nameAr: "الإصلاحات الطارئة",    parentCode: "5-6", level: 2, sortOrder: 5, nature: "variable" },
 
-  // ── 5-7 Rent — all fixed by definition ──────────────────────────────────
-  { code: "5-7-1", name: "Branch Rent",                  nameAr: "إيجارات الفروع",            parentCode: "5-7", level: 2, sortOrder: 1, nature: "fixed"    },
-  { code: "5-7-2", name: "Staff Housing Rent",           nameAr: "سكن العاملين",              parentCode: "5-7", level: 2, sortOrder: 2, nature: "fixed"    },
-
-  // ── 5-8 Other ───────────────────────────────────────────────────────────
-  { code: "5-8-1", name: "Donations",                    nameAr: "تبرعات",                    parentCode: "5-8", level: 2, sortOrder: 1, nature: "variable" },
-  { code: "5-8-2", name: "Losses & Miscellaneous",       nameAr: "خسائر ومصاريف متنوعة",      parentCode: "5-8", level: 2, sortOrder: 2, nature: "variable" },
+  // ── 5-7 Administrative Expenses ────────────────────────────────────────
+  { code: "5-7-1", name: "Office Supplies",         nameAr: "اللوازم المكتبية",   parentCode: "5-7", level: 2, sortOrder: 1, nature: "variable" },
+  { code: "5-7-2", name: "Stationery",              nameAr: "القرطاسية",          parentCode: "5-7", level: 2, sortOrder: 2, nature: "variable" },
+  { code: "5-7-3", name: "Bank Charges",            nameAr: "الرسوم البنكية",     parentCode: "5-7", level: 2, sortOrder: 3, nature: "variable" },
+  { code: "5-7-4", name: "Communication Expenses",  nameAr: "مصاريف الاتصالات",   parentCode: "5-7", level: 2, sortOrder: 4, nature: "variable" },
+  { code: "5-7-5", name: "Courier Services",        nameAr: "خدمات البريد السريع", parentCode: "5-7", level: 2, sortOrder: 5, nature: "variable" },
 ];
 
 // ─── Seed + backfill categories on startup ────────────────────────────────────
