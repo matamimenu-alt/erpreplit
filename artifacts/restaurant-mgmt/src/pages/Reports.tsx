@@ -173,7 +173,9 @@ export default function Reports() {
     invalidateFinancials();
   }, [queryClient, invalidateFinancials]);
 
-  const R = pl?.totalRevenue ?? 0; // denominator for % column
+  // Denominator for the % column = NET sales (Ex-VAT). Using gross sales
+  // here would silently understate every cost ratio (food-cost %, opex %, etc.).
+  const R = pl?.netSales ?? 0;
 
   // ── Derived values ──────────────────────────────────────────────────────────
   const cookingFuel   = pl?.cookingFuelCost ?? 0;
@@ -205,7 +207,9 @@ export default function Reports() {
       row(S("revenue"), L("cashSales"),    pl.cashSales ?? 0),
       row(S("revenue"), L("cardSales"),    pl.cardSales ?? 0),
       row(S("revenue"), L("appSales"),     pl.appSalesTotal ?? 0),
-      row(S("revenue"), L("totalRevenue"), pl.totalRevenue),
+      row(S("revenue"), L("grossSales"),   (pl as { grossSales?: number }).grossSales ?? pl.totalRevenue ?? 0),
+      row(S("revenue"), L("outputVatRevenue"), pl.outputVat ?? 0),
+      row(S("revenue"), L("netSales"),     pl.netSales ?? 0),
       row(S("cogs"), L("foodCost"),     pl.foodCost),
       row(S("cogs"), L("beverageCost"), pl.beverageCost),
       row(S("cogs"), L("generalCost"),  pl.otherCost),
@@ -313,9 +317,9 @@ export default function Reports() {
           {pl && (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               {[
-                { label: t("pl.kpi.totalRevenue"), value: pl.totalRevenue, sub: formatMonth(month), color: "bg-blue-50 border-blue-200 text-blue-700",       icon: TrendingUp },
+                { label: t("pl.kpi.totalRevenue"), value: pl.netSales, sub: t("pl.kpi.exVatSub"), color: "bg-blue-50 border-blue-200 text-blue-700",       icon: TrendingUp },
                 { label: t("pl.kpi.grossProfit"),  value: pl.grossProfit,  sub: t("pl.kpi.margin",      { value: (pl.grossMarginPercent ?? 0).toFixed(1) }), color: (pl.grossProfit ?? 0) >= 0 ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-rose-50 border-rose-200 text-rose-700", icon: (pl.grossProfit ?? 0) >= 0 ? TrendingUp : TrendingDown },
-                { label: t("pl.kpi.ebitda"),       value: ebitda,          sub: t("pl.kpi.pctOfRevenue",{ value: pctOf(ebitda, pl.totalRevenue) }),         color: ebitda >= 0 ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-rose-50 border-rose-200 text-rose-700", icon: ebitda >= 0 ? TrendingUp : TrendingDown },
+                { label: t("pl.kpi.ebitda"),       value: ebitda,          sub: t("pl.kpi.pctOfRevenue",{ value: pctOf(ebitda, pl.netSales) }),             color: ebitda >= 0 ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-rose-50 border-rose-200 text-rose-700", icon: ebitda >= 0 ? TrendingUp : TrendingDown },
                 { label: t("pl.kpi.netProfit"),    value: pl.netProfit,    sub: t("pl.kpi.netMargin",   { value: (pl.netMarginPercent ?? 0).toFixed(1) }), color: (pl.netProfit ?? 0) >= 0 ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-rose-50 border-rose-200 text-rose-700", icon: (pl.netProfit ?? 0) >= 0 ? TrendingUp : TrendingDown },
               ].map((k, i) => (
                 <div key={i} className={`rounded-2xl border p-5 ${k.color}`}>
@@ -367,13 +371,19 @@ export default function Reports() {
                   <tbody>
 
                     {/* ── [1] REVENUE ─────────────────────────────────────────────────── */}
+                    {/* IFRS-style: NET SALES (Ex-VAT) is the accounting top line.
+                        Channel rows are shown for cash-flow transparency and are
+                        VAT-INCLUSIVE (as collected at POS); they intentionally
+                        sum to Gross Sales, not to the accounting revenue line. */}
                     <SH title={t("pl.sections.revenue")} icon={<TrendingUp className="w-3.5 h-3.5" />} />
-                    <Row label={t("pl.rows.cashSales")}     value={pl?.cashSales ?? 0}    indent percent={pctOf(pl?.cashSales, R)} />
-                    <Row label={t("pl.rows.cardSales")}     value={pl?.cardSales ?? 0}    indent percent={pctOf(pl?.cardSales, R)} />
-                    <Row label={t("pl.rows.appSales")}      value={pl?.appSalesTotal ?? 0} indent percent={pctOf(pl?.appSalesTotal, R)} />
-                    <Row label={t("pl.rows.netSales")}      value={pl?.netSales ?? 0}     indent percent={pctOf(pl?.netSales, R)} />
+                    <Row label={t("pl.rows.cashSales")}     value={pl?.cashSales ?? 0}    indent sub={t("pl.rows.inclVatSub")} />
+                    <Row label={t("pl.rows.cardSales")}     value={pl?.cardSales ?? 0}    indent sub={t("pl.rows.inclVatSub")} />
+                    <Row label={t("pl.rows.appSales")}      value={pl?.appSalesTotal ?? 0} indent sub={t("pl.rows.inclVatSub")} />
                     <Div />
-                    <Row label={t("pl.rows.totalRevenue")}  value={pl?.totalRevenue ?? 0} bold highlight="neutral" percent={100} />
+                    <Row label={t("pl.rows.grossSales")}    value={pl?.grossSales ?? pl?.totalRevenue ?? 0} indent sub={t("pl.rows.grossSalesSub")} />
+                    <Row label={t("pl.rows.outputVatRevenue")} value={pl?.outputVat ?? 0} indent sub={t("pl.rows.outputVatSub")} />
+                    <Div />
+                    <Row label={t("pl.rows.netSales")}      value={pl?.netSales ?? 0}     bold highlight="neutral" percent={100} sub={t("pl.rows.netSalesSub")} />
                     <Div double />
 
                     {/* ── [2] COGS ────────────────────────────────────────────────────── */}

@@ -211,7 +211,11 @@ router.get("/pl", async (req, res) => {
     const adjustedCOGS      = adjustedCOGSBeforeTransfers + netTransferCOGS;
 
     // ── GROSS PROFIT ────────────────────────────────────────────────────────
-    const grossProfit = totalRevenue - adjustedCOGS;
+    // IFRS-style: ALL profitability uses NET (Ex-VAT) revenue. VAT is a
+    // pass-through liability and MUST NOT inflate profit. `totalRevenue`
+    // (= cash + card + apps as entered at POS) is VAT-inclusive whenever
+    // priceIncludesVat=true, so we must use `netSales` here.
+    const grossProfit = netSales - adjustedCOGS;
 
     // ── [3] PURCHASE OPERATING EXPENSES (non-COGS purchase categories) ──────
     // SOURCE RULE: purchase module owns these specific categories
@@ -552,10 +556,16 @@ router.get("/pl", async (req, res) => {
       app5Sales:    f2(app5Sales),
       app6Sales:    f2(app6Sales),
       appSalesTotal: f2(appSalesTotal),
-      netSales:     f2(netSales),
-      foodSales:    f2(foodSales),
-      beverageSales: f2(beverageSales),
-      totalRevenue: f2(totalRevenue),
+      netSales:           f2(netSales),
+      foodSales:          f2(foodSales),
+      beverageSales:      f2(beverageSales),
+      // `totalRevenue` retained for backward compatibility: it is the
+      // GROSS (VAT-inclusive when priceIncludesVat=true) revenue actually
+      // collected by the POS. It is NOT used for profitability — use
+      // `accountingRevenue` (= netSales) for that.
+      totalRevenue:       f2(totalRevenue),
+      grossSales:         f2(totalRevenue),    // explicit alias
+      accountingRevenue:  f2(netSales),        // IFRS-style top line
 
       // ── COGS (now includes cooking fuel) ───────────────────────────────────
       foodCost:            f2(foodCost),
@@ -589,7 +599,7 @@ router.get("/pl", async (req, res) => {
       // Final COGS
       adjustedCOGS:    f2(adjustedCOGS),
       grossProfit:     f2(grossProfit),
-      grossMarginPercent: pct(grossProfit, totalRevenue),
+      grossMarginPercent: pct(grossProfit, netSales),
       foodCostPercent:    pct(adjustedFoodCost, foodSales),
       beverageCostPercent: pct(adjustedBeverageCost, beverageSales),
 
@@ -661,7 +671,7 @@ router.get("/pl", async (req, res) => {
 
       // ── Net Profit ─────────────────────────────────────────────────────────
       netProfit:        f2(netProfit),
-      netMarginPercent: pct(netProfit, totalRevenue),
+      netMarginPercent: pct(netProfit, netSales),
 
       // ── Expense Accounting (full breakdown for Expense Ledger page) ────────
       // Dynamic: keyed by main-category code (5-2, 5-3, …) plus an

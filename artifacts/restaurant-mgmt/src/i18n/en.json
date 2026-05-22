@@ -247,19 +247,26 @@
       "vat": "VAT (Informational — excluded from Net Profit)"
     },
     "kpi": {
-      "totalRevenue": "Total Revenue",
+      "totalRevenue": "Net Revenue (Ex VAT)",
+      "exVatSub": "Excluding VAT — accounting base",
       "grossProfit": "Gross Profit",
       "ebitda": "EBITDA",
       "netProfit": "Net Profit / (Loss)",
       "margin": "Margin: {value}%",
       "netMargin": "Net margin: {value}%",
-      "pctOfRevenue": "{value}% of revenue"
+      "pctOfRevenue": "{value}% of net revenue"
     },
     "rows": {
       "cashSales": "Cash Sales",
       "cardSales": "Card / POS",
       "appSales": "Delivery Apps",
-      "netSales": "Net Sales (excl. VAT)",
+      "inclVatSub": "as collected — incl. VAT",
+      "grossSales": "Gross Sales",
+      "grossSalesSub": "As collected (incl. VAT)",
+      "outputVatRevenue": "Output VAT (−)",
+      "outputVatSub": "Pass-through liability — excluded from profit",
+      "netSales": "Net Sales (Ex VAT)",
+      "netSalesSub": "Accounting revenue — basis for all margins",
       "totalRevenue": "Total Revenue",
       "foodCost": "Food (Poultry, Meat, Dairy, Produce…)",
       "beverageCost": "Beverage (Juices, Water, Soft Drinks)",
