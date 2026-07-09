@@ -374,8 +374,8 @@ export interface SupplierProduct {
 export interface CreateSupplierProduct {
   supplierId: number;
   productName: string;
-  category: string;
-  unit: string;
+  category?: string;
+  unit?: string;
   previousPrice?: number;
   currentPrice: number;
 }
@@ -486,6 +486,10 @@ export interface PLReport {
   foodSales: number;
   beverageSales: number;
   totalRevenue: number;
+  /** Explicit alias of totalRevenue (gross, VAT-inclusive) */
+  grossSales?: number;
+  /** IFRS-style top line (= netSales) */
+  accountingRevenue?: number;
   foodCost: number;
   beverageCost: number;
   otherCost: number;
@@ -568,6 +572,10 @@ export interface DashboardSummary {
   totalFoodSales: number;
   totalBeverageSales: number;
   totalSales: number;
+  /** Net (pre-VAT) sales — canonical revenue figure */
+  totalNetSales?: number;
+  /** Gross sales including VAT */
+  totalRevenue?: number;
   /** Raw purchases from invoices only (excludes transfer adjustments) */
   totalPurchases: number;
   /** Cost of goods received from other internal branches (adds to effective purchases) */
@@ -800,6 +808,23 @@ export interface DishPricingItem {
   pricing: DishPricingBreakdown;
 }
 
+export type FixedCostTemplateVatType =
+  (typeof FixedCostTemplateVatType)[keyof typeof FixedCostTemplateVatType];
+
+export const FixedCostTemplateVatType = {
+  none: "none",
+  included: "included",
+  excluded: "excluded",
+} as const;
+
+export type FixedCostTemplateNature =
+  (typeof FixedCostTemplateNature)[keyof typeof FixedCostTemplateNature];
+
+export const FixedCostTemplateNature = {
+  fixed: "fixed",
+  variable: "variable",
+} as const;
+
 export interface FixedCostTemplate {
   id: number;
   category: string;
@@ -808,9 +833,29 @@ export interface FixedCostTemplate {
   notes?: string | null;
   isActive: boolean;
   sortOrder: number;
+  vatType: FixedCostTemplateVatType;
+  vatRate: number;
+  nature: FixedCostTemplateNature;
   createdAt: string;
   updatedAt: string;
 }
+
+export type CreateFixedCostTemplateVatType =
+  (typeof CreateFixedCostTemplateVatType)[keyof typeof CreateFixedCostTemplateVatType];
+
+export const CreateFixedCostTemplateVatType = {
+  none: "none",
+  included: "included",
+  excluded: "excluded",
+} as const;
+
+export type CreateFixedCostTemplateNature =
+  (typeof CreateFixedCostTemplateNature)[keyof typeof CreateFixedCostTemplateNature];
+
+export const CreateFixedCostTemplateNature = {
+  fixed: "fixed",
+  variable: "variable",
+} as const;
 
 export interface CreateFixedCostTemplate {
   category: string;
@@ -818,7 +863,19 @@ export interface CreateFixedCostTemplate {
   defaultAmount: number;
   notes?: string | null;
   sortOrder?: number;
+  vatType?: CreateFixedCostTemplateVatType;
+  vatRate?: number;
+  nature?: CreateFixedCostTemplateNature;
 }
+
+export type MonthlyFixedCostItemVatType =
+  (typeof MonthlyFixedCostItemVatType)[keyof typeof MonthlyFixedCostItemVatType];
+
+export const MonthlyFixedCostItemVatType = {
+  none: "none",
+  included: "included",
+  excluded: "excluded",
+} as const;
 
 export interface MonthlyFixedCostItem {
   templateId: number;
@@ -831,6 +888,11 @@ export interface MonthlyFixedCostItem {
   overrideNotes?: string | null;
   overrideId?: number | null;
   notes?: string | null;
+  vatType: MonthlyFixedCostItemVatType;
+  vatRate: number;
+  baseAmount: number;
+  vatAmount: number;
+  totalAmount: number;
 }
 
 export interface MonthlyFixedCosts {
@@ -839,6 +901,9 @@ export interface MonthlyFixedCosts {
   lockedBy?: string | null;
   lockedAt?: string | null;
   total: number;
+  totalBase: number;
+  totalVat: number;
+  totalGross: number;
   items: MonthlyFixedCostItem[];
 }
 

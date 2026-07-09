@@ -28,10 +28,10 @@ router.get("/", async (req, res) => {
       rows = rows.filter(r => r.status !== "archived");
     }
     rows.sort((a, b) => a.id - b.id);
-    res.json(rows);
+    return res.json(rows);
   } catch (err) {
     req.log?.error({ err });
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -51,10 +51,10 @@ router.post("/", async (req, res) => {
       taxNumber: taxNumber || null,
       status: status ?? "active",
     }).returning();
-    res.status(201).json(row);
+    return res.status(201).json(row);
   } catch (err) {
     req.log?.error({ err });
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -79,10 +79,10 @@ router.put("/:id", async (req, res) => {
       .where(eq(restaurantsTable.id, id))
       .returning();
     if (!row) return res.status(404).json({ error: "not found" });
-    res.json(row);
+    return res.json(row);
   } catch (err) {
     req.log?.error({ err });
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -100,10 +100,10 @@ router.patch("/:id/status", async (req, res) => {
       .where(eq(restaurantsTable.id, id))
       .returning();
     if (!row) return res.status(404).json({ error: "not found" });
-    res.json(row);
+    return res.json(row);
   } catch (err) {
     req.log?.error({ err });
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -117,10 +117,10 @@ router.delete("/:id", async (req, res) => {
       .where(eq(restaurantsTable.id, id))
       .returning();
     if (!row) return res.status(404).json({ error: "not found" });
-    res.json({ success: true, id });
+    return res.json({ success: true, id });
   } catch (err) {
     req.log?.error({ err });
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -189,7 +189,7 @@ router.get("/group/summary", async (req, res) => {
     const best   = sorted[0] ?? null;
     const worst  = sorted[sorted.length - 1] ?? null;
 
-    res.json({
+    return res.json({
       month:          month ?? "all",
       totalRevenue:   +totalRevenue.toFixed(2),
       totalExpenses:  +totalExpenses.toFixed(2),
@@ -200,7 +200,7 @@ router.get("/group/summary", async (req, res) => {
     });
   } catch (err) {
     req.log?.error({ err });
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

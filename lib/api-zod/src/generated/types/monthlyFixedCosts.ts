@@ -13,5 +13,8 @@ export interface MonthlyFixedCosts {
   lockedBy?: string | null;
   lockedAt?: string | null;
   total: number;
+  totalBase: number;
+  totalVat: number;
+  totalGross: number;
   items: MonthlyFixedCostItem[];
 }

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useListPurchases, useCreatePurchaseBatch, useGetPurchaseProductSuggestions, useListBranchTransfers, useListSuppliers, useGetSupplierProducts } from "@workspace/api-client-react";
-import type { SupplierProduct } from "@workspace/api-client-react";
+import type { SupplierProduct, PurchaseCategory } from "@workspace/api-client-react";
 import { usePurchasesMutations } from "@/hooks/use-purchases";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useLanguage } from "@/i18n/LanguageContext";
@@ -85,7 +85,7 @@ function ProductCombobox({
   onAfterSelect?: () => void;
   onEnter?: () => void;
   placeholder?: string;
-  inputRef?: React.RefObject<HTMLInputElement>;
+  inputRef?: React.RefObject<HTMLInputElement | null>;
   currentItems?: { productName: string; localId: string }[];
   editingLocalId?: string | null;
   supplierProducts?: SupplierProduct[];
@@ -1137,7 +1137,7 @@ export default function Purchases() {
   function handleEdit(data: EditForm) {
     if (!editRecord) return;
     update.mutate(
-      { id: editRecord.id, data: { ...data, supplierName: data.supplierName || "" } },
+      { id: editRecord.id, data: { ...data, supplierName: data.supplierName || "", category: data.category as PurchaseCategory } },
       { onSuccess: () => setEditRecord(null) }
     );
   }

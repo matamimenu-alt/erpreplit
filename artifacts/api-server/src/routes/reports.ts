@@ -543,7 +543,7 @@ router.get("/pl", async (req, res) => {
     const netProfit    = ebitda;                            // VAT-exclusive net profit
     const operatingProfit = ebitda; // alias for backward compat
 
-    res.json({
+    return res.json({
       month: month ?? "all",
 
       // ── Revenue ────────────────────────────────────────────────────────────
@@ -689,7 +689,7 @@ router.get("/pl", async (req, res) => {
     });
   } catch (err) {
     req.log.error({ err }, "Error getting P&L report");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -731,10 +731,10 @@ router.get("/purchases/monthly", async (req, res) => {
       taxCount:        d.taxCount,
       nonTaxCount:     d.nonTaxCount,
     }));
-    res.json(result);
+    return res.json(result);
   } catch (err) {
     req.log.error({ err }, "Error getting monthly purchase report");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -773,10 +773,10 @@ router.get("/purchases/by-category", async (req, res) => {
         count:        d.count,
       };
     });
-    res.json(result);
+    return res.json(result);
   } catch (err) {
     req.log.error({ err }, "Error getting category expense report");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

@@ -98,10 +98,10 @@ router.get("/", async (req, res) => {
     if (from) records = records.filter((r) => r.date >= from);
     if (to) records = records.filter((r) => r.date <= to);
 
-    res.json(records.map(formatRecord));
+    return res.json(records.map(formatRecord));
   } catch (err) {
     req.log.error({ err }, "Error listing sales");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -133,10 +133,10 @@ router.post("/", async (req, res) => {
       cashDiscrepancy: n2s(t.cashDiscrepancy),
       dailyNotes: req.body.dailyNotes ?? null,
     }).returning();
-    res.status(201).json(formatRecord(record));
+    return res.status(201).json(formatRecord(record));
   } catch (err) {
     req.log.error({ err }, "Error creating sale");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -171,10 +171,10 @@ router.put("/:id", async (req, res) => {
       .where(and(eq(salesTable.id, id), eq(salesTable.restaurantId, restaurantId)))
       .returning();
     if (!record) return res.status(404).json({ error: "Not found" });
-    res.json(formatRecord(record));
+    return res.json(formatRecord(record));
   } catch (err) {
     req.log.error({ err }, "Error updating sale");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -184,10 +184,10 @@ router.delete("/:id", async (req, res) => {
     const restaurantId = getRestaurantId(req);
     const id = parseInt(req.params.id);
     await db.delete(salesTable).where(and(eq(salesTable.id, id), eq(salesTable.restaurantId, restaurantId)));
-    res.status(204).send();
+    return res.status(204).send();
   } catch (err) {
     req.log.error({ err }, "Error deleting sale");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -247,10 +247,10 @@ router.get("/monthly-summary", async (req, res) => {
         totalCashDiscrepancy: +d.cashDiscrepancy.toFixed(2),
       }));
 
-    res.json(result);
+    return res.json(result);
   } catch (err) {
     req.log.error({ err }, "Error getting monthly summary");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -271,7 +271,7 @@ router.get("/app-config", async (req, res) => {
         defaultVatMode: "exclusive",
       });
     }
-    res.json({
+    return res.json({
       id: config.id,
       app1Name: config.app1Name, app2Name: config.app2Name,
       app3Name: config.app3Name, app4Name: config.app4Name,
@@ -280,7 +280,7 @@ router.get("/app-config", async (req, res) => {
     });
   } catch (err) {
     req.log.error({ err }, "Error getting app config");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -310,10 +310,10 @@ router.put("/app-config", async (req, res) => {
       await db.insert(salesAppConfigTable).values(data);
     }
 
-    res.json({ success: true, ...data });
+    return res.json({ success: true, ...data });
   } catch (err) {
     req.log.error({ err }, "Error updating app config");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -370,7 +370,7 @@ router.get("/report", async (req, res) => {
       };
     });
 
-    res.json({
+    return res.json({
       from: from ?? null,
       to: to ?? null,
       recordCount: records.length,
@@ -393,7 +393,7 @@ router.get("/report", async (req, res) => {
     });
   } catch (err) {
     req.log.error({ err }, "Error generating sales report");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

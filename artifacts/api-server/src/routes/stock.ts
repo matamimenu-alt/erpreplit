@@ -173,10 +173,10 @@ router.get("/items", async (req, res) => {
       items = items.filter(i => i.itemName.toLowerCase().includes(q));
     }
 
-    res.json(items);
+    return res.json(items);
   } catch (err) {
     req.log.error({ err }, "Error listing stock items");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -200,10 +200,10 @@ router.get("/movements", async (req, res) => {
       movements = movements.filter(m => m.itemName.toLowerCase().includes(q));
     }
 
-    res.json(movements.map(toMovementRecord));
+    return res.json(movements.map(toMovementRecord));
   } catch (err) {
     req.log.error({ err }, "Error listing stock movements");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -256,10 +256,10 @@ router.post("/movements", async (req, res) => {
       notes: notes || null,
     }).returning();
 
-    res.status(201).json(toMovementRecord(record));
+    return res.status(201).json(toMovementRecord(record));
   } catch (err) {
     req.log.error({ err }, "Error creating stock movement");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -271,10 +271,10 @@ router.delete("/movements/:id", async (req, res) => {
     await db.delete(stockMovementsTable).where(
       and(eq(stockMovementsTable.id, id), eq(stockMovementsTable.restaurantId, restaurantId))
     );
-    res.status(204).send();
+    return res.status(204).send();
   } catch (err) {
     req.log.error({ err }, "Error deleting stock movement");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -297,7 +297,7 @@ router.get("/transfers", async (req, res) => {
     if (dateFrom) transfers = transfers.filter(t => t.transferDate >= dateFrom);
     if (dateTo) transfers = transfers.filter(t => t.transferDate <= dateTo);
 
-    res.json(transfers.map(t => {
+    return res.json(transfers.map(t => {
       const destName = t.destinationName
         ?? (t.toRestaurantId ? (restaurantMap.get(t.toRestaurantId) ?? String(t.toRestaurantId)) : "Unknown");
       const qty = toNum(t.quantity);
@@ -330,7 +330,7 @@ router.get("/transfers", async (req, res) => {
     }));
   } catch (err) {
     req.log.error({ err }, "Error listing branch transfers");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -461,7 +461,7 @@ router.post("/transfers", async (req, res) => {
       await db.insert(stockMovementsTable).values([outMovement]);
     }
 
-    res.status(201).json({
+    return res.status(201).json({
       id: transfer.id,
       fromRestaurantId: transfer.fromRestaurantId,
       toRestaurantId: transfer.toRestaurantId ?? undefined,
@@ -486,7 +486,7 @@ router.post("/transfers", async (req, res) => {
     });
   } catch (err) {
     req.log.error({ err }, "Error creating branch transfer");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -499,10 +499,10 @@ router.delete("/transfers/:id", async (req, res) => {
       and(eq(stockMovementsTable.referenceType, "transfer"), eq(stockMovementsTable.referenceId, id))
     );
     await db.delete(branchTransfersTable).where(eq(branchTransfersTable.id, id));
-    res.status(204).send();
+    return res.status(204).send();
   } catch (err) {
     req.log.error({ err }, "Error deleting branch transfer");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -651,7 +651,7 @@ router.get("/report", async (req, res) => {
     const totalTransferIn = reportItems.reduce((s, i) => s + i.transferInQty, 0);
     const totalTransferOut = reportItems.reduce((s, i) => s + i.transferOutQty, 0);
 
-    res.json({
+    return res.json({
       month,
       items: reportItems,
       totalOpeningValue: +totalOpeningValue.toFixed(2),
@@ -663,7 +663,7 @@ router.get("/report", async (req, res) => {
     });
   } catch (err) {
     req.log.error({ err }, "Error generating stock report");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
