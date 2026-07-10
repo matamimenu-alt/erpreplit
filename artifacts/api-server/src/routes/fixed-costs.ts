@@ -120,10 +120,10 @@ router.get("/templates", async (req, res) => {
       .from(fixedCostTemplatesTable)
       .where(eq(fixedCostTemplatesTable.restaurantId, restaurantId))
       .orderBy(fixedCostTemplatesTable.sortOrder, fixedCostTemplatesTable.id);
-    res.json(templates.map(fmtTemplate));
+    return res.json(templates.map(fmtTemplate));
   } catch (err) {
     req.log.error({ err }, "Error listing fixed cost templates");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -154,10 +154,10 @@ router.post("/templates", async (req, res) => {
       action: "create_template",
       newAmount: toNum(t.defaultAmount),
     });
-    res.status(201).json(fmtTemplate(t));
+    return res.status(201).json(fmtTemplate(t));
   } catch (err) {
     req.log.error({ err }, "Error creating fixed cost template");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -203,10 +203,10 @@ router.put("/templates/:id", async (req, res) => {
       });
     }
 
-    res.json(fmtTemplate(t));
+    return res.json(fmtTemplate(t));
   } catch (err) {
     req.log.error({ err }, "Error updating fixed cost template");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -229,10 +229,10 @@ router.delete("/templates/:id", async (req, res) => {
     // Now delete the template itself
     await db.delete(fixedCostTemplatesTable)
       .where(and(eq(fixedCostTemplatesTable.id, id), eq(fixedCostTemplatesTable.restaurantId, restaurantId)));
-    res.status(204).send();
+    return res.status(204).send();
   } catch (err) {
     req.log.error({ err }, "Error deleting fixed cost template");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -299,7 +299,7 @@ router.get("/monthly", async (req, res) => {
     const totalVat   = +items.reduce((s, i) => s + i.vatAmount,   0).toFixed(2);
     const totalGross = +items.reduce((s, i) => s + i.totalAmount, 0).toFixed(2);
 
-    res.json({
+    return res.json({
       month,
       isLocked:  closingStatus?.isLocked ?? false,
       lockedBy:  closingStatus?.lockedBy ?? null,
@@ -312,7 +312,7 @@ router.get("/monthly", async (req, res) => {
     });
   } catch (err) {
     req.log.error({ err }, "Error getting monthly fixed costs");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -364,7 +364,7 @@ router.post("/monthly", async (req, res) => {
     const vatRate = toNum(template.vatRate ?? "15.00");
     const vat = computeVat(newAmt, vatType, vatRate);
 
-    res.json({
+    return res.json({
       id:         record.id,
       templateId: record.templateId,
       month:      record.month,
@@ -378,7 +378,7 @@ router.post("/monthly", async (req, res) => {
     });
   } catch (err) {
     req.log.error({ err }, "Error setting monthly override");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -419,10 +419,10 @@ router.delete("/monthly/:templateId", async (req, res) => {
         eq(fixedCostMonthlyValuesTable.month, month),
       ));
 
-    res.status(204).send();
+    return res.status(204).send();
   } catch (err) {
     req.log.error({ err }, "Error removing monthly override");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -509,10 +509,10 @@ router.get("/history", async (req, res) => {
       };
     });
 
-    res.json(result);
+    return res.json(result);
   } catch (err) {
     req.log.error({ err }, "Error getting fixed cost history");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -578,10 +578,10 @@ router.post("/monthly/batch", async (req, res) => {
       }
     }
 
-    res.json({ saved: saved.length, month });
+    return res.json({ saved: saved.length, month });
   } catch (err) {
     req.log.error({ err }, "Error batch saving monthly costs");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -618,10 +618,10 @@ router.get("/monthly/copy-prev", async (req, res) => {
       source:           prevMap.has(t.id) ? "prev-month" : "default",
     }));
 
-    res.json({ sourceMonth: prevMonth, items });
+    return res.json({ sourceMonth: prevMonth, items });
   } catch (err) {
     req.log.error({ err }, "Error fetching previous month values");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -698,7 +698,7 @@ router.get("/year-summary", async (req, res) => {
       vatType: t.vatType ?? "none", vatRate: toNum(t.vatRate ?? "15.00"),
     }));
 
-    res.json({
+    return res.json({
       year,
       yearTotal:     +yearTotal.toFixed(2),
       yearTotalBase: +yearTotalBase.toFixed(2),
@@ -708,7 +708,7 @@ router.get("/year-summary", async (req, res) => {
     });
   } catch (err) {
     req.log.error({ err }, "Error fetching year summary");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -742,10 +742,10 @@ router.post("/close-month", async (req, res) => {
       notes: notes || `Month ${month} locked`,
     });
 
-    res.json({ month, isLocked: true });
+    return res.json({ month, isLocked: true });
   } catch (err) {
     req.log.error({ err }, "Error closing month");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -767,10 +767,10 @@ router.post("/unlock-month", async (req, res) => {
       notes: notes || `Month ${month} unlocked`,
     });
 
-    res.json({ month, isLocked: false });
+    return res.json({ month, isLocked: false });
   } catch (err) {
     req.log.error({ err }, "Error unlocking month");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -788,7 +788,7 @@ router.get("/audit-log", async (req, res) => {
       .orderBy(desc(expenseAuditLogsTable.changedAt))
       .limit(limit);
 
-    res.json(logs.map(l => ({
+    return res.json(logs.map(l => ({
       id:           l.id,
       templateId:   l.templateId ?? null,
       templateName: l.templateName ?? null,
@@ -802,7 +802,7 @@ router.get("/audit-log", async (req, res) => {
     })));
   } catch (err) {
     req.log.error({ err }, "Error fetching audit log");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -837,7 +837,7 @@ router.get("/effective-total", async (req, res) => {
       totalVat += vat.vatAmount;
     }
 
-    res.json({
+    return res.json({
       month,
       total:     +total.toFixed(2),
       totalBase: +totalBase.toFixed(2),
@@ -846,7 +846,7 @@ router.get("/effective-total", async (req, res) => {
     });
   } catch (err) {
     req.log.error({ err }, "Error fetching effective total");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

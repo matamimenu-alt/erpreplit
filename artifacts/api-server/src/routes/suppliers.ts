@@ -49,10 +49,10 @@ router.get("/", async (req, res) => {
     const records = await db.select().from(suppliersTable)
       .where(eq(suppliersTable.restaurantId, restaurantId))
       .orderBy(suppliersTable.name);
-    res.json(records.map(toSupplier));
+    return res.json(records.map(toSupplier));
   } catch (err) {
     req.log.error({ err }, "Error listing suppliers");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -65,10 +65,10 @@ router.post("/", async (req, res) => {
       .insert(suppliersTable)
       .values({ restaurantId, name, contactPerson, phone, email })
       .returning();
-    res.status(201).json(toSupplier(record));
+    return res.status(201).json(toSupplier(record));
   } catch (err) {
     req.log.error({ err }, "Error creating supplier");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -84,10 +84,10 @@ router.put("/:id", async (req, res) => {
       .where(and(eq(suppliersTable.id, id), eq(suppliersTable.restaurantId, restaurantId)))
       .returning();
     if (!record) return res.status(404).json({ error: "Not found" });
-    res.json(toSupplier(record));
+    return res.json(toSupplier(record));
   } catch (err) {
     req.log.error({ err }, "Error updating supplier");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -98,10 +98,10 @@ router.delete("/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     await db.delete(supplierProductsTable).where(eq(supplierProductsTable.supplierId, id));
     await db.delete(suppliersTable).where(and(eq(suppliersTable.id, id), eq(suppliersTable.restaurantId, restaurantId)));
-    res.status(204).send();
+    return res.status(204).send();
   } catch (err) {
     req.log.error({ err }, "Error deleting supplier");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -133,10 +133,10 @@ router.get("/price-comparison", async (req, res) => {
         trend: diff > 0 ? "up" : diff < 0 ? "down" : "stable",
       };
     });
-    res.json(result);
+    return res.json(result);
   } catch (err) {
     req.log.error({ err }, "Error getting price comparison");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -149,10 +149,10 @@ router.get("/:id/products", async (req, res) => {
     const products = await db.select().from(supplierProductsTable)
       .where(eq(supplierProductsTable.supplierId, supplierId))
       .orderBy(supplierProductsTable.productName);
-    res.json(products.map((p) => toProduct(p, supplier[0].name)));
+    return res.json(products.map((p) => toProduct(p, supplier[0].name)));
   } catch (err) {
     req.log.error({ err }, "Error fetching supplier products");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -166,10 +166,10 @@ router.get("/products", async (req, res) => {
     const supplierIds = suppliers.map((s) => s.id);
     const products = await db.select().from(supplierProductsTable).orderBy(supplierProductsTable.productName);
     const filtered = products.filter((p) => p.supplierId != null && supplierIds.includes(p.supplierId));
-    res.json(filtered.map((p) => toProduct(p, supplierMap.get(p.supplierId!) ?? "Unknown")));
+    return res.json(filtered.map((p) => toProduct(p, supplierMap.get(p.supplierId!) ?? "Unknown")));
   } catch (err) {
     req.log.error({ err }, "Error listing supplier products");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -190,10 +190,10 @@ router.post("/products", async (req, res) => {
       })
       .returning();
     const supplierName = supplier[0]?.name ?? "Unknown";
-    res.status(201).json(toProduct(record, supplierName));
+    return res.status(201).json(toProduct(record, supplierName));
   } catch (err) {
     req.log.error({ err }, "Error creating supplier product");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -222,10 +222,10 @@ router.put("/products/:id", async (req, res) => {
       .returning();
     if (!record) return res.status(404).json({ error: "Not found" });
     const supplier = await db.select().from(suppliersTable).where(eq(suppliersTable.id, Number(supplierId))).limit(1);
-    res.json(toProduct(record, supplier[0]?.name ?? "Unknown"));
+    return res.json(toProduct(record, supplier[0]?.name ?? "Unknown"));
   } catch (err) {
     req.log.error({ err }, "Error updating supplier product");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -234,10 +234,10 @@ router.delete("/products/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     await db.delete(supplierProductsTable).where(eq(supplierProductsTable.id, id));
-    res.status(204).send();
+    return res.status(204).send();
   } catch (err) {
     req.log.error({ err }, "Error deleting supplier product");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

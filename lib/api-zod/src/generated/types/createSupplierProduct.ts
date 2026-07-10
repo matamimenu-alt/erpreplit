@@ -9,8 +9,8 @@
 export interface CreateSupplierProduct {
   supplierId: number;
   productName: string;
-  category: string;
-  unit: string;
+  category?: string;
+  unit?: string;
   previousPrice?: number;
   currentPrice: number;
 }

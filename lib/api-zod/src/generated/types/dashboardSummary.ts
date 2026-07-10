@@ -11,6 +11,10 @@ export interface DashboardSummary {
   totalFoodSales: number;
   totalBeverageSales: number;
   totalSales: number;
+  /** Net (pre-VAT) sales — canonical revenue figure */
+  totalNetSales?: number;
+  /** Gross sales including VAT */
+  totalRevenue?: number;
   /** Raw purchases from invoices only (excludes transfer adjustments) */
   totalPurchases: number;
   /** Cost of goods received from other internal branches (adds to effective purchases) */

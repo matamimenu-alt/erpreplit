@@ -108,10 +108,10 @@ router.get("/products", async (req, res) => {
         AND product_name <> ''
       ORDER BY lower(product_name), created_at DESC
     `);
-    res.json(result.rows);
+    return res.json(result.rows);
   } catch (err) {
     req.log.error({ err }, "Error listing products");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -165,10 +165,10 @@ router.post("/batch", async (req, res) => {
         invoiceType: invType, invoiceId: batchInvoiceId,
       }).catch(() => {});
     }
-    res.status(201).json({ invoiceId: batchInvoiceId, items: created });
+    return res.status(201).json({ invoiceId: batchInvoiceId, items: created });
   } catch (err) {
     req.log.error({ err }, "Error creating batch purchase");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -195,10 +195,10 @@ router.get("/", async (req, res) => {
       records = records.filter((r) => r.productName.toLowerCase().includes(q));
     }
 
-    res.json(records.map(toRecord));
+    return res.json(records.map(toRecord));
   } catch (err) {
     req.log.error({ err }, "Error listing purchases");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -253,10 +253,10 @@ router.post("/", async (req, res) => {
       invoiceType: invType, invoiceId: record.invoiceId ?? undefined,
     }).catch(() => {});
 
-    res.status(201).json(toRecord(record));
+    return res.status(201).json(toRecord(record));
   } catch (err) {
     req.log.error({ err }, "Error creating purchase");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -313,10 +313,10 @@ router.put("/:id", async (req, res) => {
       invoiceType: invType, invoiceId: record.invoiceId ?? undefined,
     }).catch(() => {});
 
-    res.json(toRecord(record));
+    return res.json(toRecord(record));
   } catch (err) {
     req.log.error({ err }, "Error updating purchase");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -334,10 +334,10 @@ router.delete("/:id", async (req, res) => {
     // Remove accounting mirror
     deleteExpenseBySourceId(restaurantId, expSrcId.purchase(id)).catch(() => {});
 
-    res.status(204).send();
+    return res.status(204).send();
   } catch (err) {
     req.log.error({ err }, "Error deleting purchase");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

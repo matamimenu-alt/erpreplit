@@ -140,10 +140,10 @@ router.get("/", async (req, res) => {
     const cats = await db.select().from(expenseCategoriesTable)
       .where(eq(expenseCategoriesTable.isActive, true))
       .orderBy(asc(expenseCategoriesTable.sortOrder));
-    res.json(cats);
+    return res.json(cats);
   } catch (err) {
     req.log.error({ err }, "Error fetching expense categories");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -193,10 +193,10 @@ router.post("/", async (req, res) => {
       isActive:   true,
       nature,
     }).returning();
-    res.status(201).json(row);
+    return res.status(201).json(row);
   } catch (err) {
     req.log.error({ err }, "Error creating expense category");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -234,10 +234,10 @@ router.put("/:code", async (req, res) => {
       .where(eq(expenseCategoriesTable.code, code))
       .returning();
     if (!row) return res.status(404).json({ error: "category not found" });
-    res.json(row);
+    return res.json(row);
   } catch (err) {
     req.log.error({ err }, "Error updating expense category");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -273,10 +273,10 @@ router.delete("/:code", async (req, res) => {
       .where(eq(expenseCategoriesTable.code, code))
       .returning();
     if (!row) return res.status(404).json({ error: "category not found" });
-    res.json({ success: true });
+    return res.json({ success: true });
   } catch (err) {
     req.log.error({ err }, "Error deleting expense category");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -312,7 +312,7 @@ router.get("/transactions", async (req, res) => {
     if (categoryCode) rows = rows.filter(r => r.categoryCode === categoryCode || r.categoryCode.startsWith(categoryCode + "-"));
     if (costCenter)   rows = rows.filter(r => r.costCenter === costCenter);
 
-    res.json(rows.map(r => ({
+    return res.json(rows.map(r => ({
       ...r,
       amount:      toNum(r.amount),
       vatRate:     toNum(r.vatRate),
@@ -321,7 +321,7 @@ router.get("/transactions", async (req, res) => {
     })));
   } catch (err) {
     req.log.error({ err }, "Error fetching expense transactions");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -391,14 +391,14 @@ router.post("/transactions", async (req, res) => {
       notes:           notes ? String(notes) : null,
     }).returning();
 
-    res.status(201).json({
+    return res.status(201).json({
       ...row,
       amount: toNum(row.amount), vatRate: toNum(row.vatRate),
       vatAmount: toNum(row.vatAmount), totalAmount: toNum(row.totalAmount),
     });
   } catch (err) {
     req.log.error({ err }, "Error creating expense transaction");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -440,14 +440,14 @@ router.put("/transactions/:id", async (req, res) => {
       .returning();
 
     if (!row) return res.status(404).json({ error: "Not found" });
-    res.json({
+    return res.json({
       ...row,
       amount: toNum(row.amount), vatRate: toNum(row.vatRate),
       vatAmount: toNum(row.vatAmount), totalAmount: toNum(row.totalAmount),
     });
   } catch (err) {
     req.log.error({ err }, "Error updating expense transaction");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -460,10 +460,10 @@ router.delete("/transactions/:id", async (req, res) => {
       .where(and(eq(expenseTransactionsTable.id, id), eq(expenseTransactionsTable.restaurantId, restaurantId)))
       .returning();
     if (!row) return res.status(404).json({ error: "Not found" });
-    res.json({ success: true, id });
+    return res.json({ success: true, id });
   } catch (err) {
     req.log.error({ err }, "Error deleting expense transaction");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -524,10 +524,10 @@ router.get("/summary", async (req, res) => {
           children: build(c.code),
         }));
 
-    res.json({ month: month ?? null, fromDate: fromDate ?? null, toDate: toDate ?? null, tree: build(null) });
+    return res.json({ month: month ?? null, fromDate: fromDate ?? null, toDate: toDate ?? null, tree: build(null) });
   } catch (err) {
     req.log.error({ err }, "Error fetching expense summary");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

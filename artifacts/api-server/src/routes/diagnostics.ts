@@ -276,7 +276,7 @@ router.get("/reporting", async (req, res) => {
       issues.push(`${inconsistent.length} expense_transactions row(s) have inconsistent VAT flags (vatAmount, vatType, isVatApplicable disagree).`);
     }
 
-    res.json({
+    return res.json({
       month: month ?? "all",
       restaurantId,
       sourceCounts: {
@@ -316,7 +316,7 @@ router.get("/reporting", async (req, res) => {
     });
   } catch (err) {
     req.log.error({ err }, "Error running reporting diagnostics");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

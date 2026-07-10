@@ -2393,8 +2393,6 @@ components:
       required:
         - supplierId
         - productName
-        - category
-        - unit
         - currentPrice
 
     PriceComparison:
@@ -2632,6 +2630,12 @@ components:
           type: number
         totalRevenue:
           type: number
+        grossSales:
+          type: number
+          description: Explicit alias of totalRevenue (gross, VAT-inclusive)
+        accountingRevenue:
+          type: number
+          description: IFRS-style top line (= netSales)
         foodCost:
           type: number
         beverageCost:
@@ -2853,6 +2857,12 @@ components:
           type: number
         totalSales:
           type: number
+        totalNetSales:
+          type: number
+          description: Net (pre-VAT) sales — canonical revenue figure
+        totalRevenue:
+          type: number
+          description: Gross sales including VAT
         totalPurchases:
           type: number
           description: Raw purchases from invoices only (excludes transfer adjustments)
@@ -3388,11 +3398,19 @@ components:
           type: boolean
         sortOrder:
           type: integer
+        vatType:
+          type: string
+          enum: [none, included, excluded]
+        vatRate:
+          type: number
+        nature:
+          type: string
+          enum: [fixed, variable]
         createdAt:
           type: string
         updatedAt:
           type: string
-      required: [id, category, name, defaultAmount, isActive, sortOrder, createdAt, updatedAt]
+      required: [id, category, name, defaultAmount, isActive, sortOrder, vatType, vatRate, nature, createdAt, updatedAt]
 
     CreateFixedCostTemplate:
       type: object
@@ -3408,6 +3426,14 @@ components:
           nullable: true
         sortOrder:
           type: integer
+        vatType:
+          type: string
+          enum: [none, included, excluded]
+        vatRate:
+          type: number
+        nature:
+          type: string
+          enum: [fixed, variable]
       required: [category, name, defaultAmount]
 
     MonthlyFixedCostItem:
@@ -3437,7 +3463,18 @@ components:
         notes:
           type: string
           nullable: true
-      required: [templateId, category, name, defaultAmount, effectiveAmount, hasOverride]
+        vatType:
+          type: string
+          enum: [none, included, excluded]
+        vatRate:
+          type: number
+        baseAmount:
+          type: number
+        vatAmount:
+          type: number
+        totalAmount:
+          type: number
+      required: [templateId, category, name, defaultAmount, effectiveAmount, hasOverride, vatType, vatRate, baseAmount, vatAmount, totalAmount]
 
     MonthlyFixedCosts:
       type: object
@@ -3454,11 +3491,17 @@ components:
           nullable: true
         total:
           type: number
+        totalBase:
+          type: number
+        totalVat:
+          type: number
+        totalGross:
+          type: number
         items:
           type: array
           items:
             $ref: "#/components/schemas/MonthlyFixedCostItem"
-      required: [month, isLocked, total, items]
+      required: [month, isLocked, total, totalBase, totalVat, totalGross, items]
 
     SetMonthlyOverride:
       type: object

@@ -60,7 +60,7 @@ function SupplierProductsPanel({ supplierId, supplierName }: { supplierId: numbe
   const deleteProduct = useDeleteSupplierProduct();
 
   const lastMonth = getLastMonth();
-  const { data: allPurchases = [] } = useListPurchases({ params: { month: lastMonth } });
+  const { data: allPurchases = [] } = useListPurchases({ month: lastMonth });
 
   const lastMonthPurchases = useMemo(() => {
     const q = supplierName.toLowerCase().trim();

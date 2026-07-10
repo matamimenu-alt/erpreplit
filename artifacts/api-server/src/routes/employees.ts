@@ -63,10 +63,10 @@ router.get("/", async (req, res) => {
     const records = await db.select().from(employeesTable)
       .where(eq(employeesTable.restaurantId, restaurantId))
       .orderBy(employeesTable.name);
-    res.json(records.map(toRecord));
+    return res.json(records.map(toRecord));
   } catch (err) {
     req.log.error({ err }, "Error listing employees");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -106,10 +106,10 @@ router.post("/", async (req, res) => {
         totalMonthlyCost: String(net),
       })
       .returning();
-    res.status(201).json(toRecord(record));
+    return res.status(201).json(toRecord(record));
   } catch (err) {
     req.log.error({ err }, "Error creating employee");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -152,10 +152,10 @@ router.put("/:id", async (req, res) => {
       .returning();
 
     if (!record) return res.status(404).json({ error: "Not found" });
-    res.json(toRecord(record));
+    return res.json(toRecord(record));
   } catch (err) {
     req.log.error({ err }, "Error updating employee");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -166,10 +166,10 @@ router.delete("/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     await db.delete(employeesTable)
       .where(and(eq(employeesTable.id, id), eq(employeesTable.restaurantId, restaurantId)));
-    res.status(204).send();
+    return res.status(204).send();
   } catch (err) {
     req.log.error({ err }, "Error deleting employee");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

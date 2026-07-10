@@ -56,7 +56,7 @@ router.get("/status", async (req, res) => {
         eq(fixedCostTemplatesTable.isActive, true),
       ));
 
-    res.json({
+    return res.json({
       month,
       purchases:   { synced: purchaseCount },
       payroll:     { synced: payrollCount,   total: (employeeCount as unknown as typeof employeesTable.$inferSelect[])?.length ?? 0 },
@@ -64,7 +64,7 @@ router.get("/status", async (req, res) => {
     });
   } catch (err) {
     req.log.error({ err }, "Error fetching integration status");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -91,10 +91,10 @@ router.post("/sync-payroll", async (req, res) => {
       synced++;
     }
 
-    res.json({ success: true, month, synced, message: `تم ترحيل ${synced} راتب إلى دفتر المصروفات` });
+    return res.json({ success: true, month, synced, message: `تم ترحيل ${synced} راتب إلى دفتر المصروفات` });
   } catch (err) {
     req.log.error({ err }, "Error syncing payroll");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -134,10 +134,10 @@ router.post("/sync-fixed-costs", async (req, res) => {
       synced++;
     }
 
-    res.json({ success: true, month, synced, message: `تم ترحيل ${synced} مصروف ثابت إلى دفتر المصروفات` });
+    return res.json({ success: true, month, synced, message: `تم ترحيل ${synced} مصروف ثابت إلى دفتر المصروفات` });
   } catch (err) {
     req.log.error({ err }, "Error syncing fixed costs");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -158,10 +158,10 @@ router.post("/clear-auto", async (req, res) => {
       )
     );
     await query;
-    res.json({ success: true });
+    return res.json({ success: true });
   } catch (err) {
     req.log.error({ err }, "Error clearing auto entries");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

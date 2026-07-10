@@ -163,14 +163,14 @@ async function computePricing(restaurantId: number) {
 router.get("/pricing", async (req, res) => {
   const restaurantId = getRestaurantId(req);
   const result = await computePricing(restaurantId);
-  res.json(result);
+  return res.json(result);
 });
 
 // GET /api/dishes/config
 router.get("/config", async (req, res) => {
   const restaurantId = getRestaurantId(req);
   const config = await getOrCreateConfig(restaurantId);
-  res.json({
+  return res.json({
     monthlyOrders: config.monthlyOrders,
     deliveryCostPerOrder: toNum(config.deliveryCostPerOrder),
     deliveryCommissionPct: toNum(config.deliveryCommissionPct),
@@ -192,7 +192,7 @@ router.put("/config", async (req, res) => {
     })
     .where(eq(pricingConfigTable.id, existing.id))
     .returning();
-  res.json({
+  return res.json({
     monthlyOrders: updated[0].monthlyOrders,
     deliveryCostPerOrder: toNum(updated[0].deliveryCostPerOrder),
     deliveryCommissionPct: toNum(updated[0].deliveryCommissionPct),
@@ -215,7 +215,7 @@ router.get("/", async (req, res) => {
     ingByDish.get(ing.dishId)!.push(ing);
   }
 
-  res.json(dishes.map(d => ({
+  return res.json(dishes.map(d => ({
     id: d.id,
     name: d.name,
     category: d.category,
@@ -256,7 +256,7 @@ router.post("/", async (req, res) => {
     );
   }
 
-  res.status(201).json({ id: dish.id, name: dish.name });
+  return res.status(201).json({ id: dish.id, name: dish.name });
 });
 
 // PUT /api/dishes/:id
@@ -293,7 +293,7 @@ router.put("/:id", async (req, res) => {
     }
   }
 
-  res.json({ id: dish.id, name: dish.name });
+  return res.json({ id: dish.id, name: dish.name });
 });
 
 // DELETE /api/dishes/:id
@@ -301,7 +301,7 @@ router.delete("/:id", async (req, res) => {
   const restaurantId = getRestaurantId(req);
   const id = +req.params.id;
   await db.delete(dishesTable).where(and(eq(dishesTable.id, id), eq(dishesTable.restaurantId, restaurantId)));
-  res.json({ success: true });
+  return res.json({ success: true });
 });
 
 // GET /api/dishes/products — list available products from purchases (for ingredient autocomplete)
@@ -311,7 +311,7 @@ router.get("/products", async (req, res) => {
     .selectDistinct({ productName: purchasesTable.productName })
     .from(purchasesTable)
     .where(eq(purchasesTable.restaurantId, restaurantId));
-  res.json(rows.map(r => r.productName));
+  return res.json(rows.map(r => r.productName));
 });
 
 export default router;

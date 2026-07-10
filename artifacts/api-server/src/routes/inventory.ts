@@ -33,10 +33,10 @@ router.get("/", async (req, res) => {
     if (!record) {
       return res.json({ id: 0, month, foodInventory: 0, beverageInventory: 0, generalInventory: 0, createdAt: new Date().toISOString() });
     }
-    res.json(toRecord(record));
+    return res.json(toRecord(record));
   } catch (err) {
     req.log.error({ err }, "Error getting inventory");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -73,10 +73,10 @@ router.put("/", async (req, res) => {
         notes: notes || null,
       })
       .returning();
-    res.json(toRecord(created));
+    return res.json(toRecord(created));
   } catch (err) {
     req.log.error({ err }, "Error upserting inventory");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

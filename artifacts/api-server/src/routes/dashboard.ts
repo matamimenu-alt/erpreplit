@@ -115,7 +115,7 @@ router.get("/summary", async (req, res) => {
       - dynamicFixedCosts
       - expenseLedgerNet;
 
-    res.json({
+    return res.json({
       month: month ?? "all",
       totalNetSales: +totalNetSales.toFixed(2),
       totalRevenue: +totalRevenue.toFixed(2),
@@ -156,7 +156,7 @@ router.get("/summary", async (req, res) => {
     });
   } catch (err) {
     req.log.error({ err }, "Error getting dashboard summary");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
