@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useGetSupplierPriceComparison, useListSuppliers } from "@workspace/api-client-react";
+import type { CreateSupplierProduct } from "@workspace/api-client-react";
 import { useSupplierProductMutations } from "@/hooks/use-suppliers";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useLanguage } from "@/i18n/LanguageContext";
@@ -81,7 +82,7 @@ export default function SupplierPrices() {
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-card w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in zoom-in-95">
             <div className="p-6 border-b"><h2 className="text-xl font-bold">Log New Product Price</h2></div>
-            <form onSubmit={form.handleSubmit(d => createProduct.mutate({ data: d }, { onSuccess: () => { setOpen(false); form.reset(); } }))} className="p-6 space-y-4">
+            <form onSubmit={form.handleSubmit(d => createProduct.mutate({ data: d as CreateSupplierProduct }, { onSuccess: () => { setOpen(false); form.reset(); } }))} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Supplier</label>
                 <select {...form.register("supplierId")} className="w-full px-3 py-2 border rounded-xl outline-none">

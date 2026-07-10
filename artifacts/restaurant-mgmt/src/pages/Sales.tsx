@@ -296,7 +296,8 @@ export default function Sales() {
 
   const { data: reportData, isLoading: reportLoading } = useGetSalesReport(
     reportFetch ? { from: reportFrom || undefined, to: reportTo || undefined } : undefined,
-    { query: { enabled: reportFetch } }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    { query: { enabled: reportFetch } as any }
   );
 
   const invalidate = () => {

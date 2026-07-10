@@ -166,7 +166,7 @@ function DishModal({
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
-    if (!form.name.trim()) return toast({ title: "Dish name is required", variant: "destructive" });
+    if (!form.name.trim()) { toast({ title: "Dish name is required", variant: "destructive" }); return; }
     setSaving(true);
     try {
       await onSave(form);

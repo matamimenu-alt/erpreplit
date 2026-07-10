@@ -82,7 +82,7 @@ export default function Inventory() {
     if (catFilter !== "all") {
       const group = PURCHASE_CATEGORY_GROUPS.find(g => g.color === catFilter);
       if (group) {
-        const vals = new Set(group.categories.map(c => c.value));
+        const vals = new Set(group.subcategories.map(c => c.value));
         items = items.filter(i => vals.has(i.category));
       }
     }
@@ -319,7 +319,7 @@ export default function Inventory() {
     if (reportCat !== "all") {
       const group = PURCHASE_CATEGORY_GROUPS.find(g => g.color === reportCat);
       if (group) {
-        const vals = new Set(group.categories.map(c => c.value));
+        const vals = new Set(group.subcategories.map(c => c.value));
         items = items.filter(i => vals.has(i.category));
       }
     }

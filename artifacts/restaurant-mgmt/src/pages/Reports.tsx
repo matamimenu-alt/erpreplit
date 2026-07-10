@@ -87,6 +87,7 @@ type Tab = "pl" | "monthly" | "category";
 
 // The P&L API returns additional fields not in the generated type
 type PLExtra = {
+  grossSales?: number;
   cookingFuelCost?: number;
   payrollExpenses?: number;
   ebitda?: number;
@@ -132,7 +133,8 @@ export default function Reports() {
 
   // Live mode — always refetch on mount AND on window focus so any change made
   // in another tab/page reflects immediately when user returns to the report.
-  const liveOpts = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const liveOpts: any = {
     query: {
       refetchOnMount: "always" as const,
       refetchOnWindowFocus: true,

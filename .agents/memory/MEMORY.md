@@ -1,0 +1,3 @@
+- [Railway deployment](railway-deploy.md) — single service serves SPA from api-server; non-destructive db:push in predeploy; verify with build:railway + start:railway locally.
+- [Typecheck & stale generated types](typecheck-conventions.md) — orval client + openapi.yaml are stale; extend types locally (PLExtra pattern), never regenerate blindly; typecheck gates the build.
+- GitHub pushes: plain `git push` allowed directly (askpass + connector token via code_execution); `git commit` is platform-managed — finish the turn so the checkpoint commits, then push next turn.

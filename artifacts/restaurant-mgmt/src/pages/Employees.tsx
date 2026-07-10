@@ -40,11 +40,11 @@ const TD = memo(({ children, className = "", colSpan }: { children?: React.React
   <td colSpan={colSpan} className={`px-3 py-3 text-xs border-r border-slate-100 last:border-0 ${className}`}>{children}</td>
 ));
 
-const TH = memo(({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+const TH = memo(({ children, className = "" }: { children?: React.ReactNode; className?: string }) => (
   <th className={`px-3 py-2.5 text-left text-[11px] font-semibold text-slate-500 border-r border-slate-200 last:border-0 whitespace-nowrap ${className}`}>{children}</th>
 ));
 
-const THR = memo(({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+const THR = memo(({ children, className = "" }: { children?: React.ReactNode; className?: string }) => (
   <TH className={`text-right ${className}`}>{children}</TH>
 ));
 
