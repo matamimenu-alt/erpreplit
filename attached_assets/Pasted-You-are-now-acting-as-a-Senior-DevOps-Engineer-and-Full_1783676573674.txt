@@ -1,0 +1,205 @@
+You are now acting as a Senior DevOps Engineer and Full Stack Architect.
+
+I migrated this project from Replit to GitHub and then deployed it on Railway.
+
+The deployment is currently failing.
+
+Your task is NOT to add new features.
+
+Your only task is to audit the entire repository and make it production-ready.
+
+Perform a complete verification of the project.
+
+=====================================
+PHASE 1 — Repository Audit
+=====================================
+
+Inspect the entire repository.
+
+Verify:
+
+• package.json
+• pnpm-workspace.yaml
+• pnpm-lock.yaml
+• turbo.json (if exists)
+• tsconfig files
+• Dockerfile
+• Railway configuration
+• Build scripts
+• Start scripts
+• Environment variables
+• Monorepo configuration
+• Workspace packages
+
+Detect every inconsistency.
+
+=====================================
+PHASE 2 — Dependency Audit
+=====================================
+
+Verify every dependency.
+
+Check:
+
+Missing dependencies
+
+Unused dependencies
+
+Wrong versions
+
+Workspace references
+
+Peer dependency conflicts
+
+pnpm lockfile consistency
+
+Generate a new lockfile only if required.
+
+=====================================
+PHASE 3 — Build Verification
+=====================================
+
+Run and verify:
+
+pnpm install
+
+pnpm build
+
+pnpm typecheck
+
+pnpm lint
+
+pnpm test
+
+Verify every workspace builds successfully.
+
+=====================================
+PHASE 4 — Runtime Verification
+=====================================
+
+Verify every application starts correctly.
+
+Check:
+
+API Server
+
+Restaurant App
+
+Super Admin
+
+Driver App
+
+Customer Store
+
+Shared Packages
+
+Database
+
+=====================================
+PHASE 5 — Railway Compatibility
+=====================================
+
+Verify Railway deployment.
+
+Check:
+
+Build command
+
+Start command
+
+Node version
+
+pnpm version
+
+Environment variables
+
+Ports
+
+Health checks
+
+Working directory
+
+Railpack compatibility
+
+=====================================
+PHASE 6 — Import Path Audit
+=====================================
+
+Check every import.
+
+Find:
+
+Broken imports
+
+Circular imports
+
+Invalid aliases
+
+Missing files
+
+Case-sensitive filename problems
+
+=====================================
+PHASE 7 — GitHub Audit
+=====================================
+
+Verify GitHub repository integrity.
+
+Check:
+
+Ignored files
+
+Missing files
+
+Generated files
+
+Lockfile
+
+Submodules
+
+Large files
+
+=====================================
+PHASE 8 — Fix Everything
+=====================================
+
+Fix every issue preventing production deployment.
+
+Do NOT rewrite the project.
+
+Do NOT change functionality.
+
+Only repair deployment, build, dependency and configuration problems.
+
+=====================================
+FINAL REPORT
+=====================================
+
+Provide:
+
+1. Every issue found.
+
+2. Every issue fixed.
+
+3. Every file modified.
+
+4. Commands executed.
+
+5. Whether the project is now production-ready.
+
+6. Whether it will deploy successfully on Railway.
+
+IMPORTANT:
+
+Do not stop after finding one error.
+
+Continue until the ENTIRE repository builds successfully.
+
+The final objective is:
+
+✅ Zero TypeScript errors
+✅ Zero Build errors
+✅ Zero Workspace errors
+✅ Zero pnpm errors
+✅ Zero Railway deployment errors
+✅ Successful production deployment

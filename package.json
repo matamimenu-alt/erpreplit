@@ -6,7 +6,15 @@
     "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
+    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
+    "build:railway": "pnpm --filter @workspace/restaurant-mgmt run build && pnpm --filter @workspace/api-server run build && rm -rf artifacts/api-server/dist/public && cp -R artifacts/restaurant-mgmt/dist/public artifacts/api-server/dist/public",
+    "start:railway": "NODE_ENV=production node --enable-source-maps artifacts/api-server/dist/index.mjs",
+    "db:push": "node -e \"if(!process.env.DATABASE_URL){console.error('ERROR: DATABASE_URL is not set. Add a PostgreSQL service in Railway and reference its DATABASE_URL variable on this service.');process.exit(1)}\" && pnpm --filter @workspace/db run push",
+    "db:push:force": "node -e \"if(!process.env.DATABASE_URL){console.error('ERROR: DATABASE_URL is not set. Add a PostgreSQL service in Railway and reference its DATABASE_URL variable on this service.');process.exit(1)}\" && pnpm --filter @workspace/db run push-force"
+  },
+  "engines": {
+    "node": ">=22 <25",
+    "pnpm": ">=10"
   },
   "private": true,
   "packageManager": "pnpm@10.33.0",

@@ -27,7 +27,9 @@ import {
 
 export default function Dashboard() {
   const [month, setMonth] = useState("");
-  const { data: summary, isLoading } = useGetDashboardSummary(month ? { month } : undefined);
+  const { data: summaryRaw, isLoading } = useGetDashboardSummary(month ? { month } : undefined);
+  // The API also returns totalNetSales, which is missing from the stale generated type
+  const summary = summaryRaw as (typeof summaryRaw & { totalNetSales?: number }) | undefined;
   const { t } = useLanguage();
 
   if (isLoading) {

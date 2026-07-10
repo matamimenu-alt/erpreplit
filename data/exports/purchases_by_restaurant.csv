@@ -1,0 +1,7 @@
+restaurant,restaurant_ar,id,date,supplier_name,product_name,quantity,price,price_includes_vat,amount_before_vat,vat_amount,total_amount,created_at,category,restaurant_id,notes,payment_type,invoice_type,invoice_id,unit
+Asad Al-Hamra,أسد الحمراء,14,2026-04-18,"",Chicken Breast,10.000,50.00,f,500.00,75.00,575.00,2026-04-18 09:09:37.128821,food-poultry,1,,cash,tax,7226a22c-c2ab-40cc-b9c0-32067b8efebb,unit
+Asad Al-Hamra,أسد الحمراء,15,2026-04-18,"",Mineral Water,5.000,20.00,f,100.00,15.00,115.00,2026-04-18 09:09:37.306376,food-poultry,1,,cash,tax,7226a22c-c2ab-40cc-b9c0-32067b8efebb,unit
+Asad Al-Hamra,أسد الحمراء,16,2026-04-18,"",Chicken Breast,3.000,50.00,f,150.00,22.50,172.50,2026-04-18 09:37:11.722754,food-poultry,1,,cash,tax,f07cf793-10f1-4d99-8dc5-9bf0f5b43f77,unit
+Asad Al-Hamra,أسد الحمراء,17,2026-05-11,Test Supplier,Rice,10.000,50.00,f,500.00,75.00,575.00,2026-05-11 17:21:21.475784,food,1,,cash,tax,test-001,kg
+Asad Al-Hamra,أسد الحمراء,18,2026-05-11,"",Chicken,5.000,30.00,f,150.00,22.50,172.50,2026-05-11 17:22:51.027702,food-poultry,1,,cash,tax,test-002,kg
+Asad Al-Hamra,أسد الحمراء,19,2026-05-11,"",Chicken,5.000,30.00,t,130.43,19.57,150.00,2026-05-11 17:32:40.712181,food-poultry,1,,cash,tax,d75e29ca-dce5-4b07-b3e0-afe38c517a3d,unit

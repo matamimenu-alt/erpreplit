@@ -44,7 +44,7 @@ const TH = memo(({ children, className = "" }: { children?: React.ReactNode; cla
   <th className={`px-3 py-2.5 text-left text-[11px] font-semibold text-slate-500 border-r border-slate-200 last:border-0 whitespace-nowrap ${className}`}>{children}</th>
 ));
 
-const THR = memo(({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+const THR = memo(({ children, className = "" }: { children?: React.ReactNode; className?: string }) => (
   <TH className={`text-right ${className}`}>{children}</TH>
 ));
 

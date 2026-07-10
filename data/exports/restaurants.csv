@@ -1,0 +1,5 @@
+id,name,name_ar,created_at,brand_name,branch_code,city,address,phone,tax_number,status
+1,Asad Al-Hamra,أسد الحمراء,2026-03-24 20:14:05.89471,,,,,,,active
+2,Sabah Al-El,صباح العل,2026-03-24 20:14:05.928686,,,,,,,active
+3,Chicken Bar,تشيكن بار,2026-03-24 20:14:05.932641,,,,,,,active
+28,Test Branch,,2026-05-17 19:33:41.400291,Test Brand,,Riyadh,,,,archived

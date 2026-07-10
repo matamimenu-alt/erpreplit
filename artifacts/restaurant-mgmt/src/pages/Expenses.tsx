@@ -14,7 +14,29 @@ import {
   useGetFixedCostYearSummary,
   useListExpenses,
 } from "@workspace/api-client-react";
-import type { FixedCostTemplate } from "@workspace/api-client-react";
+import type {
+  FixedCostTemplate,
+  CreateFixedCostTemplate,
+  MonthlyFixedCosts,
+  MonthlyFixedCostItem,
+} from "@workspace/api-client-react";
+
+// The fixed-costs API returns VAT fields that are not yet present in the
+// generated client types (stale OpenAPI spec). Extend locally, mirroring the
+// PLExtra pattern used in Reports.tsx.
+type FixedCostTemplateX = FixedCostTemplate & { vatType?: string; vatRate?: number };
+type MonthlyItemX = MonthlyFixedCostItem & {
+  vatType?: string;
+  vatAmount: number;
+  baseAmount: number;
+  totalAmount: number;
+};
+type MonthlyDataX = Omit<MonthlyFixedCosts, "items"> & {
+  items: MonthlyItemX[];
+  totalGross?: number;
+  totalVat?: number;
+  totalBase?: number;
+};
 import { useInvalidateFinancials } from "@/hooks/use-invalidate-financials";
 import {
   getListFixedCostTemplatesQueryKey,
@@ -95,7 +117,7 @@ function MonthNav({ month, onChange }: { month: string; onChange: (m: string) =>
 
 // ─── Template Form Modal ──────────────────────────────────────────────────────
 
-function TemplateModal({ mode, template, onClose }: { mode: "add" | "edit"; template?: FixedCostTemplate; onClose: () => void }) {
+function TemplateModal({ mode, template, onClose }: { mode: "add" | "edit"; template?: FixedCostTemplateX; onClose: () => void }) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const invalidateFinancials = useInvalidateFinancials();
@@ -130,10 +152,10 @@ function TemplateModal({ mode, template, onClose }: { mode: "add" | "edit"; temp
     const vatRate = parseFloat(form.vatRate) || 15;
     try {
       if (mode === "edit" && template) {
-        await updateTpl.mutateAsync({ id: template.id, data: { category: form.category, name: form.name, defaultAmount: amt, notes: form.notes || null, vatType: form.vatType, vatRate } });
+        await updateTpl.mutateAsync({ id: template.id, data: { category: form.category, name: form.name, defaultAmount: amt, notes: form.notes || null, vatType: form.vatType, vatRate } as CreateFixedCostTemplate });
         toast({ title: "Updated successfully" });
       } else {
-        await createTpl.mutateAsync({ data: { category: form.category, name: form.name, defaultAmount: amt, notes: form.notes || null, vatType: form.vatType, vatRate } });
+        await createTpl.mutateAsync({ data: { category: form.category, name: form.name, defaultAmount: amt, notes: form.notes || null, vatType: form.vatType, vatRate } as CreateFixedCostTemplate });
         toast({ title: "Cost item added" });
       }
       await qc.invalidateQueries({ queryKey: getListFixedCostTemplatesQueryKey() });
@@ -249,7 +271,8 @@ function MonthlyEntryTab({ month, setMonth }: { month: string; setMonth: (m: str
   const { toast } = useToast();
   const qc = useQueryClient();
   const invalidateFinancials = useInvalidateFinancials();
-  const { data: monthData, isLoading } = useGetMonthlyFixedCosts({ month });
+  const { data: monthDataRaw, isLoading } = useGetMonthlyFixedCosts({ month });
+  const monthData = monthDataRaw as MonthlyDataX | undefined;
   const batchSave = useBatchSaveMonthlyFixedCosts();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const copyPrev = useCopyPrevMonthFixedCosts({ month }, { query: { enabled: false } as any });
@@ -618,7 +641,8 @@ function TemplatesTab() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const invalidateFinancials = useInvalidateFinancials();
-  const { data: templates = [], isLoading } = useListFixedCostTemplates();
+  const { data: templatesRaw, isLoading } = useListFixedCostTemplates();
+  const templates = (templatesRaw ?? []) as FixedCostTemplateX[];
   const deleteTpl = useDeleteFixedCostTemplate();
   const [modal, setModal] = useState<{ mode: "add" | "edit"; template?: FixedCostTemplate } | null>(null);
 
@@ -631,7 +655,7 @@ function TemplatesTab() {
   }
 
   const grouped = useMemo(() => {
-    const map = new Map<string, FixedCostTemplate[]>();
+    const map = new Map<string, FixedCostTemplateX[]>();
     for (const t of templates) {
       if (!map.has(t.category)) map.set(t.category, []);
       map.get(t.category)!.push(t);
