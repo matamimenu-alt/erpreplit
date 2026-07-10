@@ -1,13 +1,15 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { useListPurchases, useCreatePurchaseBatch, useGetPurchaseProductSuggestions, useListBranchTransfers, useListSuppliers, useGetSupplierProducts } from "@workspace/api-client-react";
-import type { SupplierProduct, PurchaseCategory } from "@workspace/api-client-react";
+import { useListPurchases, useCreatePurchaseBatch, useCreatePurchase, useGetPurchaseProductSuggestions, useListBranchTransfers, useListSuppliers, useGetSupplierProducts } from "@workspace/api-client-react";
+import type { SupplierProduct, PurchaseCategory, CreatePurchase } from "@workspace/api-client-react";
+import { ImportButton, type ImportSpec } from "@/components/ImportButton";
+import { parseNum, parseBool, isIsoDate } from "@/lib/import-file";
 import { usePurchasesMutations } from "@/hooks/use-purchases";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { PrintButton } from "@/components/ui/PrintButton";
 import { formatSAR, formatDate, formatMonth } from "@/lib/format";
 import { exportToExcel } from "@/lib/export-excel";
-import { PURCHASE_CATEGORY_GROUPS, getCategoryMeta, getGroupForCategory } from "@/lib/categories";
+import { PURCHASE_CATEGORY_GROUPS, PURCHASE_CATEGORIES, getCategoryMeta, getGroupForCategory } from "@/lib/categories";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -1030,6 +1032,55 @@ export default function Purchases() {
   const { data: purchases, isLoading } = useListPurchases(month ? { month } : undefined);
   const { update, remove } = usePurchasesMutations();
   const batchCreate = useCreatePurchaseBatch();
+  const importCreate = useCreatePurchase();
+
+  const purchasesImportSpec: ImportSpec<CreatePurchase> = {
+    title: "استيراد المشتريات / Import Purchases",
+    templateName: "purchases-template",
+    templateColumns: [
+      { key: "date", example: "2026-07-02" },
+      { key: "supplierName", example: "Almarai" },
+      { key: "productName", example: "Chicken Breast" },
+      { key: "category", example: PURCHASE_CATEGORIES[0]?.value ?? "others-misc" },
+      { key: "unit", example: "kg" },
+      { key: "quantity", example: 10 },
+      { key: "price", example: 15 },
+      { key: "priceIncludesVat", example: "false" },
+      { key: "invoiceType", example: "tax" },
+      { key: "paymentType", example: "cash" },
+    ],
+    parseRow: (row) => {
+      if (!isIsoDate(row.date)) return { error: "تاريخ غير صالح (YYYY-MM-DD) / invalid date" };
+      if (!row.productName) return { error: "اسم الصنف مطلوب / productName required" };
+      const category = row.category;
+      if (!PURCHASE_CATEGORIES.some((c) => c.value === category)) {
+        return { error: `تصنيف غير معروف / unknown category: "${category}"` };
+      }
+      const quantity = parseNum(row.quantity);
+      if (quantity <= 0) return { error: "الكمية يجب أن تكون أكبر من صفر / quantity must be > 0" };
+      const price = parseNum(row.price);
+      if (price < 0) return { error: "السعر غير صالح / invalid price" };
+      const invoiceType = row.invoiceType === "non-tax" ? "non-tax" : "tax";
+      const paymentType =
+        row.paymentType === "card" || row.paymentType === "credit" ? row.paymentType : "cash";
+      return {
+        value: {
+          date: row.date,
+          supplierName: row.supplierName || "",
+          productName: row.productName,
+          category: category as PurchaseCategory,
+          unit: row.unit || "unit",
+          quantity,
+          price,
+          priceIncludesVat: parseBool(row.priceIncludesVat),
+          invoiceType,
+          paymentType,
+        },
+      };
+    },
+    summarize: (v) => `${v.date} · ${v.productName} · ${v.quantity}×${v.price} · ${v.category}`,
+    submit: (v) => importCreate.mutateAsync({ data: v }),
+  };
 
   // ── Unique suppliers extracted from purchase records ─────────────────────────
   const uniqueSuppliers = useMemo(() => {
@@ -1197,6 +1248,7 @@ export default function Purchases() {
               >
                 <FileSpreadsheet className="w-4 h-4" /> Export Excel
               </button>
+              <ImportButton spec={purchasesImportSpec} onDone={invalidateAll} />
               <button
                 onClick={() => setAddOpen(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl shadow-lg shadow-primary/25 hover:-translate-y-0.5 transition-all"
