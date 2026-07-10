@@ -21,6 +21,10 @@ export interface PLReport {
   foodSales: number;
   beverageSales: number;
   totalRevenue: number;
+  /** Explicit alias of totalRevenue (gross, VAT-inclusive) */
+  grossSales?: number;
+  /** IFRS-style top line (= netSales) */
+  accountingRevenue?: number;
   foodCost: number;
   beverageCost: number;
   otherCost: number;

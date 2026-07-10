@@ -861,8 +861,8 @@ export const ListSupplierProductsResponse = zod.array(
 export const CreateSupplierProductBody = zod.object({
   supplierId: zod.number(),
   productName: zod.string(),
-  category: zod.string(),
-  unit: zod.string(),
+  category: zod.string().optional(),
+  unit: zod.string().optional(),
   previousPrice: zod.number().optional(),
   currentPrice: zod.number(),
 });
@@ -877,8 +877,8 @@ export const UpdateSupplierProductParams = zod.object({
 export const UpdateSupplierProductBody = zod.object({
   supplierId: zod.number(),
   productName: zod.string(),
-  category: zod.string(),
-  unit: zod.string(),
+  category: zod.string().optional(),
+  unit: zod.string().optional(),
   previousPrice: zod.number().optional(),
   currentPrice: zod.number(),
 });
@@ -1002,6 +1002,9 @@ export const ListFixedCostTemplatesResponseItem = zod.object({
   notes: zod.string().nullish(),
   isActive: zod.boolean(),
   sortOrder: zod.number(),
+  vatType: zod.enum(["none", "included", "excluded"]),
+  vatRate: zod.number(),
+  nature: zod.enum(["fixed", "variable"]),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -1018,6 +1021,9 @@ export const CreateFixedCostTemplateBody = zod.object({
   defaultAmount: zod.number(),
   notes: zod.string().nullish(),
   sortOrder: zod.number().optional(),
+  vatType: zod.enum(["none", "included", "excluded"]).optional(),
+  vatRate: zod.number().optional(),
+  nature: zod.enum(["fixed", "variable"]).optional(),
 });
 
 /**
@@ -1033,6 +1039,9 @@ export const UpdateFixedCostTemplateBody = zod.object({
   defaultAmount: zod.number(),
   notes: zod.string().nullish(),
   sortOrder: zod.number().optional(),
+  vatType: zod.enum(["none", "included", "excluded"]).optional(),
+  vatRate: zod.number().optional(),
+  nature: zod.enum(["fixed", "variable"]).optional(),
 });
 
 export const UpdateFixedCostTemplateResponse = zod.object({
@@ -1043,6 +1052,9 @@ export const UpdateFixedCostTemplateResponse = zod.object({
   notes: zod.string().nullish(),
   isActive: zod.boolean(),
   sortOrder: zod.number(),
+  vatType: zod.enum(["none", "included", "excluded"]),
+  vatRate: zod.number(),
+  nature: zod.enum(["fixed", "variable"]),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -1067,6 +1079,9 @@ export const GetMonthlyFixedCostsResponse = zod.object({
   lockedBy: zod.string().nullish(),
   lockedAt: zod.string().nullish(),
   total: zod.number(),
+  totalBase: zod.number(),
+  totalVat: zod.number(),
+  totalGross: zod.number(),
   items: zod.array(
     zod.object({
       templateId: zod.number(),
@@ -1079,6 +1094,11 @@ export const GetMonthlyFixedCostsResponse = zod.object({
       overrideNotes: zod.string().nullish(),
       overrideId: zod.number().nullish(),
       notes: zod.string().nullish(),
+      vatType: zod.enum(["none", "included", "excluded"]),
+      vatRate: zod.number(),
+      baseAmount: zod.number(),
+      vatAmount: zod.number(),
+      totalAmount: zod.number(),
     }),
   ),
 });
@@ -1351,6 +1371,14 @@ export const GetPLReportResponse = zod.object({
   foodSales: zod.number(),
   beverageSales: zod.number(),
   totalRevenue: zod.number(),
+  grossSales: zod
+    .number()
+    .optional()
+    .describe("Explicit alias of totalRevenue (gross, VAT-inclusive)"),
+  accountingRevenue: zod
+    .number()
+    .optional()
+    .describe("IFRS-style top line (= netSales)"),
   foodCost: zod.number(),
   beverageCost: zod.number(),
   otherCost: zod.number(),
@@ -1459,6 +1487,11 @@ export const GetDashboardSummaryResponse = zod.object({
   totalFoodSales: zod.number(),
   totalBeverageSales: zod.number(),
   totalSales: zod.number(),
+  totalNetSales: zod
+    .number()
+    .optional()
+    .describe("Net (pre-VAT) sales — canonical revenue figure"),
+  totalRevenue: zod.number().optional().describe("Gross sales including VAT"),
   totalPurchases: zod
     .number()
     .describe(

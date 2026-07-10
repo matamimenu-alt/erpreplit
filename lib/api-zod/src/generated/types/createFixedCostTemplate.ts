@@ -5,6 +5,8 @@
  * Restaurant Management & Accounting System API
  * OpenAPI spec version: 0.1.0
  */
+import type { CreateFixedCostTemplateNature } from "./createFixedCostTemplateNature";
+import type { CreateFixedCostTemplateVatType } from "./createFixedCostTemplateVatType";
 
 export interface CreateFixedCostTemplate {
   category: string;
@@ -12,4 +14,7 @@ export interface CreateFixedCostTemplate {
   defaultAmount: number;
   notes?: string | null;
   sortOrder?: number;
+  vatType?: CreateFixedCostTemplateVatType;
+  vatRate?: number;
+  nature?: CreateFixedCostTemplateNature;
 }

@@ -209,11 +209,11 @@ function TemplateModal({ mode, template, onClose }: { mode: "add" | "edit"; temp
           <div>
             <label className="block text-sm font-semibold mb-1.5">VAT Treatment <span className="text-slate-400 font-normal">(الضريبة)</span></label>
             <div className="grid grid-cols-3 gap-2">
-              {[
+              {([
                 { key: "none",     label: "No VAT",        labelAr: "بدون ضريبة",      desc: "Amount is final cost" },
                 { key: "included", label: "VAT Included",  labelAr: "الضريبة مشمولة",  desc: "Extract VAT from total" },
                 { key: "excluded", label: "VAT Excluded",  labelAr: "الضريبة تُضاف",   desc: "Add VAT on top" },
-              ].map(v => (
+              ] as const).map(v => (
                 <button key={v.key} type="button"
                   onClick={() => setForm(f => ({ ...f, vatType: v.key }))}
                   className={`text-left px-3 py-2.5 rounded-xl border-2 text-xs font-semibold transition-all ${

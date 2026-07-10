@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useListPurchases, useCreatePurchaseBatch, useGetPurchaseProductSuggestions, useListBranchTransfers, useListSuppliers, useGetSupplierProducts } from "@workspace/api-client-react";
-import type { CreatePurchase } from "@workspace/api-client-react";
-import type { SupplierProduct } from "@workspace/api-client-react";
+import type { SupplierProduct, PurchaseCategory } from "@workspace/api-client-react";
 import { usePurchasesMutations } from "@/hooks/use-purchases";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useLanguage } from "@/i18n/LanguageContext";
@@ -311,8 +310,7 @@ function PurchaseInvoiceModal({
   const { data: allSuppliers = [] } = useListSuppliers();
   const { data: selectedSupplierProducts = [] } = useGetSupplierProducts(
     selectedSupplierId ?? 0,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    { query: { enabled: selectedSupplierId != null } as any }
+    { query: { enabled: selectedSupplierId != null } }
   );
 
   // Items list
@@ -1139,7 +1137,7 @@ export default function Purchases() {
   function handleEdit(data: EditForm) {
     if (!editRecord) return;
     update.mutate(
-      { id: editRecord.id, data: { ...data, supplierName: data.supplierName || "" } as CreatePurchase },
+      { id: editRecord.id, data: { ...data, supplierName: data.supplierName || "", category: data.category as PurchaseCategory } },
       { onSuccess: () => setEditRecord(null) }
     );
   }

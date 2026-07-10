@@ -5,6 +5,7 @@
  * Restaurant Management & Accounting System API
  * OpenAPI spec version: 0.1.0
  */
+import type { MonthlyFixedCostItemVatType } from "./monthlyFixedCostItemVatType";
 
 export interface MonthlyFixedCostItem {
   templateId: number;
@@ -17,4 +18,9 @@ export interface MonthlyFixedCostItem {
   overrideNotes?: string | null;
   overrideId?: number | null;
   notes?: string | null;
+  vatType: MonthlyFixedCostItemVatType;
+  vatRate: number;
+  baseAmount: number;
+  vatAmount: number;
+  totalAmount: number;
 }

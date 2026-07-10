@@ -38,7 +38,7 @@ router.get("/report", async (req, res) => {
         "VAT breakdown totals drift from scalar sums");
     }
 
-    res.json({
+    return res.json({
       month: month ?? "all",
 
       // ── Output VAT (from sales) ──
@@ -101,7 +101,7 @@ router.get("/report", async (req, res) => {
     });
   } catch (err) {
     req.log.error({ err }, "Error getting VAT report");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

@@ -1,10 +1,10 @@
 export * from "./generated/api";
 export * from "./generated/types";
 
-// Explicit re-exports to resolve `export *` ambiguity (TS2308) between the
-// generated zod value schemas and their same-named generated types:
-// the zod value schema wins; use `z.infer<typeof X>` or import the type
-// directly from "./generated/types" if the plain type is ever needed.
+// These names exist both as zod schemas (values) in ./generated/api and as
+// TypeScript types in ./generated/types; re-export the zod schemas explicitly
+// so the wildcard exports above stay unambiguous. The corresponding TS types
+// are available via zod.infer or from @workspace/api-client-react.
 export {
   RemoveMonthlyOverrideParams,
   SetRestaurantStatusBody,

@@ -131,7 +131,8 @@ export async function computeVatSummary(input: VatSummaryInput): Promise<VatSumm
     purchaseRecords = purchaseRecords.filter(r => r.date.startsWith(month));
   }
 
-  const totalSales     = salesRecords.reduce((s, r) => s + toNum(r.totalRevenue), 0);
+  // Taxable sales base (ZATCA Box 1) = pre-VAT net sales, not gross revenue.
+  const totalSales     = salesRecords.reduce((s, r) => s + toNum(r.netSales), 0);
   const outputVat      = salesRecords.reduce((s, r) => s + toNum(r.outputVat), 0);
   const totalPurchases = purchaseRecords.reduce((s, r) => s + toNum(r.amountBeforeVat), 0);
   const inputVatRaw    = purchaseRecords.reduce((s, r) => s + toNum(r.vatAmount), 0);
@@ -258,7 +259,7 @@ export async function computeVatSummary(input: VatSummaryInput): Promise<VatSumm
     breakdown.push({
       sourceType: "purchase",
       sourceId:   String(p.id),
-      label:      `Purchase #${p.id}`,
+      label:      `Purchase #${p.id}${p.invoiceId ? " · " + p.invoiceId : ""}`,
       date:       p.date,
       vatType:    p.priceIncludesVat ? "included" : (vat > 0 ? "excluded" : "none"),
       vatRate:    net > 0 ? +((vat / net) * 100).toFixed(2) : 0,
