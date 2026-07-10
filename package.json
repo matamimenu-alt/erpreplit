@@ -12,7 +12,6 @@
     "db:push": "node -e \"if(!process.env.DATABASE_URL){console.error('ERROR: DATABASE_URL is not set. Add a PostgreSQL service in Railway and reference its DATABASE_URL variable on this service.');process.exit(1)}\" && pnpm --filter @workspace/db run push",
     "db:push:force": "node -e \"if(!process.env.DATABASE_URL){console.error('ERROR: DATABASE_URL is not set. Add a PostgreSQL service in Railway and reference its DATABASE_URL variable on this service.');process.exit(1)}\" && pnpm --filter @workspace/db run push-force"
   },
-  "packageManager": "pnpm@10.26.1",
   "engines": {
     "node": ">=22 <25",
     "pnpm": ">=10"
