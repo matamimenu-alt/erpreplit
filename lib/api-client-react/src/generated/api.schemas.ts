@@ -5,6 +5,92 @@
  * Restaurant Management & Accounting System API
  * OpenAPI spec version: 0.1.0
  */
+export interface AiInvoiceSettings {
+  ocrEnabled: boolean;
+  autoCreateSupplier: boolean;
+  autoCreateProduct: boolean;
+  confidenceThreshold: number;
+  provider: string;
+}
+
+export interface AiInvoiceExtractRequest {
+  fileBase64: string;
+  mimeType: string;
+}
+
+export interface AiInvoiceStringField {
+  value: string | null;
+  confidence: number;
+}
+
+export interface AiInvoiceNumberField {
+  value: number | null;
+  confidence: number;
+}
+
+export interface AiInvoiceProductMatch {
+  exists: boolean;
+  matchedName: string | null;
+  category: string | null;
+  unit: string | null;
+}
+
+export interface AiInvoiceItem {
+  name: AiInvoiceStringField;
+  quantity: AiInvoiceNumberField;
+  unit: AiInvoiceStringField;
+  unitPrice: AiInvoiceNumberField;
+  discount: AiInvoiceNumberField;
+  vat: AiInvoiceNumberField;
+  lineTotal: AiInvoiceNumberField;
+  match: AiInvoiceProductMatch;
+}
+
+export interface AiInvoiceExtraction {
+  supplierName: AiInvoiceStringField;
+  invoiceNumber: AiInvoiceStringField;
+  invoiceDate: AiInvoiceStringField;
+  currency: AiInvoiceStringField;
+  vatNumber: AiInvoiceStringField;
+  subtotal: AiInvoiceNumberField;
+  vat: AiInvoiceNumberField;
+  discount: AiInvoiceNumberField;
+  grandTotal: AiInvoiceNumberField;
+  paymentMethod: AiInvoiceStringField;
+  items: AiInvoiceItem[];
+}
+
+export type AiInvoiceValidationWarningSeverity =
+  (typeof AiInvoiceValidationWarningSeverity)[keyof typeof AiInvoiceValidationWarningSeverity];
+
+export const AiInvoiceValidationWarningSeverity = {
+  warning: "warning",
+  error: "error",
+} as const;
+
+export interface AiInvoiceValidationWarning {
+  code: string;
+  message: string;
+  severity: AiInvoiceValidationWarningSeverity;
+}
+
+export interface AiInvoiceSupplierMatch {
+  exists: boolean;
+  supplierId: number | null;
+  matchedName: string | null;
+}
+
+export type AiInvoiceExtractResponseValidation = {
+  warnings: AiInvoiceValidationWarning[];
+};
+
+export interface AiInvoiceExtractResponse {
+  provider: string;
+  extraction: AiInvoiceExtraction;
+  supplierMatch: AiInvoiceSupplierMatch;
+  validation: AiInvoiceExtractResponseValidation;
+}
+
 export interface HealthStatus {
   status: string;
 }
