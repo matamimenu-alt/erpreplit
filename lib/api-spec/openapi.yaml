@@ -1691,8 +1691,165 @@ paths:
                   id:      { type: integer }
                 required: [success, id]
 
+  /ai-invoice/settings:
+    get:
+      operationId: getAiInvoiceSettings
+      tags: [ai-invoice]
+      summary: Get AI invoice import settings
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiInvoiceSettings" }
+    put:
+      operationId: updateAiInvoiceSettings
+      tags: [ai-invoice]
+      summary: Update AI invoice import settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AiInvoiceSettings" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiInvoiceSettings" }
+
+  /ai-invoice/extract:
+    post:
+      operationId: extractAiInvoice
+      tags: [ai-invoice]
+      summary: Extract a supplier invoice from an image or PDF (OCR + AI)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AiInvoiceExtractRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiInvoiceExtractResponse" }
+
 components:
   schemas:
+    AiInvoiceSettings:
+      type: object
+      properties:
+        ocrEnabled: { type: boolean }
+        autoCreateSupplier: { type: boolean }
+        autoCreateProduct: { type: boolean }
+        confidenceThreshold: { type: integer }
+        provider: { type: string }
+      required: [ocrEnabled, autoCreateSupplier, autoCreateProduct, confidenceThreshold, provider]
+
+    AiInvoiceExtractRequest:
+      type: object
+      properties:
+        fileBase64: { type: string }
+        mimeType: { type: string }
+      required: [fileBase64, mimeType]
+
+    AiInvoiceStringField:
+      type: object
+      properties:
+        value: { type: string, nullable: true }
+        confidence: { type: number }
+      required: [value, confidence]
+
+    AiInvoiceNumberField:
+      type: object
+      properties:
+        value: { type: number, nullable: true }
+        confidence: { type: number }
+      required: [value, confidence]
+
+    AiInvoiceProductMatch:
+      type: object
+      properties:
+        exists: { type: boolean }
+        matchedName: { type: string, nullable: true }
+        category: { type: string, nullable: true }
+        unit: { type: string, nullable: true }
+      required: [exists, matchedName, category, unit]
+
+    AiInvoiceItem:
+      type: object
+      properties:
+        name: { $ref: "#/components/schemas/AiInvoiceStringField" }
+        quantity: { $ref: "#/components/schemas/AiInvoiceNumberField" }
+        unit: { $ref: "#/components/schemas/AiInvoiceStringField" }
+        unitPrice: { $ref: "#/components/schemas/AiInvoiceNumberField" }
+        discount: { $ref: "#/components/schemas/AiInvoiceNumberField" }
+        vat: { $ref: "#/components/schemas/AiInvoiceNumberField" }
+        lineTotal: { $ref: "#/components/schemas/AiInvoiceNumberField" }
+        match: { $ref: "#/components/schemas/AiInvoiceProductMatch" }
+      required: [name, quantity, unit, unitPrice, discount, vat, lineTotal, match]
+
+    AiInvoiceExtraction:
+      type: object
+      properties:
+        supplierName: { $ref: "#/components/schemas/AiInvoiceStringField" }
+        invoiceNumber: { $ref: "#/components/schemas/AiInvoiceStringField" }
+        invoiceDate: { $ref: "#/components/schemas/AiInvoiceStringField" }
+        currency: { $ref: "#/components/schemas/AiInvoiceStringField" }
+        vatNumber: { $ref: "#/components/schemas/AiInvoiceStringField" }
+        subtotal: { $ref: "#/components/schemas/AiInvoiceNumberField" }
+        vat: { $ref: "#/components/schemas/AiInvoiceNumberField" }
+        discount: { $ref: "#/components/schemas/AiInvoiceNumberField" }
+        grandTotal: { $ref: "#/components/schemas/AiInvoiceNumberField" }
+        paymentMethod: { $ref: "#/components/schemas/AiInvoiceStringField" }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AiInvoiceItem" }
+      required:
+        - supplierName
+        - invoiceNumber
+        - invoiceDate
+        - currency
+        - vatNumber
+        - subtotal
+        - vat
+        - discount
+        - grandTotal
+        - paymentMethod
+        - items
+
+    AiInvoiceValidationWarning:
+      type: object
+      properties:
+        code: { type: string }
+        message: { type: string }
+        severity: { type: string, enum: [warning, error] }
+      required: [code, message, severity]
+
+    AiInvoiceSupplierMatch:
+      type: object
+      properties:
+        exists: { type: boolean }
+        supplierId: { type: integer, nullable: true }
+        matchedName: { type: string, nullable: true }
+      required: [exists, supplierId, matchedName]
+
+    AiInvoiceExtractResponse:
+      type: object
+      properties:
+        provider: { type: string }
+        extraction: { $ref: "#/components/schemas/AiInvoiceExtraction" }
+        supplierMatch: { $ref: "#/components/schemas/AiInvoiceSupplierMatch" }
+        validation:
+          type: object
+          properties:
+            warnings:
+              type: array
+              items: { $ref: "#/components/schemas/AiInvoiceValidationWarning" }
+          required: [warnings]
+      required: [provider, extraction, supplierMatch, validation]
+
     HealthStatus:
       type: object
       properties:

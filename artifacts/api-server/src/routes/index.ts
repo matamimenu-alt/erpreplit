@@ -16,6 +16,7 @@ import fixedCostsRouter from "./fixed-costs";
 import expenseAccountingRouter, { seedExpenseCategories } from "./expense-accounting";
 import expenseIntegrationsRouter from "./expense-integrations";
 import diagnosticsRouter from "./diagnostics";
+import aiInvoiceRouter from "./ai-invoice";
 
 const router: IRouter = Router();
 
@@ -40,5 +41,6 @@ router.use("/fixed-costs", fixedCostsRouter);
 router.use("/expense-categories", expenseAccountingRouter);
 router.use("/expense-integrations", expenseIntegrationsRouter);
 router.use("/diagnostics", diagnosticsRouter);
+router.use("/ai-invoice", aiInvoiceRouter);
 
 export default router;

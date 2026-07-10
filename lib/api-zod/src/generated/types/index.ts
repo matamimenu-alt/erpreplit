@@ -6,6 +6,18 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./aiInvoiceExtraction";
+export * from "./aiInvoiceExtractRequest";
+export * from "./aiInvoiceExtractResponse";
+export * from "./aiInvoiceExtractResponseValidation";
+export * from "./aiInvoiceItem";
+export * from "./aiInvoiceNumberField";
+export * from "./aiInvoiceProductMatch";
+export * from "./aiInvoiceSettings";
+export * from "./aiInvoiceStringField";
+export * from "./aiInvoiceSupplierMatch";
+export * from "./aiInvoiceValidationWarning";
+export * from "./aiInvoiceValidationWarningSeverity";
 export * from "./auditLogEntry";
 export * from "./batchInvoiceItem";
 export * from "./batchSaveMonthlyFixedCosts";

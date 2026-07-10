@@ -2099,3 +2099,139 @@ export const DeleteExpenseTransactionResponse = zod.object({
   success: zod.boolean(),
   id: zod.number(),
 });
+
+/**
+ * @summary Get AI invoice import settings
+ */
+export const GetAiInvoiceSettingsResponse = zod.object({
+  ocrEnabled: zod.boolean(),
+  autoCreateSupplier: zod.boolean(),
+  autoCreateProduct: zod.boolean(),
+  confidenceThreshold: zod.number(),
+  provider: zod.string(),
+});
+
+/**
+ * @summary Update AI invoice import settings
+ */
+export const UpdateAiInvoiceSettingsBody = zod.object({
+  ocrEnabled: zod.boolean(),
+  autoCreateSupplier: zod.boolean(),
+  autoCreateProduct: zod.boolean(),
+  confidenceThreshold: zod.number(),
+  provider: zod.string(),
+});
+
+export const UpdateAiInvoiceSettingsResponse = zod.object({
+  ocrEnabled: zod.boolean(),
+  autoCreateSupplier: zod.boolean(),
+  autoCreateProduct: zod.boolean(),
+  confidenceThreshold: zod.number(),
+  provider: zod.string(),
+});
+
+/**
+ * @summary Extract a supplier invoice from an image or PDF (OCR + AI)
+ */
+export const ExtractAiInvoiceBody = zod.object({
+  fileBase64: zod.string(),
+  mimeType: zod.string(),
+});
+
+export const ExtractAiInvoiceResponse = zod.object({
+  provider: zod.string(),
+  extraction: zod.object({
+    supplierName: zod.object({
+      value: zod.string().nullable(),
+      confidence: zod.number(),
+    }),
+    invoiceNumber: zod.object({
+      value: zod.string().nullable(),
+      confidence: zod.number(),
+    }),
+    invoiceDate: zod.object({
+      value: zod.string().nullable(),
+      confidence: zod.number(),
+    }),
+    currency: zod.object({
+      value: zod.string().nullable(),
+      confidence: zod.number(),
+    }),
+    vatNumber: zod.object({
+      value: zod.string().nullable(),
+      confidence: zod.number(),
+    }),
+    subtotal: zod.object({
+      value: zod.number().nullable(),
+      confidence: zod.number(),
+    }),
+    vat: zod.object({
+      value: zod.number().nullable(),
+      confidence: zod.number(),
+    }),
+    discount: zod.object({
+      value: zod.number().nullable(),
+      confidence: zod.number(),
+    }),
+    grandTotal: zod.object({
+      value: zod.number().nullable(),
+      confidence: zod.number(),
+    }),
+    paymentMethod: zod.object({
+      value: zod.string().nullable(),
+      confidence: zod.number(),
+    }),
+    items: zod.array(
+      zod.object({
+        name: zod.object({
+          value: zod.string().nullable(),
+          confidence: zod.number(),
+        }),
+        quantity: zod.object({
+          value: zod.number().nullable(),
+          confidence: zod.number(),
+        }),
+        unit: zod.object({
+          value: zod.string().nullable(),
+          confidence: zod.number(),
+        }),
+        unitPrice: zod.object({
+          value: zod.number().nullable(),
+          confidence: zod.number(),
+        }),
+        discount: zod.object({
+          value: zod.number().nullable(),
+          confidence: zod.number(),
+        }),
+        vat: zod.object({
+          value: zod.number().nullable(),
+          confidence: zod.number(),
+        }),
+        lineTotal: zod.object({
+          value: zod.number().nullable(),
+          confidence: zod.number(),
+        }),
+        match: zod.object({
+          exists: zod.boolean(),
+          matchedName: zod.string().nullable(),
+          category: zod.string().nullable(),
+          unit: zod.string().nullable(),
+        }),
+      }),
+    ),
+  }),
+  supplierMatch: zod.object({
+    exists: zod.boolean(),
+    supplierId: zod.number().nullable(),
+    matchedName: zod.string().nullable(),
+  }),
+  validation: zod.object({
+    warnings: zod.array(
+      zod.object({
+        code: zod.string(),
+        message: zod.string(),
+        severity: zod.enum(["warning", "error"]),
+      }),
+    ),
+  }),
+});

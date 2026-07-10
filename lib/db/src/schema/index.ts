@@ -11,3 +11,4 @@ export * from "./branch-transfers";
 export * from "./dishes";
 export * from "./fixed-costs";
 export * from "./expense-accounting";
+export * from "./ai-invoice";

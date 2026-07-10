@@ -45,6 +45,10 @@ onlyBuiltDependencies:
   - unrs-resolver
 
 overrides:
+  # Keep a single zod version across the repo. @anthropic-ai/sdk declares zod as
+  # an optional peer (^3.25 || ^4); without this pin pnpm pulls in zod v4, whose
+  # types leak into @hookform/resolvers (which uses zod 3.25) and break typecheck.
+  zod: 3.25.76
   '@esbuild-kit/esm-loader': npm:tsx@^4.21.0
   '@expo/ngrok-bin>@expo/ngrok-bin-darwin-arm64': '-'
   '@expo/ngrok-bin>@expo/ngrok-bin-darwin-x64': '-'

@@ -22,6 +22,9 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AiInvoiceExtractRequest,
+  AiInvoiceExtractResponse,
+  AiInvoiceSettings,
   AuditLogEntry,
   BatchSaveMonthlyFixedCosts,
   BatchSaveMonthlyFixedCosts200,
@@ -10698,4 +10701,340 @@ export const useDeleteExpenseTransaction = <
     getDeleteExpenseTransactionMutationOptions(options),
     queryClient,
   );
+};
+
+/**
+ * @summary Get AI invoice import settings
+ */
+export const getGetAiInvoiceSettingsUrl = () => {
+  return `/api/ai-invoice/settings`;
+};
+
+export const getAiInvoiceSettings = async (
+  options?: RequestInit,
+): Promise<AiInvoiceSettings> => {
+  return customFetch<AiInvoiceSettings>(getGetAiInvoiceSettingsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAiInvoiceSettingsQueryKey = () => {
+  return [`/api/ai-invoice/settings`] as const;
+};
+
+export const getGetAiInvoiceSettingsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAiInvoiceSettings>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<
+      Awaited<ReturnType<typeof getAiInvoiceSettings>>,
+      TError,
+      TData
+    >
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAiInvoiceSettingsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAiInvoiceSettings>>
+  > = ({ signal }) => getAiInvoiceSettings({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAiInvoiceSettings>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetAiInvoiceSettingsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAiInvoiceSettings>>
+>;
+export type GetAiInvoiceSettingsQueryError = ErrorType<unknown>;
+
+export function useGetAiInvoiceSettings<
+  TData = Awaited<ReturnType<typeof getAiInvoiceSettings>>,
+  TError = ErrorType<unknown>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getAiInvoiceSettings>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAiInvoiceSettings>>,
+          TError,
+          Awaited<ReturnType<typeof getAiInvoiceSettings>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAiInvoiceSettings<
+  TData = Awaited<ReturnType<typeof getAiInvoiceSettings>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getAiInvoiceSettings>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAiInvoiceSettings>>,
+          TError,
+          Awaited<ReturnType<typeof getAiInvoiceSettings>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAiInvoiceSettings<
+  TData = Awaited<ReturnType<typeof getAiInvoiceSettings>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getAiInvoiceSettings>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get AI invoice import settings
+ */
+
+export function useGetAiInvoiceSettings<
+  TData = Awaited<ReturnType<typeof getAiInvoiceSettings>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getAiInvoiceSettings>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetAiInvoiceSettingsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update AI invoice import settings
+ */
+export const getUpdateAiInvoiceSettingsUrl = () => {
+  return `/api/ai-invoice/settings`;
+};
+
+export const updateAiInvoiceSettings = async (
+  aiInvoiceSettings: AiInvoiceSettings,
+  options?: RequestInit,
+): Promise<AiInvoiceSettings> => {
+  return customFetch<AiInvoiceSettings>(getUpdateAiInvoiceSettingsUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(aiInvoiceSettings),
+  });
+};
+
+export const getUpdateAiInvoiceSettingsMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateAiInvoiceSettings>>,
+    TError,
+    { data: BodyType<AiInvoiceSettings> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateAiInvoiceSettings>>,
+  TError,
+  { data: BodyType<AiInvoiceSettings> },
+  TContext
+> => {
+  const mutationKey = ["updateAiInvoiceSettings"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateAiInvoiceSettings>>,
+    { data: BodyType<AiInvoiceSettings> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateAiInvoiceSettings(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateAiInvoiceSettingsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateAiInvoiceSettings>>
+>;
+export type UpdateAiInvoiceSettingsMutationBody = BodyType<AiInvoiceSettings>;
+export type UpdateAiInvoiceSettingsMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update AI invoice import settings
+ */
+export const useUpdateAiInvoiceSettings = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateAiInvoiceSettings>>,
+      TError,
+      { data: BodyType<AiInvoiceSettings> },
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateAiInvoiceSettings>>,
+  TError,
+  { data: BodyType<AiInvoiceSettings> },
+  TContext
+> => {
+  return useMutation(
+    getUpdateAiInvoiceSettingsMutationOptions(options),
+    queryClient,
+  );
+};
+
+/**
+ * @summary Extract a supplier invoice from an image or PDF (OCR + AI)
+ */
+export const getExtractAiInvoiceUrl = () => {
+  return `/api/ai-invoice/extract`;
+};
+
+export const extractAiInvoice = async (
+  aiInvoiceExtractRequest: AiInvoiceExtractRequest,
+  options?: RequestInit,
+): Promise<AiInvoiceExtractResponse> => {
+  return customFetch<AiInvoiceExtractResponse>(getExtractAiInvoiceUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(aiInvoiceExtractRequest),
+  });
+};
+
+export const getExtractAiInvoiceMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof extractAiInvoice>>,
+    TError,
+    { data: BodyType<AiInvoiceExtractRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof extractAiInvoice>>,
+  TError,
+  { data: BodyType<AiInvoiceExtractRequest> },
+  TContext
+> => {
+  const mutationKey = ["extractAiInvoice"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof extractAiInvoice>>,
+    { data: BodyType<AiInvoiceExtractRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return extractAiInvoice(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ExtractAiInvoiceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof extractAiInvoice>>
+>;
+export type ExtractAiInvoiceMutationBody = BodyType<AiInvoiceExtractRequest>;
+export type ExtractAiInvoiceMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Extract a supplier invoice from an image or PDF (OCR + AI)
+ */
+export const useExtractAiInvoice = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof extractAiInvoice>>,
+      TError,
+      { data: BodyType<AiInvoiceExtractRequest> },
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof extractAiInvoice>>,
+  TError,
+  { data: BodyType<AiInvoiceExtractRequest> },
+  TContext
+> => {
+  return useMutation(getExtractAiInvoiceMutationOptions(options), queryClient);
 };

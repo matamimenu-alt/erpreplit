@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useListPurchases, useCreatePurchaseBatch, useCreatePurchase, useGetPurchaseProductSuggestions, useListBranchTransfers, useListSuppliers, useGetSupplierProducts } from "@workspace/api-client-react";
 import type { SupplierProduct, PurchaseCategory, CreatePurchase } from "@workspace/api-client-react";
 import { ImportButton, type ImportSpec } from "@/components/ImportButton";
+import { AiInvoiceImport } from "@/components/AiInvoiceImport";
 import { parseNum, parseBool, isIsoDate } from "@/lib/import-file";
 import { usePurchasesMutations } from "@/hooks/use-purchases";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -13,7 +14,7 @@ import { PURCHASE_CATEGORY_GROUPS, PURCHASE_CATEGORIES, getCategoryMeta, getGrou
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Trash2, Pencil, Search, X, FileSpreadsheet, Receipt, Tag, PackagePlus, ChevronRight, Banknote, CreditCard, BookOpen, BarChart3, ChevronDown } from "lucide-react";
+import { Plus, Trash2, Pencil, Search, X, FileSpreadsheet, Receipt, Tag, PackagePlus, ChevronRight, Banknote, CreditCard, BookOpen, BarChart3, ChevronDown, Sparkles } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   getListPurchasesQueryKey,
@@ -1026,6 +1027,7 @@ export default function Purchases() {
   const [paymentFilter, setPaymentFilter] = useState<"" | "cash" | "card" | "credit">("");
   const [supplierFilter, setSupplierFilter] = useState("");
   const [addOpen, setAddOpen] = useState(false);
+  const [aiImportOpen, setAiImportOpen] = useState(false);
   const [editRecord, setEditRecord] = useState<{ id: number; data: EditForm } | null>(null);
 
   const queryClient = useQueryClient();
@@ -1249,6 +1251,12 @@ export default function Purchases() {
                 <FileSpreadsheet className="w-4 h-4" /> Export Excel
               </button>
               <ImportButton spec={purchasesImportSpec} onDone={invalidateAll} />
+              <button
+                onClick={() => setAiImportOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-600 to-primary text-white rounded-xl hover:-translate-y-0.5 transition-all"
+              >
+                <Sparkles className="w-4 h-4" /> Import From Image / PDF
+              </button>
               <button
                 onClick={() => setAddOpen(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl shadow-lg shadow-primary/25 hover:-translate-y-0.5 transition-all"
@@ -1609,6 +1617,9 @@ export default function Purchases() {
         onSaved={handleBatchSave}
         isPending={batchCreate.isPending}
       />
+
+      {/* AI Invoice Import (image / PDF → review → save) */}
+      <AiInvoiceImport open={aiImportOpen} onClose={() => setAiImportOpen(false)} onSaved={invalidateAll} />
 
       {/* Edit Single Item Modal */}
       {editRecord && (
