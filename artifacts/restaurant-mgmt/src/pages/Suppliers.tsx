@@ -7,8 +7,9 @@ import {
   useDeleteSupplierProduct,
   useListPurchases,
 } from "@workspace/api-client-react";
-import type { SupplierProduct, Purchase } from "@workspace/api-client-react";
+import type { SupplierProduct, Purchase, CreateSupplier } from "@workspace/api-client-react";
 import { useSupplierMutations } from "@/hooks/use-suppliers";
+import { ImportButton, type ImportSpec } from "@/components/ImportButton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { PrintButton } from "@/components/ui/PrintButton";
@@ -604,6 +605,30 @@ export default function Suppliers() {
 
   const form = useForm<SupplierFormValues>({ resolver: zodResolver(supplierSchema) });
 
+  const suppliersImportSpec: ImportSpec<CreateSupplier> = {
+    title: "استيراد الموردين / Import Suppliers",
+    templateName: "suppliers-template",
+    templateColumns: [
+      { key: "name", example: "Almarai" },
+      { key: "contactPerson", example: "Khalid" },
+      { key: "phone", example: "0500000000" },
+      { key: "email", example: "sales@almarai.com" },
+    ],
+    parseRow: (row) => {
+      if (!row.name) return { error: "اسم المورد مطلوب / name required" };
+      return {
+        value: {
+          name: row.name,
+          contactPerson: row.contactPerson || undefined,
+          phone: row.phone || undefined,
+          email: row.email || undefined,
+        },
+      };
+    },
+    summarize: (v) => `${v.name}${v.phone ? " · " + v.phone : ""}`,
+    submit: (v) => createSupplier.mutateAsync({ data: v }),
+  };
+
   return (
     <div>
       <PageHeader
@@ -617,6 +642,7 @@ export default function Suppliers() {
             >
               <Plus className="w-4 h-4" /> Add Supplier
             </button>
+            <ImportButton spec={suppliersImportSpec} />
             <PrintButton />
           </div>
         }

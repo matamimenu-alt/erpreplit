@@ -11,6 +11,8 @@ import type { ExpenseTransaction, CreateExpenseTransaction, ExpenseCategory } fr
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { PrintButton } from "@/components/ui/PrintButton";
+import { ImportButton, type ImportSpec } from "@/components/ImportButton";
+import { parseNum, isIsoDate } from "@/lib/import-file";
 import { formatSAR } from "@/lib/format";
 import { useRestaurant } from "@/contexts/RestaurantContext";
 import { useQueryClient } from "@tanstack/react-query";
@@ -509,6 +511,44 @@ export default function ExpenseLedger() {
   });
 
   const createMut = useCreateExpenseTransaction({ mutation: { onSuccess: () => { toast({ title: "تم حفظ المصروف" }); setFormOpen(false); invalidate(); }, onError: () => toast({ title: "خطأ في الحفظ", variant: "destructive" }) } });
+  // Dedicated mutation for bulk import — no per-row toast/close side effects.
+  const importCreate = useCreateExpenseTransaction();
+
+  const expensesImportSpec: ImportSpec<CreateExpenseTransaction> = {
+    title: "استيراد المصاريف / Import Expenses",
+    templateName: "expenses-template",
+    templateColumns: [
+      { key: "date", example: "2026-07-05" },
+      { key: "categoryCode", example: categories[0]?.code ?? "5-1-1" },
+      { key: "description", example: "Cleaning supplies" },
+      { key: "amount", example: 300 },
+      { key: "vatType", example: "excluded" },
+      { key: "vatRate", example: 15 },
+    ],
+    parseRow: (row) => {
+      if (!isIsoDate(row.date)) return { error: "تاريخ غير صالح (YYYY-MM-DD) / invalid date" };
+      if (!row.categoryCode || !categories.some((c) => c.code === row.categoryCode)) {
+        return { error: `رمز تصنيف غير معروف / unknown categoryCode: "${row.categoryCode}"` };
+      }
+      if (!row.description) return { error: "الوصف مطلوب / description required" };
+      const amount = parseNum(row.amount);
+      if (amount <= 0) return { error: "المبلغ يجب أن يكون أكبر من صفر / amount must be > 0" };
+      const vatType =
+        row.vatType === "included" || row.vatType === "excluded" ? row.vatType : "none";
+      return {
+        value: {
+          date: row.date,
+          categoryCode: row.categoryCode,
+          description: row.description,
+          amount,
+          vatType,
+          vatRate: row.vatRate ? parseNum(row.vatRate, 15) : 15,
+        },
+      };
+    },
+    summarize: (v) => `${v.date} · ${v.categoryCode} · ${v.description} · ${v.amount}`,
+    submit: (v) => importCreate.mutateAsync({ data: v }),
+  };
   const updateMut = useUpdateExpenseTransaction({ mutation: { onSuccess: () => { toast({ title: "تم التحديث" }); setEditTxn(null); invalidate(); }, onError: () => toast({ title: "خطأ في التحديث", variant: "destructive" }) } });
   const deleteMut = useDeleteExpenseTransaction({ mutation: { onSuccess: () => { toast({ title: "تم الحذف" }); setDeleteId(null); invalidate(); }, onError: () => toast({ title: "خطأ في الحذف", variant: "destructive" }) } });
 
@@ -548,6 +588,7 @@ export default function ExpenseLedger() {
         action={
           <div className="flex items-center gap-2">
             <PrintButton />
+            <ImportButton spec={expensesImportSpec} onDone={invalidate} />
             <button onClick={() => setFormOpen(true)}
               className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm">
               <Plus className="w-4 h-4" /> إضافة مصروف

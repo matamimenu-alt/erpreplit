@@ -13,6 +13,9 @@ import { useLanguage } from "@/i18n/LanguageContext";
 import { PrintButton } from "@/components/ui/PrintButton";
 import { formatSAR, formatDate } from "@/lib/format";
 import { exportToExcel } from "@/lib/export-excel";
+import { ImportButton, type ImportSpec } from "@/components/ImportButton";
+import { parseNum, isIsoDate } from "@/lib/import-file";
+import type { CreateSale } from "@workspace/api-client-react";
 import { useForm, FormProvider, useFormContext } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -313,6 +316,44 @@ export default function Sales() {
   const update = useUpdateSale({ mutation: { onSuccess: invalidate } });
   const remove = useDeleteSale({ mutation: { onSuccess: invalidate } });
 
+  const salesImportSpec: ImportSpec<CreateSale> = {
+    title: "استيراد المبيعات / Import Sales",
+    templateName: "sales-template",
+    templateColumns: [
+      { key: "date", example: "2026-07-01" },
+      { key: "cash", example: 1000 },
+      { key: "card", example: 2000 },
+      { key: "app1", example: 500 },
+      { key: "app2", example: 0 },
+      { key: "app3", example: 0 },
+      { key: "app4", example: 0 },
+      { key: "app5", example: 0 },
+      { key: "app6", example: 0 },
+      { key: "vatMode", example: "exclusive" },
+    ],
+    parseRow: (row) => {
+      if (!isIsoDate(row.date)) return { error: "تاريخ غير صالح (YYYY-MM-DD) / invalid date" };
+      const vatMode = row.vatMode === "inclusive" ? "inclusive" : "exclusive";
+      return {
+        value: {
+          date: row.date,
+          cash: parseNum(row.cash),
+          card: parseNum(row.card),
+          app1: parseNum(row.app1),
+          app2: parseNum(row.app2),
+          app3: parseNum(row.app3),
+          app4: parseNum(row.app4),
+          app5: parseNum(row.app5),
+          app6: parseNum(row.app6),
+          vatMode,
+        },
+      };
+    },
+    summarize: (v) =>
+      `${v.date} · نقد ${v.cash ?? 0} · شبكة ${v.card ?? 0} · تطبيقات ${(v.app1 ?? 0) + (v.app2 ?? 0) + (v.app3 ?? 0) + (v.app4 ?? 0) + (v.app5 ?? 0) + (v.app6 ?? 0)}`,
+    submit: (v) => create.mutateAsync({ data: v }),
+  };
+
   const sales = salesRaw as SaleRecord[];
 
   function handleCreate(data: SaleForm) {
@@ -398,6 +439,7 @@ export default function Sales() {
               <button onClick={exportExcel} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 text-sm">
                 <FileSpreadsheet className="w-4 h-4" /> Export
               </button>
+              <ImportButton spec={salesImportSpec} onDone={invalidate} />
               <button
                 onClick={() => setAddOpen(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all text-sm"
