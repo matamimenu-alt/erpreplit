@@ -40,6 +40,13 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   "/food-cost":            "pages.foodCostTitle",
   "/vat-report":           "pages.vatReportTitle",
   "/reports":              "pages.reportsTitle",
+  "/reports/pl":           "pages.reportsTitle",
+  "/reports/sales-comparison":       "pages.salesComparisonTitle",
+  "/reports/restaurant-performance": "pages.restaurantPerfTitle",
+  "/reports/financial":              "pages.financialReportTitle",
+  "/reports/consolidated":           "pages.consolidatedTitle",
+  "/reports/supplier-purchases":     "pages.supplierReportTitle",
+  "/reports/price-comparison":       "pages.priceComparisonTitle",
 };
 
 function cn(...inputs: ClassValue[]) {
