@@ -101,6 +101,12 @@
     "foodCostTitle": "Food Cost & Pricing",
     "vatReportTitle": "Zakat & VAT",
     "reportsTitle": "Financial Reports",
+    "salesComparisonTitle": "Sales Comparison",
+    "restaurantPerfTitle": "Restaurant Performance",
+    "financialReportTitle": "Financial Report",
+    "consolidatedTitle": "Consolidated Financial",
+    "supplierReportTitle": "Supplier Purchases",
+    "priceComparisonTitle": "Price Comparison",
     "fallback": "Report",
     "salesPageTitle": "Sales & Cash Management",
     "salesDesc": "Daily revenue tracking by payment channel with VAT handling.",
@@ -478,6 +484,151 @@
     "category": "Category",
     "branch": "Branch",
     "date": "Date"
+  },
+  "reportsHub": {
+    "title": "Reports Center",
+    "description": "All reports and analytics in one place",
+    "cards": {
+      "salesComparison": {
+        "title": "Sales Comparison",
+        "desc": "Compare sales across periods — day vs day, month vs month, year vs year, or custom ranges."
+      },
+      "restaurantPerf": {
+        "title": "Restaurant Performance",
+        "desc": "Comprehensive performance analysis for all restaurants with monthly trends and growth metrics."
+      },
+      "financialReport": {
+        "title": "Financial Report",
+        "desc": "Detailed income and purchases breakdown for each restaurant by period."
+      },
+      "consolidatedReport": {
+        "title": "Consolidated Financial",
+        "desc": "Combined financial overview across all restaurants with income and purchase totals."
+      },
+      "supplierReport": {
+        "title": "Supplier Purchases",
+        "desc": "Analyze purchase volumes and trends per supplier with monthly breakdowns."
+      },
+      "priceComparison": {
+        "title": "Item Price Comparison",
+        "desc": "Compare item prices across suppliers — find the best deals and track price changes."
+      },
+      "plReport": {
+        "title": "P&L Statement",
+        "desc": "Full profit and loss statement with COGS, operating expenses, payroll, and net profit."
+      }
+    }
+  },
+  "rptCommon": {
+    "backToReports": "Back to Reports",
+    "restaurant": "Restaurant",
+    "allRestaurants": "All Restaurants",
+    "selectRestaurant": "Select Restaurant",
+    "selectRestaurantPrompt": "Select a restaurant to view its financial report",
+    "from": "From",
+    "to": "To",
+    "noData": "No data available for the selected criteria"
+  },
+  "rptSales": {
+    "title": "Sales Comparison Report",
+    "description": "Compare sales between different periods",
+    "dayVsDay": "Day vs Day",
+    "monthVsMonth": "Month vs Month",
+    "yearVsYear": "Year vs Year",
+    "custom": "Custom Period",
+    "period1": "Current Period",
+    "period2": "Previous Period",
+    "diff": "Difference",
+    "change": "Change %",
+    "restaurant": "Restaurant",
+    "chartTitle": "Sales Comparison Chart",
+    "from1": "Period 1 From",
+    "to1": "Period 1 To",
+    "from2": "Period 2 From",
+    "to2": "Period 2 To"
+  },
+  "rptPerf": {
+    "title": "Restaurant Performance Report",
+    "description": "Compare performance across all restaurants",
+    "allRestaurants": "All Restaurants",
+    "singleRestaurant": "Single Restaurant",
+    "compareRestaurants": "Compare Restaurants",
+    "restaurant": "Restaurant",
+    "totalSales": "Total Sales",
+    "orderCount": "Order Count",
+    "avgOrder": "Avg Order Value",
+    "curMonth": "Current Month",
+    "prevMonth": "Previous Month",
+    "lastYear": "Same Month Last Year",
+    "vsPrev": "vs Previous Month",
+    "vsLastYear": "vs Last Year",
+    "trendChart": "Monthly Sales Trend"
+  },
+  "rptFin": {
+    "title": "Financial Report",
+    "description": "Income and purchases breakdown per restaurant",
+    "restaurant": "Restaurant",
+    "incomeSection": "Income",
+    "purchasesSection": "Purchases",
+    "cashIncome": "Cash Income",
+    "cardIncome": "Card Income",
+    "appIncome": "App Income",
+    "totalIncome": "Total Income",
+    "cashPurchases": "Cash Purchases",
+    "creditPurchases": "Credit Purchases",
+    "totalPurchases": "Total Purchases",
+    "netProfit": "Net Profit"
+  },
+  "rptConsol": {
+    "title": "Consolidated Financial Report",
+    "description": "Combined financial data across all restaurants",
+    "today": "Today",
+    "thisWeek": "This Week",
+    "thisMonth": "This Month",
+    "thisYear": "This Year",
+    "totalIncome": "Total Income",
+    "totalPurchases": "Total Purchases",
+    "grandTotal": "Grand Total",
+    "incomeBreakdown": "Income Breakdown",
+    "purchaseBreakdown": "Purchases Breakdown"
+  },
+  "rptSupplier": {
+    "title": "Supplier Purchases Report",
+    "description": "Analyze purchases by supplier with monthly trends",
+    "supplierName": "Supplier",
+    "invoiceCount": "Invoices",
+    "totalAmount": "Total Amount",
+    "totalSuppliers": "Total Suppliers",
+    "totalPurchases": "Total Purchases",
+    "totalInvoices": "Total Invoices",
+    "topSupplier": "Top Supplier",
+    "vsPrev": "vs Previous Month",
+    "monthlyTrend": "Monthly Purchase Trend",
+    "month": "Month",
+    "amount": "Amount"
+  },
+  "rptPrice": {
+    "title": "Item Price Comparison Report",
+    "description": "Compare item prices across different suppliers",
+    "searchProduct": "Search Product",
+    "searchPlaceholder": "Type product name...",
+    "product": "Product",
+    "supplier": "Supplier",
+    "avgPrice": "Avg Price",
+    "minPrice": "Min Price",
+    "maxPrice": "Max Price",
+    "lowestOverall": "Lowest Overall",
+    "highestOverall": "Highest Overall",
+    "priceDiff": "Price Difference",
+    "suppliersCount": "suppliers",
+    "lowest": "Lowest",
+    "highest": "Highest",
+    "avg": "Average",
+    "diff": "Diff",
+    "status": "Status",
+    "cheapest": "Best Price",
+    "mostExpensive": "Highest Price",
+    "priceTrend": "Price Trend Over Time"
   },
   "print": {
     "documentTitle": "{app} — {page}",

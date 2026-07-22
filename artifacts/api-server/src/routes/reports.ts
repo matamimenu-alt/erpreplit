@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { salesTable, purchasesTable, employeesTable, inventoryTable, branchTransfersTable, fixedCostTemplatesTable, fixedCostMonthlyValuesTable, expenseTransactionsTable, expenseCategoriesTable } from "@workspace/db/schema";
+import { salesTable, purchasesTable, employeesTable, inventoryTable, branchTransfersTable, fixedCostTemplatesTable, fixedCostMonthlyValuesTable, expenseTransactionsTable, expenseCategoriesTable, restaurantsTable, suppliersTable } from "@workspace/db/schema";
 import { eq, and, or } from "drizzle-orm";
 import { getRestaurantId } from "../lib/restaurant";
 import { computeVatSummary } from "../lib/vat-engine";
@@ -776,6 +776,365 @@ router.get("/purchases/by-category", async (req, res) => {
     return res.json(result);
   } catch (err) {
     req.log.error({ err }, "Error getting category expense report");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── GET /api/reports/sales-comparison ───────────────────────────────────────
+// Cross-restaurant sales comparison for two date ranges
+router.get("/sales-comparison", async (req, res) => {
+  try {
+    const restaurantId = req.query.restaurantId ? parseInt(req.query.restaurantId as string) : null;
+    const from1 = req.query.from1 as string | undefined;
+    const to1   = req.query.to1   as string | undefined;
+    const from2 = req.query.from2 as string | undefined;
+    const to2   = req.query.to2   as string | undefined;
+
+    const restaurants = await db.select().from(restaurantsTable);
+    const targetIds = restaurantId
+      ? [restaurantId]
+      : restaurants.filter(r => r.status !== "archived").map(r => r.id);
+
+    const allSales = await db.select().from(salesTable);
+    const results = targetIds.map(rid => {
+      const rSales = allSales.filter(s => s.restaurantId === rid);
+      const rest = restaurants.find(r => r.id === rid);
+
+      const filterRange = (sales: typeof rSales, from?: string, to?: string) => {
+        return sales.filter(s => {
+          if (from && s.date < from) return false;
+          if (to && s.date > to) return false;
+          return true;
+        });
+      };
+
+      const p1Sales = filterRange(rSales, from1, to1);
+      const p2Sales = filterRange(rSales, from2, to2);
+
+      const sumSales = (records: typeof rSales) => ({
+        totalRevenue: records.reduce((s, r) => s + toNum(r.totalRevenue), 0),
+        netSales:     records.reduce((s, r) => s + toNum(r.netSales), 0),
+        cash:         records.reduce((s, r) => s + toNum(r.cash), 0),
+        card:         records.reduce((s, r) => s + toNum(r.card), 0),
+        apps:         records.reduce((s, r) => s + toNum(r.app1) + toNum(r.app2) + toNum(r.app3) + toNum(r.app4) + toNum(r.app5) + toNum(r.app6), 0),
+        days:         records.length,
+      });
+
+      const period1 = sumSales(p1Sales);
+      const period2 = sumSales(p2Sales);
+      const diff = f2(period1.netSales - period2.netSales);
+      const changePct = period2.netSales ? f2(((period1.netSales - period2.netSales) / period2.netSales) * 100) : 0;
+
+      return {
+        restaurantId: rid,
+        restaurantName: rest?.name ?? "",
+        restaurantNameAr: rest?.nameAr ?? "",
+        period1: { ...period1, totalRevenue: f2(period1.totalRevenue), netSales: f2(period1.netSales), cash: f2(period1.cash), card: f2(period1.card), apps: f2(period1.apps) },
+        period2: { ...period2, totalRevenue: f2(period2.totalRevenue), netSales: f2(period2.netSales), cash: f2(period2.cash), card: f2(period2.card), apps: f2(period2.apps) },
+        diff,
+        changePct,
+      };
+    });
+
+    const totalP1 = f2(results.reduce((s, r) => s + toNum(r.period1.netSales), 0));
+    const totalP2 = f2(results.reduce((s, r) => s + toNum(r.period2.netSales), 0));
+
+    return res.json({ results, totalPeriod1: totalP1, totalPeriod2: totalP2 });
+  } catch (err) {
+    req.log.error({ err }, "Error getting sales comparison");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── GET /api/reports/restaurant-performance ─────────────────────────────────
+// Performance of all/selected restaurants with monthly trend
+router.get("/restaurant-performance", async (req, res) => {
+  try {
+    const restaurantId = req.query.restaurantId ? parseInt(req.query.restaurantId as string) : null;
+    const compareIds = req.query.compareIds ? (req.query.compareIds as string).split(",").map(Number) : null;
+
+    const restaurants = await db.select().from(restaurantsTable);
+    const allSales = await db.select().from(salesTable);
+    const allPurchases = await db.select().from(purchasesTable);
+
+    let targetIds: number[];
+    if (compareIds && compareIds.length > 0) targetIds = compareIds;
+    else if (restaurantId) targetIds = [restaurantId];
+    else targetIds = restaurants.filter(r => r.status !== "archived").map(r => r.id);
+
+    const now = new Date();
+    const curMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const prevMonth = (() => {
+      const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    })();
+    const lastYearMonth = `${now.getFullYear() - 1}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+    const results = targetIds.map(rid => {
+      const rest = restaurants.find(r => r.id === rid);
+      const rSales = allSales.filter(s => s.restaurantId === rid);
+      const rPurchases = allPurchases.filter(p => p.restaurantId === rid);
+
+      const totalNetSales = rSales.reduce((s, r) => s + toNum(r.netSales), 0);
+      const orderCount = rSales.length;
+      const avgOrderValue = orderCount ? f2(totalNetSales / orderCount) : 0;
+
+      const curMonthSales = rSales.filter(s => s.date.startsWith(curMonth)).reduce((s, r) => s + toNum(r.netSales), 0);
+      const prevMonthSales = rSales.filter(s => s.date.startsWith(prevMonth)).reduce((s, r) => s + toNum(r.netSales), 0);
+      const lastYearSales = rSales.filter(s => s.date.startsWith(lastYearMonth)).reduce((s, r) => s + toNum(r.netSales), 0);
+
+      const monthVsPrev = prevMonthSales ? f2(((curMonthSales - prevMonthSales) / prevMonthSales) * 100) : 0;
+      const monthVsLastYear = lastYearSales ? f2(((curMonthSales - lastYearSales) / lastYearSales) * 100) : 0;
+
+      const monthlyData: Record<string, { sales: number; purchases: number; orders: number }> = {};
+      for (const s of rSales) {
+        const m = s.date.substring(0, 7);
+        if (!monthlyData[m]) monthlyData[m] = { sales: 0, purchases: 0, orders: 0 };
+        monthlyData[m].sales += toNum(s.netSales);
+        monthlyData[m].orders += 1;
+      }
+      for (const p of rPurchases) {
+        const m = p.date.substring(0, 7);
+        if (!monthlyData[m]) monthlyData[m] = { sales: 0, purchases: 0, orders: 0 };
+        monthlyData[m].purchases += toNum(p.amountBeforeVat);
+      }
+      const monthlyTrend = Object.entries(monthlyData)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([month, d]) => ({ month, sales: f2(d.sales), purchases: f2(d.purchases), orders: d.orders }));
+
+      return {
+        restaurantId: rid,
+        restaurantName: rest?.name ?? "",
+        restaurantNameAr: rest?.nameAr ?? "",
+        totalSales: f2(totalNetSales),
+        orderCount,
+        avgOrderValue,
+        currentMonthSales: f2(curMonthSales),
+        previousMonthSales: f2(prevMonthSales),
+        lastYearSamePeriodSales: f2(lastYearSales),
+        monthVsPrevPct: monthVsPrev,
+        monthVsLastYearPct: monthVsLastYear,
+        monthlyTrend,
+      };
+    });
+
+    return res.json({ results });
+  } catch (err) {
+    req.log.error({ err }, "Error getting restaurant performance");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── GET /api/reports/financial ──────────────────────────────────────────────
+// Financial report for a single restaurant or consolidated across all
+router.get("/financial", async (req, res) => {
+  try {
+    const restaurantId = req.query.restaurantId ? parseInt(req.query.restaurantId as string) : null;
+    const from = req.query.from as string | undefined;
+    const to   = req.query.to   as string | undefined;
+
+    const restaurants = await db.select().from(restaurantsTable);
+    const targetIds = restaurantId
+      ? [restaurantId]
+      : restaurants.filter(r => r.status !== "archived").map(r => r.id);
+
+    const allSales     = await db.select().from(salesTable);
+    const allPurchases = await db.select().from(purchasesTable);
+
+    const filterDate = <T extends { date: string }>(records: T[]) => {
+      return records.filter(r => {
+        if (from && r.date < from) return false;
+        if (to && r.date > to) return false;
+        return true;
+      });
+    };
+
+    const restaurantResults = targetIds.map(rid => {
+      const rest = restaurants.find(r => r.id === rid);
+      const rSales = filterDate(allSales.filter(s => s.restaurantId === rid));
+      const rPurchases = filterDate(allPurchases.filter(p => p.restaurantId === rid));
+
+      const cashIncome = rSales.reduce((s, r) => s + toNum(r.cash), 0);
+      const cardIncome = rSales.reduce((s, r) => s + toNum(r.card), 0);
+      const appIncome  = rSales.reduce((s, r) => s + toNum(r.app1) + toNum(r.app2) + toNum(r.app3) + toNum(r.app4) + toNum(r.app5) + toNum(r.app6), 0);
+      const totalIncome = cashIncome + cardIncome + appIncome;
+
+      const cashPurchases = rPurchases.filter(p => p.paymentType === "cash").reduce((s, p) => s + toNum(p.totalAmount), 0);
+      const creditPurchases = rPurchases.filter(p => p.paymentType === "credit").reduce((s, p) => s + toNum(p.totalAmount), 0);
+      const totalPurchases = rPurchases.reduce((s, p) => s + toNum(p.totalAmount), 0);
+
+      return {
+        restaurantId: rid,
+        restaurantName: rest?.name ?? "",
+        restaurantNameAr: rest?.nameAr ?? "",
+        income: {
+          cash: f2(cashIncome),
+          card: f2(cardIncome),
+          apps: f2(appIncome),
+          total: f2(totalIncome),
+        },
+        purchases: {
+          cash: f2(cashPurchases),
+          credit: f2(creditPurchases),
+          total: f2(totalPurchases),
+        },
+        netProfit: f2(totalIncome - totalPurchases),
+      };
+    });
+
+    const consolidated = {
+      income: {
+        cash:  f2(restaurantResults.reduce((s, r) => s + toNum(r.income.cash), 0)),
+        card:  f2(restaurantResults.reduce((s, r) => s + toNum(r.income.card), 0)),
+        apps:  f2(restaurantResults.reduce((s, r) => s + toNum(r.income.apps), 0)),
+        total: f2(restaurantResults.reduce((s, r) => s + toNum(r.income.total), 0)),
+      },
+      purchases: {
+        cash:   f2(restaurantResults.reduce((s, r) => s + toNum(r.purchases.cash), 0)),
+        credit: f2(restaurantResults.reduce((s, r) => s + toNum(r.purchases.credit), 0)),
+        total:  f2(restaurantResults.reduce((s, r) => s + toNum(r.purchases.total), 0)),
+      },
+      netProfit: f2(restaurantResults.reduce((s, r) => s + toNum(r.netProfit), 0)),
+    };
+
+    return res.json({ restaurants: restaurantResults, consolidated });
+  } catch (err) {
+    req.log.error({ err }, "Error getting financial report");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── GET /api/reports/supplier-purchases ─────────────────────────────────────
+// Purchase history grouped by supplier with monthly breakdown
+router.get("/supplier-purchases", async (req, res) => {
+  try {
+    const supplierId = req.query.supplierId as string | undefined;
+    const from = req.query.from as string | undefined;
+    const to   = req.query.to   as string | undefined;
+
+    let records = await db.select().from(purchasesTable);
+    if (from) records = records.filter(r => r.date >= from);
+    if (to)   records = records.filter(r => r.date <= to);
+
+    const suppliers = await db.select().from(suppliersTable);
+    const supplierMap = new Map(suppliers.map(s => [s.name.toLowerCase().trim(), s]));
+
+    type SupplierAgg = {
+      supplierName: string; invoiceCount: number; totalAmount: number;
+      monthly: Record<string, { amount: number; count: number }>;
+    };
+    const agg: Record<string, SupplierAgg> = {};
+
+    for (const r of records) {
+      const name = r.supplierName?.trim() || "Unknown";
+      const key = name.toLowerCase();
+      if (supplierId && !suppliers.some(s => s.id === parseInt(supplierId) && s.name.toLowerCase().trim() === key)) continue;
+
+      if (!agg[key]) agg[key] = { supplierName: name, invoiceCount: 0, totalAmount: 0, monthly: {} };
+      agg[key].invoiceCount += 1;
+      agg[key].totalAmount += toNum(r.totalAmount);
+      const m = r.date.substring(0, 7);
+      if (!agg[key].monthly[m]) agg[key].monthly[m] = { amount: 0, count: 0 };
+      agg[key].monthly[m].amount += toNum(r.totalAmount);
+      agg[key].monthly[m].count += 1;
+    }
+
+    const result = Object.values(agg).map(s => {
+      const monthly = Object.entries(s.monthly)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([month, d]) => ({ month, amount: f2(d.amount), count: d.count }));
+
+      let prevMonthComp = 0;
+      if (monthly.length >= 2) {
+        const last = monthly[monthly.length - 1].amount;
+        const prev = monthly[monthly.length - 2].amount;
+        prevMonthComp = prev ? f2(((last - prev) / prev) * 100) : 0;
+      }
+
+      return {
+        supplierName: s.supplierName,
+        invoiceCount: s.invoiceCount,
+        totalAmount: f2(s.totalAmount),
+        monthlyBreakdown: monthly,
+        prevMonthChangePct: prevMonthComp,
+      };
+    }).sort((a, b) => toNum(b.totalAmount) - toNum(a.totalAmount));
+
+    return res.json({ suppliers: result });
+  } catch (err) {
+    req.log.error({ err }, "Error getting supplier purchases report");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── GET /api/reports/item-price-comparison ──────────────────────────────────
+// Compare item prices across suppliers with historical data
+router.get("/item-price-comparison", async (req, res) => {
+  try {
+    const productName = req.query.productName as string | undefined;
+    const from = req.query.from as string | undefined;
+    const to   = req.query.to   as string | undefined;
+
+    let records = await db.select().from(purchasesTable);
+    if (from) records = records.filter(r => r.date >= from);
+    if (to)   records = records.filter(r => r.date <= to);
+    if (productName) {
+      const lower = productName.toLowerCase();
+      records = records.filter(r => r.productName.toLowerCase().includes(lower));
+    }
+
+    type ItemData = {
+      productName: string;
+      suppliers: Record<string, { prices: number[]; months: Record<string, number[]> }>;
+    };
+    const items: Record<string, ItemData> = {};
+
+    for (const r of records) {
+      const pName = r.productName.trim();
+      const key = pName.toLowerCase();
+      const supplier = r.supplierName?.trim() || "Unknown";
+      const unitPrice = toNum(r.price);
+      const month = r.date.substring(0, 7);
+
+      if (!items[key]) items[key] = { productName: pName, suppliers: {} };
+      if (!items[key].suppliers[supplier]) items[key].suppliers[supplier] = { prices: [], months: {} };
+      items[key].suppliers[supplier].prices.push(unitPrice);
+      if (!items[key].suppliers[supplier].months[month]) items[key].suppliers[supplier].months[month] = [];
+      items[key].suppliers[supplier].months[month].push(unitPrice);
+    }
+
+    const result = Object.values(items).map(item => {
+      const supplierData = Object.entries(item.suppliers).map(([name, data]) => {
+        const avg = data.prices.length ? f2(data.prices.reduce((a, b) => a + b, 0) / data.prices.length) : 0;
+        const min = data.prices.length ? f2(Math.min(...data.prices)) : 0;
+        const max = data.prices.length ? f2(Math.max(...data.prices)) : 0;
+
+        const monthlyPrices = Object.entries(data.months)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([month, prices]) => ({
+            month,
+            avgPrice: f2(prices.reduce((a, b) => a + b, 0) / prices.length),
+            minPrice: f2(Math.min(...prices)),
+            maxPrice: f2(Math.max(...prices)),
+          }));
+
+        return { supplierName: name, avgPrice: avg, minPrice: min, maxPrice: max, monthlyPrices };
+      });
+
+      const allPrices = supplierData.flatMap(s => [s.avgPrice]).filter(p => p > 0);
+      return {
+        productName: item.productName,
+        suppliers: supplierData,
+        lowestPrice: allPrices.length ? f2(Math.min(...allPrices)) : 0,
+        highestPrice: allPrices.length ? f2(Math.max(...allPrices)) : 0,
+        averagePrice: allPrices.length ? f2(allPrices.reduce((a, b) => a + b, 0) / allPrices.length) : 0,
+        priceDiff: allPrices.length >= 2 ? f2(Math.max(...allPrices) - Math.min(...allPrices)) : 0,
+      };
+    });
+
+    return res.json({ items: result });
+  } catch (err) {
+    req.log.error({ err }, "Error getting item price comparison");
     return res.status(500).json({ error: "Internal server error" });
   }
 });

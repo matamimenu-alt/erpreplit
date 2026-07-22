@@ -101,6 +101,12 @@
     "foodCostTitle": "تكلفة الطعام والتسعير",
     "vatReportTitle": "الزكاة وضريبة القيمة المضافة",
     "reportsTitle": "التقارير المالية",
+    "salesComparisonTitle": "مقارنة المبيعات",
+    "restaurantPerfTitle": "أداء المطاعم",
+    "financialReportTitle": "التقرير المالي",
+    "consolidatedTitle": "التقرير المالي الموحّد",
+    "supplierReportTitle": "مشتريات الموردين",
+    "priceComparisonTitle": "مقارنة أسعار الأصناف",
     "fallback": "تقرير",
     "salesPageTitle": "المبيعات وإدارة النقدية",
     "salesDesc": "متابعة الإيرادات اليومية حسب قناة الدفع مع احتساب الضريبة.",
@@ -478,6 +484,151 @@
     "category": "التصنيف",
     "branch": "الفرع",
     "date": "التاريخ"
+  },
+  "reportsHub": {
+    "title": "مركز التقارير",
+    "description": "جميع التقارير والتحليلات في مكان واحد",
+    "cards": {
+      "salesComparison": {
+        "title": "مقارنة المبيعات",
+        "desc": "مقارنة المبيعات بين الفترات — يوم بيوم، شهر بشهر، سنة بسنة، أو فترات مخصصة."
+      },
+      "restaurantPerf": {
+        "title": "أداء المطاعم",
+        "desc": "تحليل شامل لأداء جميع المطاعم مع الاتجاهات الشهرية ومؤشرات النمو."
+      },
+      "financialReport": {
+        "title": "التقرير المالي",
+        "desc": "تفصيل الإيرادات والمشتريات لكل مطعم حسب الفترة."
+      },
+      "consolidatedReport": {
+        "title": "التقرير المالي الموحّد",
+        "desc": "نظرة مالية شاملة لجميع المطاعم مع إجماليات الإيرادات والمشتريات."
+      },
+      "supplierReport": {
+        "title": "مشتريات الموردين",
+        "desc": "تحليل حجم المشتريات والاتجاهات لكل مورّد مع تفصيل شهري."
+      },
+      "priceComparison": {
+        "title": "مقارنة أسعار الأصناف",
+        "desc": "مقارنة أسعار الأصناف بين الموردين — اعثر على أفضل الأسعار وتتبّع التغيّرات."
+      },
+      "plReport": {
+        "title": "قائمة الأرباح والخسائر",
+        "desc": "قائمة أرباح وخسائر كاملة مع تكلفة المبيعات والمصروفات التشغيلية والرواتب وصافي الربح."
+      }
+    }
+  },
+  "rptCommon": {
+    "backToReports": "العودة للتقارير",
+    "restaurant": "المطعم",
+    "allRestaurants": "جميع المطاعم",
+    "selectRestaurant": "اختر المطعم",
+    "selectRestaurantPrompt": "اختر مطعمًا لعرض تقريره المالي",
+    "from": "من",
+    "to": "إلى",
+    "noData": "لا توجد بيانات للمعايير المحددة"
+  },
+  "rptSales": {
+    "title": "تقرير مقارنة المبيعات",
+    "description": "مقارنة المبيعات بين فترات مختلفة",
+    "dayVsDay": "يوم بيوم",
+    "monthVsMonth": "شهر بشهر",
+    "yearVsYear": "سنة بسنة",
+    "custom": "فترة مخصصة",
+    "period1": "الفترة الحالية",
+    "period2": "الفترة السابقة",
+    "diff": "الفرق",
+    "change": "نسبة التغيّر ٪",
+    "restaurant": "المطعم",
+    "chartTitle": "رسم بياني لمقارنة المبيعات",
+    "from1": "الفترة ١ من",
+    "to1": "الفترة ١ إلى",
+    "from2": "الفترة ٢ من",
+    "to2": "الفترة ٢ إلى"
+  },
+  "rptPerf": {
+    "title": "تقرير أداء المطاعم",
+    "description": "مقارنة الأداء بين جميع المطاعم",
+    "allRestaurants": "جميع المطاعم",
+    "singleRestaurant": "مطعم واحد",
+    "compareRestaurants": "مقارنة المطاعم",
+    "restaurant": "المطعم",
+    "totalSales": "إجمالي المبيعات",
+    "orderCount": "عدد الطلبات",
+    "avgOrder": "متوسط قيمة الطلب",
+    "curMonth": "الشهر الحالي",
+    "prevMonth": "الشهر السابق",
+    "lastYear": "نفس الشهر من العام الماضي",
+    "vsPrev": "مقابل الشهر السابق",
+    "vsLastYear": "مقابل العام الماضي",
+    "trendChart": "اتجاه المبيعات الشهري"
+  },
+  "rptFin": {
+    "title": "التقرير المالي",
+    "description": "تفصيل الإيرادات والمشتريات لكل مطعم",
+    "restaurant": "المطعم",
+    "incomeSection": "الإيرادات",
+    "purchasesSection": "المشتريات",
+    "cashIncome": "إيرادات نقدية",
+    "cardIncome": "إيرادات البطاقات",
+    "appIncome": "إيرادات التطبيقات",
+    "totalIncome": "إجمالي الإيرادات",
+    "cashPurchases": "مشتريات نقدية",
+    "creditPurchases": "مشتريات آجلة",
+    "totalPurchases": "إجمالي المشتريات",
+    "netProfit": "صافي الربح"
+  },
+  "rptConsol": {
+    "title": "التقرير المالي الموحّد",
+    "description": "بيانات مالية مجمّعة لجميع المطاعم",
+    "today": "اليوم",
+    "thisWeek": "هذا الأسبوع",
+    "thisMonth": "هذا الشهر",
+    "thisYear": "هذه السنة",
+    "totalIncome": "إجمالي الإيرادات",
+    "totalPurchases": "إجمالي المشتريات",
+    "grandTotal": "الإجمالي العام",
+    "incomeBreakdown": "تفصيل الإيرادات",
+    "purchaseBreakdown": "تفصيل المشتريات"
+  },
+  "rptSupplier": {
+    "title": "تقرير مشتريات الموردين",
+    "description": "تحليل المشتريات حسب المورّد مع الاتجاهات الشهرية",
+    "supplierName": "المورّد",
+    "invoiceCount": "الفواتير",
+    "totalAmount": "إجمالي المبلغ",
+    "totalSuppliers": "إجمالي الموردين",
+    "totalPurchases": "إجمالي المشتريات",
+    "totalInvoices": "إجمالي الفواتير",
+    "topSupplier": "المورّد الأول",
+    "vsPrev": "مقابل الشهر السابق",
+    "monthlyTrend": "اتجاه المشتريات الشهري",
+    "month": "الشهر",
+    "amount": "المبلغ"
+  },
+  "rptPrice": {
+    "title": "تقرير مقارنة أسعار الأصناف",
+    "description": "مقارنة أسعار الأصناف بين الموردين المختلفين",
+    "searchProduct": "بحث عن صنف",
+    "searchPlaceholder": "اكتب اسم الصنف…",
+    "product": "الصنف",
+    "supplier": "المورّد",
+    "avgPrice": "متوسط السعر",
+    "minPrice": "أقل سعر",
+    "maxPrice": "أعلى سعر",
+    "lowestOverall": "الأقل إجمالاً",
+    "highestOverall": "الأعلى إجمالاً",
+    "priceDiff": "فرق السعر",
+    "suppliersCount": "مورّد",
+    "lowest": "الأقل",
+    "highest": "الأعلى",
+    "avg": "المتوسط",
+    "diff": "الفرق",
+    "status": "الحالة",
+    "cheapest": "أفضل سعر",
+    "mostExpensive": "أعلى سعر",
+    "priceTrend": "اتجاه الأسعار عبر الزمن"
   },
   "print": {
     "documentTitle": "{app} — {page}",

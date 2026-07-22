@@ -18,6 +18,13 @@ import Reports from "@/pages/Reports";
 import Branches from "@/pages/Branches";
 import GroupDashboard from "@/pages/GroupDashboard";
 import ExpensesManagement from "@/pages/ExpensesManagement";
+import ReportsHub from "@/pages/reports/ReportsHub";
+import SalesComparison from "@/pages/reports/SalesComparison";
+import RestaurantPerformance from "@/pages/reports/RestaurantPerformance";
+import FinancialReport from "@/pages/reports/FinancialReport";
+import ConsolidatedFinancial from "@/pages/reports/ConsolidatedFinancial";
+import SupplierPurchases from "@/pages/reports/SupplierPurchases";
+import PriceComparison from "@/pages/reports/PriceComparison";
 import { RestaurantProvider } from "@/contexts/RestaurantContext";
 import { LanguageProvider } from "@/i18n/LanguageContext";
 
@@ -51,7 +58,14 @@ function Router() {
         <Route path="/inventory" component={Inventory} />
         <Route path="/food-cost" component={FoodCost} />
         <Route path="/vat-report" component={VatReport} />
-        <Route path="/reports" component={Reports} />
+        <Route path="/reports" component={ReportsHub} />
+        <Route path="/reports/pl" component={Reports} />
+        <Route path="/reports/sales-comparison" component={SalesComparison} />
+        <Route path="/reports/restaurant-performance" component={RestaurantPerformance} />
+        <Route path="/reports/financial" component={FinancialReport} />
+        <Route path="/reports/consolidated" component={ConsolidatedFinancial} />
+        <Route path="/reports/supplier-purchases" component={SupplierPurchases} />
+        <Route path="/reports/price-comparison" component={PriceComparison} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>
