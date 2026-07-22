@@ -1,9 +1,9 @@
 import { Link, useLocation } from "wouter";
-import { 
-  LayoutDashboard, 
-  Receipt, 
-  ShoppingCart, 
-  Users, 
+import {
+  LayoutDashboard,
+  Receipt,
+  ShoppingCart,
+  Users,
   TrendingDown,
   Building2,
   FileBarChart,
@@ -14,6 +14,7 @@ import {
   Menu,
   ChevronDown,
   LayoutGrid,
+  CalendarDays,
 } from "lucide-react";
 import { useState } from "react";
 import { clsx, type ClassValue } from "clsx";
@@ -28,6 +29,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   "/":                     "pages.dashboardTitle",
   "/group-dashboard":      "pages.groupDashboardTitle",
   "/branches":             "pages.branchesTitle",
+  "/daily-revenue":        "pages.dailyRevenueTitle",
   "/sales":                "pages.salesTitle",
   "/purchases":            "pages.purchasesTitle",
   "/suppliers":            "pages.suppliersTitle",
@@ -62,6 +64,7 @@ const groupNavItems = [
 
 const branchNavItems = [
   { key: "nav.dashboard",           href: "/",                     icon: LayoutDashboard },
+  { key: "nav.dailyRevenue",        href: "/daily-revenue",        icon: CalendarDays },
   { key: "nav.sales",               href: "/sales",                icon: Receipt },
   { key: "nav.purchases",           href: "/purchases",            icon: ShoppingCart },
   { key: "nav.suppliers",           href: "/suppliers",            icon: Building2 },
