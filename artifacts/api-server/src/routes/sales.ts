@@ -317,6 +317,24 @@ router.put("/app-config", async (req, res) => {
   }
 });
 
+// GET /api/sales/by-date  — fetch single record for a specific date (upsert helper)
+router.get("/by-date", async (req, res) => {
+  try {
+    const restaurantId = getRestaurantId(req);
+    const date = req.query.date as string | undefined;
+    if (!date) return res.status(400).json({ error: "date query param required" });
+
+    const [record] = await db.select().from(salesTable)
+      .where(and(eq(salesTable.restaurantId, restaurantId), eq(salesTable.date, date)));
+
+    if (!record) return res.json(null);
+    return res.json(formatRecord(record));
+  } catch (err) {
+    req.log.error({ err }, "Error fetching sale by date");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // GET /api/sales/report  — date-range report with channel breakdown
 router.get("/report", async (req, res) => {
   try {

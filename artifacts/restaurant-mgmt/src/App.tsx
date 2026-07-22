@@ -18,6 +18,7 @@ import Reports from "@/pages/Reports";
 import Branches from "@/pages/Branches";
 import GroupDashboard from "@/pages/GroupDashboard";
 import ExpensesManagement from "@/pages/ExpensesManagement";
+import DailyRevenueEntry from "@/pages/DailyRevenueEntry";
 import ReportsHub from "@/pages/reports/ReportsHub";
 import SalesComparison from "@/pages/reports/SalesComparison";
 import RestaurantPerformance from "@/pages/reports/RestaurantPerformance";
@@ -44,6 +45,7 @@ function Router() {
         <Route path="/" component={Dashboard} />
         <Route path="/group-dashboard" component={GroupDashboard} />
         <Route path="/branches" component={Branches} />
+        <Route path="/daily-revenue" component={DailyRevenueEntry} />
         <Route path="/sales" component={Sales} />
         <Route path="/purchases" component={Purchases} />
         <Route path="/suppliers" component={Suppliers} />
